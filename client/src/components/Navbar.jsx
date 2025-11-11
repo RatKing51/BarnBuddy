@@ -25,10 +25,10 @@ const Navbar = () => {
 
           {/* Right: Desktop links */}
           <div className="hidden md:flex md:items-center md:space-x-6 z-20">
-            <a href="#about" className="text-white text-xl font-bold hover:text-blue-300 transition-colors">
+            <a href="/about" className="text-white text-xl font-bold hover:text-blue-300 transition-colors">
               About Us
             </a>
-            <a href="#pricing" className="text-white text-xl font-bold hover:text-blue-300 transition-colors">
+            <a href="/pricing" className="text-white text-xl font-bold hover:text-blue-300 transition-colors">
               Pricing
             </a>
             <a href="/signup" className="bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-2 px-4 rounded-md transition-colors">
