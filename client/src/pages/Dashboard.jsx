@@ -1,131 +1,151 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
+import AnimalGeneralData from "../components/AnimalGeneralData"; // import the new component
+import HealthRecords from "../components/HealthRecords";
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState('general');
-  const [sidebarTab, setSidebarTab] = useState('animals');
+  const { logout } = useAuth();
+
+  const [activeTab, setActiveTab] = useState("general");
+  const [dateTime, setDateTime] = useState("");
+  const [selectedHerd, setSelectedHerd] = useState("Default Herd");
+  const herds = ["Default Herd", "North Pasture", "Goat Pen", "Show Herd"];
+
+  // Live clock
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setDateTime(
+        now.toLocaleString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      );
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-[#0A1128] p-6">
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between border-b border-[#5170FF]/30 pb-4">
-        <div className="flex items-center gap-8">
-          <h1 className="text-2xl font-bold text-white">
-            <span className="text-[#5170FF]">Barn</span>Buddy.
+    <div className="flex min-h-screen bg-gray-900 text-gray-100">
+      {/* ---------------------- SIDEBAR ---------------------- */}
+      <aside className="w-64 bg-gray-800 shadow-lg border-r border-gray-700 flex flex-col">
+        <div className="px-6 py-6 border-b border-gray-700">
+          <h1 className="text-2xl font-bold tracking-tight">
+            <span className="text-blue-500">Barn</span>Buddy
           </h1>
-          <span className="text-[#D9D9DD] text-sm">Dashboard</span>
-        </div>
-        
-        <div className="flex-1 px-8">
-          <div className="bg-[#101D42] border border-[#5170FF]/30 rounded-lg p-4 text-center">
-            <p className="text-[#D9D9DD] text-sm">Basic Stats about farm go here</p>
-          </div>
+          <p className="text-sm text-gray-400 mt-1">Dashboard</p>
         </div>
 
-        <div className="text-right">
-          <p className="text-[#D9D9DD] text-sm">Date & Time</p>
-          <p className="text-[#5170FF] font-semibold">November 18, 2025</p>
+        {/* Herd Selector */}
+        <div className="px-4 py-3 border-b border-gray-700">
+          <select
+            value={selectedHerd}
+            onChange={(e) => setSelectedHerd(e.target.value)}
+            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-gray-100 outline-none cursor-pointer"
+          >
+            {herds.map((herd) => (
+              <option key={herd} value={herd} className="bg-gray-800 text-gray-100">
+                {herd}
+              </option>
+            ))}
+          </select>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-4 gap-6">
-        {/* Sidebar */}
-        <div className="col-span-1 h-[600px] flex flex-col">
-          {/* Animals/Herd Tabs */}
-          <div className="bg-[#101D42] border border-[#5170FF]/30 rounded-lg mb-4">
-            <div className="grid grid-cols-2 border-b border-[#5170FF]/30">
-              <button
-                onClick={() => setSidebarTab('animals')}
-                className={`py-3 text-sm font-medium transition-colors rounded-lg ${
-                  sidebarTab === 'animals'
-                    ? 'bg-[#5170FF] text-white'
-                    : 'text-[#D9D9DD] hover:bg-[#5170FF]/20'
-                }`}
-              >
-                Animals
-              </button>
-              <button
-                onClick={() => setSidebarTab('herd')}
-                className={`py-3 text-sm font-medium transition-colors rounded-lg ${
-                  sidebarTab === 'herd'
-                    ? 'bg-[#5170FF] text-white'
-                    : 'text-[#D9D9DD] hover:bg-[#5170FF]/20'
-                }`}
-              >
-                Herd
-              </button>
-            </div>
-          </div>
+        <nav className="flex-1 px-4 py-6 space-y-3">
+          <button className="w-full text-left px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow hover:bg-blue-500 transition border-2 border-blue-500">
+            Animals
+          </button>
 
-          {/* Animal List */}
-          <div className="bg-[#101D42] border border-[#5170FF]/30 rounded-lg p-4 flex-1">
-            <button className="w-full bg-[#5170FF] text-white px-4 py-3 rounded-lg text-left font-medium hover:bg-[#5170FF]/90 transition-colors">
-              Animal001
+          {/* Example placeholder animals */}
+          <div className="mt-4 space-y-2">
+            <button className="w-full text-left px-4 py-2 rounded-lg border border-gray-600 hover:bg-gray-700 transition">
+              Bella
+            </button>
+            <button className="w-full text-left px-4 py-2 rounded-lg border border-gray-600 hover:bg-gray-700 transition">
+              Duke
+            </button>
+            <button className="w-full text-left px-4 py-2 rounded-lg border border-gray-600 hover:bg-gray-700 transition">
+              Spot
             </button>
           </div>
-        </div>
+        </nav>
+      </aside>
 
-        {/* Main Content Area */}
-        <div className="col-span-3 h-[600px] flex flex-col">
-          {/* Content Tabs */}
-          <div className="bg-[#101D42] border border-[#5170FF]/30 rounded-lg mb-4">
-            <div className="grid grid-cols-3 border-b border-[#5170FF]/30">
-              <button
-                onClick={() => setActiveTab('general')}
-                className={`py-4 text-sm font-medium transition-colors rounded-lg ${
-                  activeTab === 'general'
-                    ? 'bg-[#5170FF] text-white'
-                    : 'text-[#D9D9DD] hover:bg-[#5170FF]/20'
-                }`}
-              >
-                General Data
-              </button>
-              <button
-                onClick={() => setActiveTab('health')}
-                className={`py-4 text-sm font-medium transition-colors rounded-lg ${
-                  activeTab === 'health'
-                    ? 'bg-[#5170FF] text-white'
-                    : 'text-[#D9D9DD] hover:bg-[#5170FF]/20'
-                }`}
-              >
-                Health Records
-              </button>
-              <button
-                onClick={() => setActiveTab('vet')}
-                className={`py-4 text-sm font-medium transition-colors ${
-                  activeTab === 'vet'
-                    ? 'bg-[#5170FF] text-white'
-                    : 'text-[#D9D9DD] hover:bg-[#5170FF]/20'
-                }`}
-              >
-                Vet Visits
-              </button>
-            </div>
+      {/* ---------------------- MAIN AREA ---------------------- */}
+      <main className="flex-1 p-8">
+        {/* ---------------------- HEADER ---------------------- */}
+        <header className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-2xl font-semibold">Welcome Back 👋</h2>
+            <p className="text-gray-400">{dateTime}</p>
           </div>
 
-          {/* Content Area */}
-          <div className="bg-[#101D42] border border-[#5170FF]/30 rounded-lg p-8 flex-1 overflow-y-auto">
-            {activeTab === 'general' && (
-              <div className="text-[#D9D9DD]">
-                <h2 className="text-white text-xl font-semibold mb-4">General Data</h2>
-                <p className="text-sm">General data content goes here</p>
-              </div>
-            )}
-            {activeTab === 'health' && (
-              <div className="text-[#D9D9DD]">
-                <h2 className="text-white text-xl font-semibold mb-4">Health Records</h2>
-                <p className="text-sm">Health records content goes here</p>
-              </div>
-            )}
-            {activeTab === 'vet' && (
-              <div className="text-[#D9D9DD]">
-                <h2 className="text-white text-xl font-semibold mb-4">Vet Visits</h2>
-                <p className="text-sm">Vet visits content goes here</p>
+          <button
+            onClick={logout}
+            className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition"
+          >
+            Logout
+          </button>
+        </header>
+
+        {/* ---------------------- QUICK STATS ---------------------- */}
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+          <div className="bg-gray-800 shadow-md border border-gray-700 rounded-2xl p-6">
+            <p className="text-gray-400 text-sm">Animals</p>
+            <h3 className="text-3xl font-bold mt-2">12</h3>
+          </div>
+
+          <div className="bg-gray-800 shadow-md border border-gray-700 rounded-2xl p-6">
+            <p className="text-gray-400 text-sm">Vaccinations Due</p>
+            <h3 className="text-3xl font-bold mt-2">3</h3>
+          </div>
+
+          <div className="bg-gray-800 shadow-md border border-gray-700 rounded-2xl p-6">
+            <p className="text-gray-400 text-sm">Upcoming Vet Visits</p>
+            <h3 className="text-3xl font-bold mt-2">1</h3>
+          </div>
+        </section>
+
+        {/* ---------------------- TABS ---------------------- */}
+        <div className="bg-gray-800 rounded-2xl shadow-md border border-gray-700">
+          <div className="border-b border-gray-700 flex">
+            {["general", "health", "vet"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 py-4 text-sm font-medium transition rounded-t-2xl ${
+                  activeTab === tab
+                    ? "bg-blue-600 text-white shadow-inner"
+                    : "text-gray-400 hover:bg-gray-700"
+                }`}
+              >
+                {tab === "general" && "General Data"}
+                {tab === "health" && "Health Records"}
+                {tab === "vet" && "Vet Visits"}
+              </button>
+            ))}
+          </div>
+
+          {/* ---------------------- TAB CONTENT ---------------------- */}
+          <div className="p-8 text-gray-300 min-h-[300px]">
+            {activeTab === "general" && <AnimalGeneralData />}
+
+            {activeTab === "health" && <HealthRecords />}
+
+            {activeTab === "vet" && (
+              <div>
+                <h3 className="text-xl font-semibold mb-4">Vet Visits</h3>
+                <p>Upcoming and past veterinary visits will be shown here.</p>
               </div>
             )}
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

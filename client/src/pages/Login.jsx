@@ -1,23 +1,48 @@
-import React from 'react'
-import Footer from '../components/Footer'
+import React, { useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import Footer from "../components/Footer";
 
 export default function Login() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
+
+    try {
+      await login(email, password);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#0b1730] text-white flex flex-col">
-      {/* Main content (no navbar — already on screen) */}
       <main className="flex-grow flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-md">
           <div className="bg-[#0f2650] border border-white/6 rounded-xl p-8 shadow-lg">
             <h1 className="text-2xl font-semibold mb-6">LOGIN</h1>
 
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+            {error && (
+              <div className="text-red-400 text-sm mb-3">{error}</div>
+            )}
+
+            <form className="space-y-4" onSubmit={handleSubmit}>
               <label className="flex flex-col text-sm">
                 <span className="mb-2 text-white/80">Email</span>
                 <input
                   type="email"
                   required
-                  className="px-3 py-2 rounded-md bg-white/5 placeholder-white/50 text-white border border-white/8 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  placeholder="you@farm.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="px-3 py-2 rounded-md bg-white/5 text-white border border-white/8"
                 />
               </label>
 
@@ -26,14 +51,15 @@ export default function Login() {
                 <input
                   type="password"
                   required
-                  className="px-3 py-2 rounded-md bg-white/5 placeholder-white/50 text-white border border-white/8 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="px-3 py-2 rounded-md bg-white/5 text-white border border-white/8"
                 />
               </label>
 
               <button
                 type="submit"
-                className="w-full mt-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-md transition-colors"
+                className="w-full mt-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-md"
               >
                 Sign In
               </button>
@@ -51,8 +77,7 @@ export default function Login() {
         </div>
       </main>
 
-      {/* Footer (reuses your Footer component and styles) */}
       <Footer />
     </div>
-  )
+  );
 }
