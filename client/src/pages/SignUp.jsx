@@ -1,10 +1,8 @@
 import React, { useState } from "react";
 import Footer from "../components/Footer";
-import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 export default function SignUp() {
-  const { register, login } = useAuth();
   const navigate = useNavigate();
 
   // form fields

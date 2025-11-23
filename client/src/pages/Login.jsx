@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import Footer from "../components/Footer";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login } = "yes!!"
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
