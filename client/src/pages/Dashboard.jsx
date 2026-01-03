@@ -3,12 +3,28 @@ import AnimalGeneralData from "../components/AnimalGeneralData";
 import HealthRecords from "../components/HealthRecords";
 import VetVisits from "../components/VetVisits";
 import Reproductions from "../components/Reproductions";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { getAnimalsForUser, createAnimal } from "../api/animal";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("general");
   const [dateTime, setDateTime] = useState("");
-  const [selectedHerd, setSelectedHerd] = useState("Default Herd");
-  const herds = ["Default Herd", "North Pasture", "Goat Pen", "Show Herd"];
+  const [selectedHerd, setSelectedHerd] = useState("");
+  const [herds, setHerds] = useState([]);
+  const [animals, setAnimals] = useState([]);
+  const [newAnimalName, setNewAnimalName] = useState("NewAnimal");
+  const [selectedAnimal, setSelectedAnimal] = useState("");
+
+  const [refreshFlag, setRefreshFlag] = useState(false);
+
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  }
 
   useEffect(() => {
     const updateTime = () => {
@@ -27,6 +43,48 @@ export default function Dashboard() {
     const timer = setInterval(updateTime, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  async function handleAddAnimal() {
+    if (newAnimalName.trim() === "") return;
+    setNewAnimalName("NewAnimal");
+
+    try {
+      const filler = {
+        herd_id: null,
+        name: "NewAnimal",
+        species: "Cow",
+        sex: "Male",
+        birthdate: "2025-10-29",
+        age: "0",
+        comments: "None",
+        weight: "0.00",
+        behavior: "None",
+        tag_id: "0000"
+      };
+
+      await createAnimal(filler)
+      console.log("created animal");
+
+      setAnimals(prev => [...prev, filler]);
+      setSelectedAnimal(filler);
+    } catch (err) {
+      console.error(err);
+    }
+
+  }
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await getAnimalsForUser();
+        setAnimals(res.data);
+      } catch (err) {
+        console.error(err.response?.data || err.message);
+      }
+    }
+
+    load();
+  }, [refreshFlag])
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-900 text-gray-100">
@@ -59,14 +117,33 @@ export default function Dashboard() {
           </button>
 
           <div className="mt-4 space-y-2">
-            {["Bella", "Duke", "Spot"].map((animal) => (
-              <button
-                key={animal}
-                className="w-full text-left px-4 py-2 rounded-lg border border-gray-600 hover:bg-gray-700 transition"
-              >
-                {animal}
-              </button>
-            ))}
+            {animals.map((animal) => {
+              const isSelected = selectedAnimal?.id === animal.id
+              
+              return(
+                <button
+                  key={animal.id}
+                  onClick={() => setSelectedAnimal(animal)}
+                  className={`w-full text-left px-4 py-2 rounded-lg transition border
+                    ${
+                      isSelected
+                        ? "bg-blue-600 border-blue-500 text-white shadow"
+                        : "border-gray-600 hover:bg-gray-700 text-gray-200"
+                      }
+                    `}
+                >
+                  {animal.name}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-4 flex flex-col gap-2 px-4">
+            <button
+              onClick={handleAddAnimal}
+              className="w-full px-3 py-2 bg-blue-600 rounded-lg text-white font-semibold hover:bg-blue-500"
+            >
+              Add
+            </button>
           </div>
         </nav>
       </aside>
@@ -79,19 +156,28 @@ export default function Dashboard() {
             <h2 className="text-2xl font-semibold">Welcome Back 👋</h2>
             <p className="text-gray-400">{dateTime}</p>
           </div>
+          <div>
+            <button
+            className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition mr-3"
+            
+          >
+            Settings
+          </button>
           <button
             className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition"
+            onClick={handleLogout}
           >
             Logout
           </button>
+          </div>
         </header>
 
         {/* QUICK STATS */}
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           {[
-            { title: "Animals", value: 12 },
-            { title: "Vaccinations Due", value: 3 },
-            { title: "Upcoming Vet Visits", value: 1 },
+            { title: "Animals", value: animals.length },
+            { title: "Vaccinations Due", value: null },
+            { title: "Upcoming Vet Visits", value: null },
           ].map((stat) => (
             <div
               key={stat.title}
@@ -124,10 +210,10 @@ export default function Dashboard() {
 
           {/* TAB CONTENT */}
           <div className="p-4 sm:p-6 text-gray-300 min-h-[400px] overflow-auto">
-            {activeTab === "general" && <AnimalGeneralData />}
-            {activeTab === "health" && <HealthRecords />}
-            {activeTab === "vet" && <VetVisits />}
-            {activeTab === "reproduction" && <Reproductions />}
+            {activeTab === "general" && <AnimalGeneralData animal={selectedAnimal} setRefreshFlag={setRefreshFlag} />}
+            {activeTab === "health" && <HealthRecords animal={selectedAnimal} />}
+            {activeTab === "vet" && <VetVisits animal={selectedAnimal} />}
+            {activeTab === "reproduction" && <Reproductions animal={selectedAnimal} />}
           </div>
         </div>
       </main>

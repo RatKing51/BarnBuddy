@@ -1,146 +1,121 @@
 import React, { useState } from "react";
 
-export default function Reproductions({ animals=[] }) {
-  const [record, setRecord] = useState({
-    damId: animals[0]?.id || "",
-    sireId: animals[0]?.id || "",
-    breedingDate: "",
-    dueDate: "",
-    outcome: "",
-    notes: "",
-  });
+export default function Reproductions({ animal }) {
+  const [breedingEvents, setBreedingEvents] = useState([]);
+  const [selectedBreedingIndex, setSelectedBreedingIndex] = useState(0);
+  const [expandedKids, setExpandedKids] = useState(true); // toggle kids visibility
 
-  const [history, setHistory] = useState([]);
+  const handleAddBreeding = () => {
+    setBreedingEvents([
+      ...breedingEvents,
+      { dam: "", buck: "", breedingDate: "", dueDate: "", outcome: "", notes: "", kids: [] },
+    ]);
+    setSelectedBreedingIndex(breedingEvents.length);
+  };
 
-  const addRecord = () => {
-    setHistory([...history, record]);
-    // Reset form
-    setRecord({
-      damId: animals[0]?.id || "",
-      sireId: animals[0]?.id || "",
-      breedingDate: "",
-      dueDate: "",
-      outcome: "",
-      notes: "",
-    });
+  const handleAddKid = () => {
+    const updated = [...breedingEvents];
+    updated[selectedBreedingIndex].kids.push({ name: "", sex: "", birthDate: "", birthWeight: "", health: "", notes: "" });
+    setBreedingEvents(updated);
   };
 
   return (
-    <div className="flex flex-col gap-6 h-full">
-      {/* Top Grid */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Left Panel: Dam, Sire, Breeding, Due */}
-        <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-4">
-          <div>
-            <label className="block text-gray-400 text-sm mb-1">Dam</label>
-            <select
-              value={record.damId}
-              onChange={(e) => setRecord({ ...record, damId: e.target.value })}
-              className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
-            >
-              {animals.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-gray-400 text-sm mb-1">Sire</label>
-            <select
-              value={record.sireId}
-              onChange={(e) => setRecord({ ...record, sireId: e.target.value })}
-              className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
-            >
-              {animals.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-gray-400 text-sm mb-1">Breeding Date</label>
-            <input
-              type="date"
-              value={record.breedingDate}
-              onChange={(e) =>
-                setRecord({ ...record, breedingDate: e.target.value })
-              }
-              className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-400 text-sm mb-1">Due Date</label>
-            <input
-              type="date"
-              value={record.dueDate}
-              onChange={(e) => setRecord({ ...record, dueDate: e.target.value })}
-              className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
-            />
-          </div>
-        </div>
-
-        {/* Right Panel: Outcome + Notes */}
-        <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 flex flex-col space-y-4">
-          <div>
-            <label className="block text-gray-400 text-sm mb-1">Outcome</label>
-            <input
-              type="text"
-              value={record.outcome}
-              onChange={(e) => setRecord({ ...record, outcome: e.target.value })}
-              className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
-            />
-          </div>
-
-          <div className="flex-1">
-            <label className="block text-gray-400 text-sm mb-1">Notes</label>
-            <textarea
-              value={record.notes}
-              onChange={(e) => setRecord({ ...record, notes: e.target.value })}
-              className="w-full h-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 resize-none"
-            />
-          </div>
-        </div>
+    <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-4 p-2">
+      {/* Breeding Events Selector */}
+      <div className="bg-gray-800 p-4 rounded-2xl border border-gray-700 flex flex-col gap-2">
+        <h3 className="text-gray-400 font-semibold">Breeding Events</h3>
+        {breedingEvents.map((_, idx) => (
+          <button
+            key={idx}
+            onClick={() => setSelectedBreedingIndex(idx)}
+            className={`px-3 py-2 rounded-lg border text-xs md:text-sm ${
+              selectedBreedingIndex === idx ? "bg-blue-600 border-blue-500 text-white" : "bg-gray-700 border-gray-600 text-gray-100 hover:bg-gray-600"
+            }`}
+          >
+            Event {idx + 1}
+          </button>
+        ))}
+        <button
+          onClick={handleAddBreeding}
+          className="px-3 py-2 mt-2 rounded-lg border border-gray-600 bg-gray-700 text-gray-100 hover:bg-gray-600"
+        >
+          + Add Breeding Event
+        </button>
       </div>
 
-      {/* Bottom: History Table */}
-      <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 overflow-x-auto">
-        <h3 className="text-gray-400 font-semibold mb-4">Reproduction History</h3>
-        <table className="w-full text-sm text-gray-200">
-          <thead>
-            <tr className="border-b border-gray-700">
-              <th className="py-2 px-3 text-left">Dam</th>
-              <th className="py-2 px-3 text-left">Sire</th>
-              <th className="py-2 px-3 text-left">Breeding Date</th>
-              <th className="py-2 px-3 text-left">Due Date</th>
-              <th className="py-2 px-3 text-left">Outcome</th>
-              <th className="py-2 px-3 text-left">Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {history.map((h, idx) => (
-              <tr key={idx} className="border-b border-gray-700">
-                <td className="py-2 px-3">{animals.find(a => a.id === h.damId)?.name}</td>
-                <td className="py-2 px-3">{animals.find(a => a.id === h.sireId)?.name}</td>
-                <td className="py-2 px-3">{h.breedingDate}</td>
-                <td className="py-2 px-3">{h.dueDate}</td>
-                <td className="py-2 px-3">{h.outcome}</td>
-                <td className="py-2 px-3">{h.notes}</td>
-              </tr>
+      {/* Event Details */}
+      <div className="col-span-2 bg-gray-800 p-4 rounded-2xl border border-gray-700 flex flex-col gap-4">
+        {breedingEvents[selectedBreedingIndex] && (
+          <>
+            <h3 className="text-gray-400 font-semibold">Event Details</h3>
+            {["dam", "buck", "breedingDate", "dueDate", "outcome", "notes"].map((field) => (
+              <div key={field}>
+                <label className="block text-gray-400 text-sm mb-1">{field.charAt(0).toUpperCase() + field.slice(1)}</label>
+                {field === "notes" ? (
+                  <textarea
+                    value={breedingEvents[selectedBreedingIndex][field]}
+                    onChange={(e) => {
+                      const updated = [...breedingEvents];
+                      updated[selectedBreedingIndex][field] = e.target.value;
+                      setBreedingEvents(updated);
+                    }}
+                    className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
+                  />
+                ) : (
+                  <input
+                    value={breedingEvents[selectedBreedingIndex][field]}
+                    onChange={(e) => {
+                      const updated = [...breedingEvents];
+                      updated[selectedBreedingIndex][field] = e.target.value;
+                      setBreedingEvents(updated);
+                    }}
+                    className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
+                  />
+                )}
+              </div>
             ))}
-          </tbody>
-        </table>
 
-        <button
-          onClick={addRecord}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition"
-        >
-          Add Record
-        </button>
+            {/* Kids Section */}
+            <div className="mt-4">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="text-gray-400 font-semibold">Offspring / Kids</h4>
+                <button
+                  onClick={() => setExpandedKids(!expandedKids)}
+                  className="px-2 py-1 text-xs bg-gray-700 rounded border border-gray-600 hover:bg-gray-600"
+                >
+                  {expandedKids ? "Collapse" : "Expand"}
+                </button>
+              </div>
+
+              {expandedKids &&
+                breedingEvents[selectedBreedingIndex].kids.map((kid, idx) => (
+                  <div key={idx} className="bg-gray-700 p-3 rounded-lg mb-2 border border-gray-600">
+                    {["name", "sex", "birthDate", "birthWeight", "health", "notes"].map((field) => (
+                      <div key={field} className="mb-1">
+                        <label className="block text-gray-300 text-xs">{field.charAt(0).toUpperCase() + field.slice(1)}</label>
+                        <input
+                          value={kid[field]}
+                          onChange={(e) => {
+                            const updated = [...breedingEvents];
+                            updated[selectedBreedingIndex].kids[idx][field] = e.target.value;
+                            setBreedingEvents(updated);
+                          }}
+                          className="w-full bg-gray-600 text-gray-100 border border-gray-500 rounded px-2 py-1 text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+
+              <button
+                onClick={handleAddKid}
+                className="px-3 py-2 mt-2 rounded-lg border border-gray-600 bg-gray-700 text-gray-100 hover:bg-gray-600"
+              >
+                + Add Kid
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -1,22 +1,16 @@
 import React, { useState } from "react";
 
-export default function VetVisits() {
+export default function VetVisits({ animal }) {
   const [selectedVisit, setSelectedVisit] = useState({
-    date: "11/01/2025",
-    vet: "Dr. Smith",
-    reason: "Checkup",
-    notes: "Healthy overall",
+    date: "",
+    vet: "",
+    reason: "",
+    notes: "",
   });
 
-  const upcomingVisits = [
-    { date: "11/20/2025", vet: "Dr. Johnson" },
-    { date: "12/05/2025", vet: "Dr. Lee" },
-  ];
+  const upcomingVisits = [];
 
-  const pastVisits = [
-    { date: "09/15/2025", vet: "Dr. Smith" },
-    { date: "10/10/2025", vet: "Dr. Brown" },
-  ];
+  const pastVisits = [];
 
   const addVisit = () => {
     const newVisit = { date: "New Date", vet: "New Vet" };
