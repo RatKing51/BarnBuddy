@@ -1,0 +1,156 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "../api/axios"; // your axios instance
+
+export default function HerdSettings() {
+  const [herds, setHerds] = useState([]);
+  const [selectedHerd, setSelectedHerd] = useState(null);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+
+  const navigate = useNavigate();
+
+  // fetch herds
+  useEffect(() => {
+    fetchHerds();
+  }, []);
+
+  const fetchHerds = async () => {
+    const res = await axios.get("/herds");
+    setHerds(res.data);
+  };
+
+  const selectHerd = (herd) => {
+    setSelectedHerd(herd);
+    setName(herd.name);
+    setDescription(herd.description || "");
+  };
+
+  const saveHerd = async () => {
+    if (!selectedHerd) return;
+
+    await axios.put(`/herds/${selectedHerd.id}`, {
+      name,
+      description,
+    });
+
+    fetchHerds();
+  };
+
+  const deleteHerd = async () => {
+    if (!selectedHerd) return;
+
+    if (!window.confirm("Delete this herd? This cannot be undone.")) return;
+
+    await axios.delete(`/herds/${selectedHerd.id}`);
+
+    setSelectedHerd(null);
+    setName("");
+    setDescription("");
+    fetchHerds();
+  };
+
+  const createHerd = async () => {
+    const res = await axios.post("/herds", {
+      name: "New Herd",
+      description: "",
+    });
+
+    fetchHerds();
+    selectHerd(res.data);
+  };
+
+  return (
+    <div className="flex bg-gray-900 text-gray-100 w-full h-screen">
+      
+      {/* Sidebar */}
+      <div className="w-64 border-r border-gray-700 p-4">
+        <h2 className="text-lg font-semibold mb-4">Herds</h2>
+        <button
+            className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition m-5"
+            onClick={() => navigate("/dashboard")}
+          >
+            Back to Dashboard
+          </button>
+        <div className="space-y-2">
+          {herds.map((herd) => (
+            <div
+              key={herd.id}
+              onClick={() => selectHerd(herd)}
+              className={`p-2 rounded-xl cursor-pointer ${
+                selectedHerd?.id === herd.id
+                  ? "bg-blue-600"
+                  : "hover:bg-gray-700"
+              }`}
+            >
+              {herd.name}
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={createHerd}
+          className="mt-4 w-full bg-green-600 hover:bg-green-700 py-2 rounded-xl"
+        >
+          + New Herd
+        </button>
+      </div>
+
+      {/* Main */}
+      <div className="flex-1 p-6">
+        {!selectedHerd ? (
+          <div className="text-gray-400">
+            Select a herd to edit settings
+          </div>
+        ) : (
+          <>
+            <h2 className="text-xl font-semibold mb-6">
+              Edit Herd
+            </h2>
+
+            <div className="space-y-4 max-w-lg">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">
+                  Herd Name
+                </label>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2"
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={saveHerd}
+                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+                >
+                  Save Changes
+                </button>
+
+                <button
+                  onClick={deleteHerd}
+                  className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded"
+                >
+                  Delete Herd
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

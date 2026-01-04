@@ -19,7 +19,7 @@ export default function VetVisits({ animal }) {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-full gap-6">
+    <div className="flex flex-col lg:flex-row h-full gap-6 min-h-screen">
 
       {/* Left Panel */}
       <div className="w-full lg:w-1/4 flex flex-col gap-4">
@@ -75,7 +75,7 @@ export default function VetVisits({ animal }) {
       </div>
 
       {/* Right Panel: Visit Details */}
-      <div className="w-full lg:w-3/4 bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-5">
+      <div className="w-full g:w-3/4 bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-5 h-min">
         <h3 className="text-gray-400 font-semibold mb-1 text-lg">
           Visit Details
         </h3>

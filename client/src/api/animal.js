@@ -17,3 +17,6 @@ export const deleteAnimal = (id) =>
 
 export const getAnimalsForHerd = (herdId) =>
     api.get(`/animals/herd/${herdId}`);
+
+export const getAnimalsUnassigned = () =>
+    api.get("/animals/unassigned");

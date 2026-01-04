@@ -3,6 +3,7 @@ import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { toast } from "react-toastify";
 
 export default function Login() {
   const { login, loading, user } = useAuth();
@@ -21,11 +22,11 @@ export default function Login() {
   async function handleSubmit(e) {
     e.preventDefault();
     setMessage("");
-    
     try {
       await login(email, password);
+      toast.success("Logged in!")
     } catch (err) {
-      setMessage(err.message);
+      toast.error(err.message);
     }
   }
 

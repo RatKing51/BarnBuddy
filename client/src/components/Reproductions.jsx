@@ -20,9 +20,9 @@ export default function Reproductions({ animal }) {
   };
 
   return (
-    <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-4 p-2">
+    <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-4 p-2 min-h-screen">
       {/* Breeding Events Selector */}
-      <div className="bg-gray-800 p-4 rounded-2xl border border-gray-700 flex flex-col gap-2">
+      <div className="bg-gray-800 p-4 rounded-2xl border border-gray-700 flex flex-col gap-2 h-min">
         <h3 className="text-gray-400 font-semibold">Breeding Events</h3>
         {breedingEvents.map((_, idx) => (
           <button
@@ -44,7 +44,7 @@ export default function Reproductions({ animal }) {
       </div>
 
       {/* Event Details */}
-      <div className="col-span-2 bg-gray-800 p-4 rounded-2xl border border-gray-700 flex flex-col gap-4">
+      <div className="col-span-2 bg-gray-800 p-4 rounded-2xl border border-gray-700 flex flex-col gap-4 h-min">
         {breedingEvents[selectedBreedingIndex] && (
           <>
             <h3 className="text-gray-400 font-semibold">Event Details</h3>

@@ -8,14 +8,17 @@ import Dashboard from "./pages/Dashboard";
 import Pricing from "./pages/Pricing";
 import About from "./pages/AboutUs";
 import PrivateRoute from "./routes/PrivateRoute";
+import HerdSettings from "./pages/HerdSettings";
+import { ToastContainer } from "react-toastify";
 
 function AppContent() {
   const location = useLocation(); // ✅ safe because AppContent is inside Router
-  const hiddenPaths = ["/dashboard"];
+  const hiddenPaths = ["/dashboard", "/settings/herd"];
   const showShell = !hiddenPaths.includes(location.pathname);
 
   return (
     <>
+      <ToastContainer autoClose={1000} />
       {showShell && <Navbar />}
       <Routes>
         <Route path="/" element={<Landing />} />
@@ -27,6 +30,7 @@ function AppContent() {
         {/* Protected routes */}
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/settings/herd" element={<HerdSettings />} />
         </Route>
       </Routes>
     </>

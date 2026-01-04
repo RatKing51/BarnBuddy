@@ -5,17 +5,21 @@ import VetVisits from "../components/VetVisits";
 import Reproductions from "../components/Reproductions";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { getAnimalsForUser, createAnimal } from "../api/animal";
+import {
+  createAnimal,
+  getAnimalsForHerd,
+  getAnimalsUnassigned,
+} from "../api/animal";
+import { getHerdsForUser } from "../api/herd";
+import { toast } from "react-toastify";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("general");
   const [dateTime, setDateTime] = useState("");
-  const [selectedHerd, setSelectedHerd] = useState("");
+  const [selectedHerd, setSelectedHerd] = useState(null);
   const [herds, setHerds] = useState([]);
   const [animals, setAnimals] = useState([]);
-  const [newAnimalName, setNewAnimalName] = useState("NewAnimal");
-  const [selectedAnimal, setSelectedAnimal] = useState("");
-
+  const [selectedAnimal, setSelectedAnimal] = useState(null);
   const [refreshFlag, setRefreshFlag] = useState(false);
 
   const { logout } = useAuth();
@@ -24,8 +28,10 @@ export default function Dashboard() {
   const handleLogout = () => {
     logout();
     navigate("/login");
-  }
+    toast.success("Logged out!");
+  };
 
+  // Update clock every second
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -44,50 +50,101 @@ export default function Dashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  async function handleAddAnimal() {
-    if (newAnimalName.trim() === "") return;
-    setNewAnimalName("NewAnimal");
-
-    try {
-      const filler = {
-        herd_id: null,
-        name: "NewAnimal",
-        species: "Cow",
-        sex: "Male",
-        birthdate: "2025-10-29",
-        age: "0",
-        comments: "None",
-        weight: "0.00",
-        behavior: "None",
-        tag_id: "0000"
-      };
-
-      await createAnimal(filler)
-      console.log("created animal");
-
-      setAnimals(prev => [...prev, filler]);
-      setSelectedAnimal(filler);
-    } catch (err) {
-      console.error(err);
-    }
-
-  }
-
+  // Load herds once on mount
   useEffect(() => {
-    async function load() {
+    async function loadHerds() {
       try {
-        const res = await getAnimalsForUser();
-        setAnimals(res.data);
+        const res = await getHerdsForUser();
+        setHerds(res.data);
+
+        // Default herd selection
+        setSelectedHerd((prev) => {
+          if (prev) return prev;
+          return res.data.length > 0
+            ? res.data[0]
+            : { id: "unassigned", name: "Unassigned" };
+        });
       } catch (err) {
-        console.error(err.response?.data || err.message);
+        console.error(err);
+        toast.error("Failed to load herds");
       }
     }
 
-    load();
-  }, [refreshFlag])
+    loadHerds();
+  }, []);
+
+  // Load animals whenever herd changes or refreshFlag toggles
+  useEffect(() => {
+    async function loadAnimals() {
+      if (!selectedHerd) return;
+
+      try {
+        let animalsData = [];
+        if (selectedHerd.id === "unassigned") {
+          const res = await getAnimalsUnassigned(); // always use dedicated unassigned endpoint
+          animalsData = res.data;
+        } else {
+          const res = await getAnimalsForHerd(selectedHerd.id);
+          animalsData = res.data;
+        }
+        setAnimals(animalsData);
+      } catch (err) {
+        console.error(err.response?.data || err.message);
+        toast.error("Animals failed to load");
+      }
+    }
+
+    loadAnimals();
+  }, [selectedHerd, refreshFlag]);
+
+  useEffect(() => {
+    setSelectedAnimal("")
+  }, [selectedHerd])
+
+  // Add new animal
+  const handleAddAnimal = async () => {
+    if (!selectedHerd) return;
+
+    try {
+      const filler = {
+        herd_id: selectedHerd.id === "unassigned" ? null : selectedHerd.id,
+        name: "NewAnimal",
+        species: "Cow",
+        sex: "Male",
+        birthdate: "2009-10-29",
+        age: 1,
+        comments: "None",
+        weight: "0.00",
+        behavior: "None",
+        tag_id: "0000",
+      };
+
+      await createAnimal(filler);
+      toast.success("Created new animal!");
+      setRefreshFlag((prev) => !prev);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to create new animal!");
+    }
+  };
+
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") {
+        setSelectedAnimal(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleEsc);
+
+    return () => {
+      window.removeEventListener("keydown", handleEsc);
+    };
+  }, []);
+
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-gray-900 text-gray-100">
+    <div className="flex flex-col md:flex-row max-h-screen bg-gray-900 text-gray-100">
       {/* SIDEBAR */}
       <aside className="w-full md:w-64 bg-gray-800 shadow-lg border-b md:border-b-0 md:border-r border-gray-700 flex flex-col flex-shrink-0">
         <div className="px-6 py-6 border-b border-gray-700">
@@ -99,44 +156,51 @@ export default function Dashboard() {
 
         <div className="px-4 py-3 border-b border-gray-700">
           <select
-            value={selectedHerd}
-            onChange={(e) => setSelectedHerd(e.target.value)}
+            value={selectedHerd ? selectedHerd.id : ""}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === "unassigned") {
+                setSelectedHerd({ id: "unassigned", name: "Unassigned" });
+              } else {
+                const herd = herds.find((h) => String(h.id) === value);
+                setSelectedHerd(herd);
+              }
+            }}
             className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-gray-100 outline-none cursor-pointer"
           >
+            <option value="" disabled>
+              Select Herd
+            </option>
+            <option value="unassigned">Unassigned Animals</option>
             {herds.map((herd) => (
-              <option key={herd} value={herd} className="bg-gray-800 text-gray-100">
-                {herd}
+              <option key={herd.id} value={String(herd.id)}>
+                {herd.name}
               </option>
             ))}
           </select>
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-3 overflow-y-auto">
-          <button className="w-full text-left px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow hover:bg-blue-500 transition border-2 border-blue-500">
+          <button className="w-full text-left px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold shad transition border-2 border-blue-500">
             Animals
           </button>
 
           <div className="mt-4 space-y-2">
-            {animals.map((animal) => {
-              const isSelected = selectedAnimal?.id === animal.id
-              
-              return(
-                <button
-                  key={animal.id}
-                  onClick={() => setSelectedAnimal(animal)}
-                  className={`w-full text-left px-4 py-2 rounded-lg transition border
-                    ${
-                      isSelected
-                        ? "bg-blue-600 border-blue-500 text-white shadow"
-                        : "border-gray-600 hover:bg-gray-700 text-gray-200"
-                      }
-                    `}
-                >
-                  {animal.name}
-                </button>
-              );
-            })}
+            {animals.map((animal) => (
+              <button
+                key={animal.id}
+                onClick={() => setSelectedAnimal(animal)}
+                className={`w-full text-left px-4 py-2 rounded-lg transition border cursor-pointer ${
+                  selectedAnimal?.id === animal.id
+                    ? "bg-blue-600 border-blue-500 text-white shadow"
+                    : "border-gray-600 hover:bg-gray-700 text-gray-200"
+                }`}
+              >
+                {animal.name}
+              </button>
+            ))}
           </div>
+
           <div className="mt-4 flex flex-col gap-2 px-4">
             <button
               onClick={handleAddAnimal}
@@ -149,7 +213,7 @@ export default function Dashboard() {
       </aside>
 
       {/* MAIN AREA */}
-      <main className="flex-1 p-6 md:p-8 overflow-auto">
+      <main className="flex-1 p-6 md:p-8 overflow-y-scroll">
         {/* HEADER */}
         <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
           <div className="mb-4 sm:mb-0">
@@ -158,17 +222,17 @@ export default function Dashboard() {
           </div>
           <div>
             <button
-            className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition mr-3"
-            
-          >
-            Settings
-          </button>
-          <button
-            className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition"
-            onClick={handleLogout}
-          >
-            Logout
-          </button>
+              className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition mr-3"
+              onClick={() => navigate("/settings/herd")}
+            >
+              Herd Settings
+            </button>
+            <button
+              className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition"
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
           </div>
         </header>
 
@@ -189,32 +253,53 @@ export default function Dashboard() {
           ))}
         </section>
 
-        {/* TABS */}
-        <div className="bg-gray-800 rounded-2xl shadow-md border border-gray-700 flex flex-col">
-          <div className="border-b border-gray-700 flex flex-wrap">
-            {["general", "health", "vet", "reproduction"].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-3 text-sm font-medium transition rounded-t-2xl ${
-                  activeTab === tab ? "bg-blue-600 text-white shadow-inner" : "text-gray-400 hover:bg-gray-700"
-                }`}
-              >
-                {tab === "general" && "General Data"}
-                {tab === "health" && "Health Records"}
-                {tab === "vet" && "Vet Visits"}
-                {tab === "reproduction" && "Reproduction"}
-              </button>
-            ))}
-          </div>
+        {/* ANIMAL DATA */}
+        <div className="bg-gray-800 rounded-2xl shadow-md border border-gray-700 flex flex-col min-h-screen">
+          {!selectedAnimal ? (
+            <div className="flex flex-1 items-center justify-center text-gray-400 text-lg">
+              No animal selected
+            </div>
+          ) : (
+            <>
+              {/* TABS */}
+              <div className="border-b border-gray-700 flex flex-wrap">
+                {["general", "health", "vet", "reproduction"].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`flex-1 py-3 text-sm font-medium transition rounded-t-2xl ${
+                      activeTab === tab
+                        ? "bg-blue-600 text-white shadow-inner"
+                        : "text-gray-400 hover:bg-gray-700"
+                    }`}
+                  >
+                    {tab === "general" && "General Data"}
+                    {tab === "health" && "Health Records"}
+                    {tab === "vet" && "Vet Visits"}
+                    {tab === "reproduction" && "Reproduction"}
+                  </button>
+                ))}
+              </div>
 
-          {/* TAB CONTENT */}
-          <div className="p-4 sm:p-6 text-gray-300 min-h-[400px] overflow-auto">
-            {activeTab === "general" && <AnimalGeneralData animal={selectedAnimal} setRefreshFlag={setRefreshFlag} />}
-            {activeTab === "health" && <HealthRecords animal={selectedAnimal} />}
-            {activeTab === "vet" && <VetVisits animal={selectedAnimal} />}
-            {activeTab === "reproduction" && <Reproductions animal={selectedAnimal} />}
-          </div>
+              {/* TAB CONTENT */}
+              <div className="p-4 sm:p-6 text-gray-300 overflow-auto">
+                {activeTab === "general" && (
+                  <AnimalGeneralData
+                    animal={selectedAnimal}
+                    setRefreshFlag={setRefreshFlag}
+                    setSelectedAnimal={setSelectedAnimal}
+                    herds={herds}
+                    selectedHerd={selectedHerd}
+                  />
+                )}
+                {activeTab === "health" && <HealthRecords animal={selectedAnimal} />}
+                {activeTab === "vet" && <VetVisits animal={selectedAnimal} />}
+                {activeTab === "reproduction" && (
+                  <Reproductions animal={selectedAnimal} />
+                )}
+              </div>
+            </>
+          )}
         </div>
       </main>
     </div>
