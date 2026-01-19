@@ -14,6 +14,13 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
   const [behavior, setBehavior] = useState("");
   const [herdId, setHerdId] = useState("");
   const [animalId, setAnimalId] = useState("");
+  const sexOptionsBySpecies = {
+    Cow: ["Cow", "Heifer", "Steer", "Bull", "Calf"],
+    Sheep: ["Ewe", "Ram", "Lamb", "Wether"],
+    Goat: ["Doe", "Buck", "Wether", "Yearling"],
+    Swine: ["Gilt", "Sow", "Boar", "Barrow", "Stag"],
+  };
+
 
   function calculateAge(dob) {
     if (!dob) return "";
@@ -159,12 +166,20 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
           </div>
           <div>
             <label className="block text-gray-400 text-sm mb-1">Sex</label>
-            <input
+            <select
               value={sex}
-              onBlur={() => saveAnimal()}
               onChange={(e) => setSex(e.target.value)}
+              onBlur={() => saveAnimal()}
               className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
-            />
+            >
+              <option value="">Select Sex</option>
+
+              {(sexOptionsBySpecies[species] || []).map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -216,12 +231,20 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
 
         <div>
           <label className="block text-gray-400 text-sm mb-1">Species</label>
-          <input
+          <select
             value={species}
+            onChange={(e) => {
+              setSpecies(e.target.value); 
+              setSex("")}
+            }
             onBlur={() => saveAnimal()}
-            onChange={(e) => setSpecies(e.target.value)}
             className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
-          />
+          >
+            <option value="Cow">Cow</option>
+            <option value="Sheep">Sheep</option>
+            <option value="Goat">Goat</option>
+            <option value="Swine">Swine</option>
+          </select>
         </div>
 
         <div>
