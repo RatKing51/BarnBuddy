@@ -141,25 +141,17 @@ router.get("/herd/:herdId", authMiddleware, async (req, res) => {
 const upload = require("../middleware/upload");
 
 router.post(
-  "/:id/upload",
-  authMiddleware,
+  "/animals/:id/upload",
   upload.single("image"),
   async (req, res) => {
     try {
       const animalId = req.params.id;
-      if (!req.file) {
-        return res.status(400).json({ error: "No image uploaded" });
-      }
       const imagePath = `/uploads/animals/${req.file.filename}`;
 
-      const updateResult = await pool.query(
-        "UPDATE animals SET image_url = $1 WHERE id = $2 AND user_id = $3 RETURNING id",
-        [imagePath, animalId, req.user.id]
+      await pool.query(
+        "UPDATE animals SET image_url = $1 WHERE id = $2",
+        [imagePath, animalId]
       );
-
-      if (updateResult.rows.length === 0) {
-        return res.status(404).json({ error: "Animal not found" });
-      }
 
       res.json({ message: "Image uploaded", image_url: imagePath });
 
