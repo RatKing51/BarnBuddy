@@ -18,6 +18,7 @@ app.use("/api/vaccinations", vaccinationRoutes);
 app.use("/api/vetVisits", vetVisitRoutes);
 app.use("/api/healthEvents", healthEventRoutes);
 app.use("/auth", authRoutes);
+app.use("/uploads", express.static("uploads"));
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))

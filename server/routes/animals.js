@@ -51,7 +51,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
 
 // Create a new animal
 router.post("/", authMiddleware, async (req, res) => {
-    let { herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id } = req.body;
+    let { herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url } = req.body;
 
     // Handle "unassigned" herd
     herd_id = herd_id === "unassigned" ? null : herd_id;
@@ -59,10 +59,10 @@ router.post("/", authMiddleware, async (req, res) => {
     try {
         const result = await pool.query(
             `INSERT INTO animals
-            (user_id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+            (user_id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
             RETURNING *`,
-            [req.user.id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id]
+            [req.user.id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -74,17 +74,17 @@ router.post("/", authMiddleware, async (req, res) => {
 // Update an existing animal
 router.put("/:id", authMiddleware, async (req, res) => {
     const { id } = req.params;
-    let { herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id } = req.body;
+    let { herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url } = req.body;
 
     // Handle "unassigned" herd
     herd_id = herd_id === "unassigned" ? null : herd_id;
 
     try {
         const result = await pool.query(
-            `UPDATE animals SET herd_id=$1, name=$2, species=$3, sex=$4, birthdate=$5, age=$6, comments=$7, weight=$8, behavior=$9, tag_id=$10
+            `UPDATE animals SET herd_id=$1, name=$2, species=$3, sex=$4, birthdate=$5, age=$6, comments=$7, weight=$8, behavior=$9, tag_id=$10, image_url = $13
              WHERE id=$11 AND user_id=$12
              RETURNING *`,
-            [herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, id, req.user.id]
+            [herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, id, req.user.id, image_url]
         );
 
         if (result.rows.length === 0) return res.status(404).json({ error: "Animal not found" });
@@ -137,5 +137,30 @@ router.get("/herd/:herdId", authMiddleware, async (req, res) => {
         res.status(500).json({ error: "Failed to get animals for herd" });
     }
 });
+
+const upload = require("../middleware/upload");
+
+router.post(
+  "/animals/:id/upload",
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      const animalId = req.params.id;
+      const imagePath = `/uploads/animals/${req.file.filename}`;
+
+      await pool.query(
+        "UPDATE animals SET image_url = $1 WHERE id = $2",
+        [imagePath, animalId]
+      );
+
+      res.json({ message: "Image uploaded", image_url: imagePath });
+
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Upload failed" });
+    }
+  }
+);
+
 
 module.exports = router;
