@@ -1,4 +1,4 @@
-import { updateAnimal, deleteAnimal } from "../api/animal";
+import { updateAnimal, deleteAnimal, uploadAnimalImage, removeAnimalImage } from "../api/animal";
 import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from "react-toastify";
 
@@ -14,6 +14,9 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
   const [behavior, setBehavior] = useState("");
   const [herdId, setHerdId] = useState("");
   const [animalId, setAnimalId] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isRemovingImage, setIsRemovingImage] = useState(false);
   const sexOptionsBySpecies = {
     Cow: ["Cow", "Heifer", "Steer", "Bull", "Calf"],
     Sheep: ["Ewe", "Ram", "Lamb", "Wether"],
@@ -52,6 +55,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
     setBehavior(animal.behavior || "");
     setHerdId(animal.herd_id === null ? "unassigned" : String(animal.herd_id));
     setAnimalId(animal.id || "");
+    setImageUrl(animal.image_url || "");
   }, [animal]);
 
   // Save Animal to DB
@@ -70,6 +74,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
         weight,
         behavior,
         tag_id: tag,
+        image_url: imageUrl,
         ...updatedData, // merge in changes like herdId
       };
 
@@ -79,6 +84,53 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
     } catch (err) {
       console.error("Failed to update animal:", err.response?.data || err.message);
       toast.error("Failed to save animal data!");
+    }
+  }
+
+
+
+  const imageSrc = imageUrl
+    ? `http://localhost:5000${imageUrl}`
+    : "https://via.placeholder.com/600";
+
+  async function handleImageUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file || !animal?.id) return;
+
+    try {
+      setIsUploadingImage(true);
+      const { data } = await uploadAnimalImage(animal.id, file);
+      setImageUrl(data.image_url);
+      setRefreshFlag((prev) => !prev);
+      toast.success("Image uploaded successfully!");
+    } catch (err) {
+      console.error("Image upload failed:", err.response?.data || err.message);
+      toast.error("Failed to upload image.");
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = "";
+    }
+  }
+
+
+
+  async function handleRemoveImage() {
+    if (!animal?.id || !imageUrl) return;
+
+    const confirmDeleteImage = window.confirm(`Remove image for ${animal.name}?`);
+    if (!confirmDeleteImage) return;
+
+    try {
+      setIsRemovingImage(true);
+      await removeAnimalImage(animal.id);
+      setImageUrl("");
+      setRefreshFlag((prev) => !prev);
+      toast.success("Image removed.");
+    } catch (err) {
+      console.error("Image removal failed:", err.response?.data || err.message);
+      toast.error("Failed to remove image.");
+    } finally {
+      setIsRemovingImage(false);
     }
   }
 
@@ -196,16 +248,36 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
 
       {/* Top Right - Picture */}
       <div className="bg-gray-800 p-0 rounded-2xl border border-gray-700 overflow-hidden">
-        <div className="w-full h-full relative group">
+        <label className="w-full h-full relative group block cursor-pointer">
           <img
-            src="https://via.placeholder.com/600"
-            alt="Animal"
+            src={imageSrc}
+            alt={`${name || "Animal"} profile`}
             className="w-full h-full object-cover transition duration-300 group-hover:opacity-70"
           />
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 bg-black bg-opacity-30 text-white text-lg font-semibold">
-            Change Picture
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageUpload}
+            disabled={isUploadingImage}
+          />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition duration-300 bg-black/40 text-white text-lg font-semibold">
+            <span>{isUploadingImage ? "Uploading..." : "Change Picture"}</span>
+            {imageUrl && (
+              <button
+                type="button"
+                className="px-3 py-1 text-sm font-medium rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-60"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleRemoveImage();
+                }}
+                disabled={isRemovingImage}
+              >
+                {isRemovingImage ? "Removing..." : "Remove Image"}
+              </button>
+            )}
           </div>
-        </div>
+        </label>
       </div>
 
       {/* Bottom Left - Quick Dates */}
