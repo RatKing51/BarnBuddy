@@ -20,3 +20,18 @@ export const getAnimalsForHerd = (herdId) =>
 
 export const getAnimalsUnassigned = () =>
     api.get("/animals/unassigned");
+
+export const uploadAnimalImage = (id, file) => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    return api.post(`/animals/${id}/upload`, formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
+};
+
+
+export const removeAnimalImage = (id) =>
+    api.delete(`/animals/${id}/upload`);

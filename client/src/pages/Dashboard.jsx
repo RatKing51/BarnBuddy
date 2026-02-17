@@ -22,6 +22,21 @@ export default function Dashboard() {
   const [selectedAnimal, setSelectedAnimal] = useState(null);
   const [refreshFlag, setRefreshFlag] = useState(false);
 
+  const handleAnimalsMenuClick = () => {
+    setActiveTab("general");
+
+    if (!animals.length) {
+      setSelectedAnimal(null);
+      toast.info("No animals yet. Add one to get started.");
+      return;
+    }
+
+    setSelectedAnimal((current) => {
+      if (current?.id) return current;
+      return animals[0];
+    });
+  };
+
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -181,7 +196,11 @@ export default function Dashboard() {
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-3 overflow-y-auto">
-          <button className="w-full text-left px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold shad transition border-2 border-blue-500">
+          <button
+            type="button"
+            onClick={handleAnimalsMenuClick}
+            className="w-full text-left px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold shad transition border-2 border-blue-500 hover:bg-blue-500 cursor-pointer"
+          >
             Animals
           </button>
 

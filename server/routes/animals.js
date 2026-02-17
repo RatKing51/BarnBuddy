@@ -1,4 +1,6 @@
 const express = require("express");
+const fs = require("fs");
+const path = require("path");
 const pool = require("../data-source");
 const authMiddleware = require("../middleware/authMiddleware");
 
@@ -141,17 +143,25 @@ router.get("/herd/:herdId", authMiddleware, async (req, res) => {
 const upload = require("../middleware/upload");
 
 router.post(
-  "/animals/:id/upload",
+  "/:id/upload",
+  authMiddleware,
   upload.single("image"),
   async (req, res) => {
     try {
       const animalId = req.params.id;
+      if (!req.file) {
+        return res.status(400).json({ error: "No image uploaded" });
+      }
       const imagePath = `/uploads/animals/${req.file.filename}`;
 
-      await pool.query(
-        "UPDATE animals SET image_url = $1 WHERE id = $2",
-        [imagePath, animalId]
+      const updateResult = await pool.query(
+        "UPDATE animals SET image_url = $1 WHERE id = $2 AND user_id = $3 RETURNING id",
+        [imagePath, animalId, req.user.id]
       );
+
+      if (updateResult.rows.length === 0) {
+        return res.status(404).json({ error: "Animal not found" });
+      }
 
       res.json({ message: "Image uploaded", image_url: imagePath });
 
@@ -161,6 +171,43 @@ router.post(
     }
   }
 );
+
+
+router.delete("/:id/upload", authMiddleware, async (req, res) => {
+  try {
+    const animalId = req.params.id;
+
+    const animalResult = await pool.query(
+      "SELECT image_url FROM animals WHERE id = $1 AND user_id = $2",
+      [animalId, req.user.id]
+    );
+
+    if (animalResult.rows.length === 0) {
+      return res.status(404).json({ error: "Animal not found" });
+    }
+
+    const currentImageUrl = animalResult.rows[0].image_url;
+
+    await pool.query(
+      "UPDATE animals SET image_url = NULL WHERE id = $1 AND user_id = $2",
+      [animalId, req.user.id]
+    );
+
+    if (currentImageUrl) {
+      const relativePath = currentImageUrl.replace(/^\/+/, "");
+      const absolutePath = path.resolve(relativePath);
+
+      if (fs.existsSync(absolutePath)) {
+        fs.unlinkSync(absolutePath);
+      }
+    }
+
+    res.json({ message: "Image removed", image_url: null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to remove image" });
+  }
+});
 
 
 module.exports = router;
