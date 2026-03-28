@@ -168,7 +168,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
       {/* Top Left - Basic Info */}
       <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-4">
         <h3 className="text-gray-400 font-semibold mb-2">Basic Info</h3>
@@ -247,7 +247,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       </div>
 
       {/* Top Right - Picture */}
-      <div className="bg-gray-800 p-0 rounded-2xl border border-gray-700 overflow-hidden">
+      <div className="bg-gray-800  rounded-2xl border border-gray-700 overflow-hidden h-100 object-cover">
         <label className="w-full h-full relative group block cursor-pointer">
           <img
             src={imageSrc}

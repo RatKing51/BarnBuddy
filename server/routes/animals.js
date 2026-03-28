@@ -61,8 +61,8 @@ router.post("/", authMiddleware, async (req, res) => {
     try {
         const result = await pool.query(
             `INSERT INTO animals
-            (user_id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
+            (user_id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url, birth_weight, birth_notes)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NULL, NULL) 
             RETURNING *`,
             [req.user.id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url]
         );
@@ -94,6 +94,27 @@ router.put("/:id", authMiddleware, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Failed to update animal" });
+    }
+});
+
+// Update birth data for an animal (separate endpoint)
+router.put("/:id/birth-data", authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const { birth_weight, birth_notes } = req.body;
+
+    try {
+        const result = await pool.query(
+            `UPDATE animals SET birth_weight=$1, birth_notes=$2
+             WHERE id=$3 AND user_id=$4
+             RETURNING *`,
+            [birth_weight, birth_notes, id, req.user.id]
+        );
+
+        if (result.rows.length === 0) return res.status(404).json({ error: "Animal not found" });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to update birth data" });
     }
 });
 
