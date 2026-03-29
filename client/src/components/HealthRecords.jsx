@@ -4,7 +4,7 @@ import * as healthEventsAPI from "../api/healthEvents";
 import * as vaccinationsAPI from "../api/vaccinations";
 import * as birthDataAPI from "../api/birthData";
 
-export default function HealthRecords({ animal }) {
+export default function HealthRecords({ animal, onVaccinationUpdate }) {
 
   const [healthEvents, setHealthEvents] = useState([]);
   const [selectedEventIndex, setSelectedEventIndex] = useState(null);
@@ -21,37 +21,39 @@ export default function HealthRecords({ animal }) {
   const [savingEvent, setSavingEvent] = useState(null);
   const [savingVaccine, setSavingVaccine] = useState(null);
 
-  // Helper to format dates from API (ISO string) to input format (YYYY-MM-DD)
-  const formatDateForInput = (dateStr) => {
-    if (!dateStr) return "";
-    return dateStr.slice(0, 10);
+  // Helper to get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().slice(0, 10);
   };
 
   const handleAddEvent = () => {
     const newEvent = {
-      date: "",
-      type: "",
-      severity: "",
+      date: getTodayDate(),
+      type: "Checkup",
+      severity: "Low",
       description: "",
       notes: "",
       resolved: false
     };
 
-    setHealthEvents([...healthEvents, newEvent]);
-    setSelectedEventIndex(healthEvents.length);
+    // Auto-save the new event immediately - it will be added to state with ID
+    saveHealthEvent(healthEvents.length, newEvent);
+    // Removed auto-selection: setSelectedEventIndex(healthEvents.length);
   };
 
   const handleAddVaccine = () => {
     const newVaccine = {
-      date: "",
-      type: "",
+      date: getTodayDate(),
+      type: "Routine",
       notes: "",
       next_due_date: "",
       dosage: ""
     };
 
-    setVaccinations([...vaccinations, newVaccine]);
-    setSelectedVaccineIndex(vaccinations.length);
+    // Auto-save the new vaccination immediately - it will be added to state with ID
+    saveVaccination(vaccinations.length, newVaccine);
+    // Removed auto-selection: setSelectedVaccineIndex(vaccinations.length);
   };
 
   const handleDeleteEvent = (idx) => {
@@ -132,9 +134,9 @@ export default function HealthRecords({ animal }) {
     }
   };
 
-  const saveHealthEvent = async (idx) => {
+  const saveHealthEvent = async (idx, eventData = null) => {
     if (!animal || idx === null) return;
-    const event = healthEvents[idx];
+    const event = eventData || healthEvents[idx];
     
     console.log("Saving health event:", event);
     
@@ -170,8 +172,9 @@ export default function HealthRecords({ animal }) {
           notes: event.notes
         });
         
-        const updated = [...healthEvents];
-        updated[idx].id = res.data.id;
+        // For new events, add the ID and update state
+        const newEventWithId = { ...event, id: res.data.id };
+        const updated = [...healthEvents, newEventWithId];
         setHealthEvents(updated);
         toast.success("Health event created");
       }
@@ -193,15 +196,16 @@ export default function HealthRecords({ animal }) {
     try {
       await healthEventsAPI.deleteHealthEvent(event.id);
       handleDeleteEvent(idx);
+      toast.success("Health event deleted");
     } catch (err) {
       console.error("Error deleting health event:", err);
-      alert("Failed to delete health event");
+      toast.error("Failed to delete health event");
     }
   };
 
-  const saveVaccination = async (idx) => {
+  const saveVaccination = async (idx, vaccineData = null) => {
     if (!animal || idx === null) return;
-    const vaccine = vaccinations[idx];
+    const vaccine = vaccineData || vaccinations[idx];
     
     console.log("Saving vaccination:", vaccine);
     
@@ -218,6 +222,7 @@ export default function HealthRecords({ animal }) {
           notes: vaccine.notes
         });
         toast.success("Vaccination saved");
+        if (onVaccinationUpdate) onVaccinationUpdate();
       } else {
         // Create new
         if (!vaccine.date || !vaccine.type) {
@@ -235,8 +240,9 @@ export default function HealthRecords({ animal }) {
           notes: vaccine.notes
         });
         
-        const updated = [...vaccinations];
-        updated[idx].id = res.data.id;
+        // For new vaccinations, add the ID and update state
+        const newVaccineWithId = { ...vaccine, id: res.data.id };
+        const updated = [...vaccinations, newVaccineWithId];
         setVaccinations(updated);
         toast.success("Vaccination created");
       }
@@ -246,26 +252,31 @@ export default function HealthRecords({ animal }) {
     } finally {
       setSavingVaccine(null);
     }
+
+    if (onVaccinationUpdate) onVaccinationUpdate();
   };
 
   const deleteVaccinationAPI = async (idx) => {
     const vaccine = vaccinations[idx];
     if (!vaccine.id) {
       handleDeleteVaccine(idx);
+      if (onVaccinationUpdate) onVaccinationUpdate();
       return;
     }
     
     try {
       await vaccinationsAPI.deleteVaccination(vaccine.id);
       handleDeleteVaccine(idx);
+      toast.success("Vaccination deleted");
+      if (onVaccinationUpdate) onVaccinationUpdate();
     } catch (err) {
       console.error("Error deleting vaccination:", err);
-      alert("Failed to delete vaccination");
+      toast.error("Failed to delete vaccination");
     }
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-2">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
       {/* HEALTH EVENTS */}
       <div className="lg:col-span-2 bg-gray-800 border border-gray-700 rounded-xl p-5">
@@ -331,8 +342,6 @@ export default function HealthRecords({ animal }) {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-3 gap-4">
-
                   <div>
                     <label className="text-xs text-gray-400">Date</label>
                     <input
@@ -343,7 +352,7 @@ export default function HealthRecords({ animal }) {
                         updated[selectedEventIndex].date = e.target.value;
                         setHealthEvents(updated);
                       }}
-                      onBlur={() => saveHealthEvent(selectedEventIndex)}
+                      onBlur={healthEvents[selectedEventIndex].id ? () => saveHealthEvent(selectedEventIndex) : undefined}
                       className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
                     />
                   </div>
@@ -357,7 +366,7 @@ export default function HealthRecords({ animal }) {
                         updated[selectedEventIndex].type = e.target.value;
                         setHealthEvents(updated);
                       }}
-                      onBlur={() => saveHealthEvent(selectedEventIndex)}
+                      onBlur={healthEvents[selectedEventIndex].id ? () => saveHealthEvent(selectedEventIndex) : undefined}
                       className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
                     >
                       <option value="">Select</option>
@@ -377,7 +386,7 @@ export default function HealthRecords({ animal }) {
                         updated[selectedEventIndex].severity = e.target.value;
                         setHealthEvents(updated);
                       }}
-                      onBlur={() => saveHealthEvent(selectedEventIndex)}
+                      onBlur={healthEvents[selectedEventIndex].id ? () => saveHealthEvent(selectedEventIndex) : undefined}
                       className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
                     >
                       <option value="">Select</option>
@@ -386,8 +395,6 @@ export default function HealthRecords({ animal }) {
                       <option>High</option>
                     </select>
                   </div>
-
-                </div>
 
                 <div>
                   <label className="text-xs text-gray-400">Description</label>
@@ -398,7 +405,7 @@ export default function HealthRecords({ animal }) {
                       updated[selectedEventIndex].description = e.target.value;
                       setHealthEvents(updated);
                     }}
-                    onBlur={() => saveHealthEvent(selectedEventIndex)}
+                    onBlur={healthEvents[selectedEventIndex].id ? () => saveHealthEvent(selectedEventIndex) : undefined}
                     className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
@@ -413,7 +420,7 @@ export default function HealthRecords({ animal }) {
                       updated[selectedEventIndex].notes = e.target.value;
                       setHealthEvents(updated);
                     }}
-                    onBlur={() => saveHealthEvent(selectedEventIndex)}
+                    onBlur={healthEvents[selectedEventIndex].id ? () => saveHealthEvent(selectedEventIndex) : undefined}
                     className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
@@ -427,10 +434,11 @@ export default function HealthRecords({ animal }) {
                       updated[selectedEventIndex].resolved = e.target.checked;
                       setHealthEvents(updated);
                     }}
-                    onBlur={() => saveHealthEvent(selectedEventIndex)}
+                    onBlur={healthEvents[selectedEventIndex].id ? () => saveHealthEvent(selectedEventIndex) : undefined}
                   />
                   Mark as resolved
                 </label>
+
               </>
             )}
 
@@ -442,99 +450,148 @@ export default function HealthRecords({ animal }) {
       {/* VACCINATIONS */}
       <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
 
-        <div className="flex justify-between mb-4">
-          <h2 className="text-gray-200 font-semibold">Vaccinations</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-gray-200 font-semibold text-lg">Vaccinations</h2>
 
           <button
             onClick={handleAddVaccine}
-            className="bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded-lg text-sm"
+            className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium"
           >
-            + Add
+            + Add Vaccination
           </button>
         </div>
 
-        <div className="space-y-3 max-h-[320px] overflow-y-auto">
+        <div className="grid grid-cols-3 gap-6">
 
-          {vaccinations.map((v, idx) => (
-            <div
-              key={idx}
-              className="bg-gray-700 border border-gray-600 p-3 rounded-lg"
-            >
-              <div className="flex justify-between items-start gap-2 mb-2">
-                <input
-                  type="date"
-                  value={v.date}
-                  onChange={(e) => {
-                    const updated = [...vaccinations];
-                    updated[idx].date = e.target.value;
-                    setVaccinations(updated);
-                  }}
-                  onBlur={() => saveVaccination(idx)}
-                  className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm flex-1"
-                />
+          {/* VACCINE LIST */}
+          <div className="col-span-1 space-y-2 max-h-[360px] overflow-y-auto">
+
+            {vaccinations.length === 0 && (
+              <div className="text-gray-400 text-sm">
+                No vaccinations recorded
+              </div>
+            )}
+
+            {vaccinations.map((vaccine, idx) => (
+              <div key={idx} className="flex gap-2 items-center">
+                <button
+                  onClick={() => setSelectedVaccineIndex(idx)}
+                  className={`flex-1 text-left p-3 rounded-lg border transition ${
+                    selectedVaccineIndex === idx
+                      ? "bg-blue-600 border-blue-500"
+                      : "bg-gray-700 border-gray-600 hover:bg-gray-650"
+                  }`}
+                >
+                  <div className="text-sm font-medium">
+                    {vaccine.type || "Vaccination"}
+                  </div>
+
+                  <div className="text-xs text-gray-400">
+                    {vaccine.date || "No date"}
+                  </div>
+                </button>
                 <button
                   onClick={() => deleteVaccinationAPI(idx)}
-                  className="bg-red-600 hover:bg-red-500 px-2 py-1 rounded text-sm font-medium whitespace-nowrap"
-                  title="Delete vaccine"
+                  className="bg-red-600 hover:bg-red-500 px-3 py-2 rounded-lg text-sm font-medium"
+                  title="Delete vaccination"
                 >
                   ×
                 </button>
               </div>
+            ))}
 
-              <input
-                placeholder="Vaccine Type"
-                value={v.type}
-                onChange={(e) => {
-                  const updated = [...vaccinations];
-                  updated[idx].type = e.target.value;
-                  setVaccinations(updated);
-                }}
-                onBlur={() => saveVaccination(idx)}
-                className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm w-full mb-2"
-              />
+          </div>
 
-              <input
-                type="date"
-                placeholder="Next Due Date"
-                value={v.next_due_date || ""}
-                onChange={(e) => {
-                  const updated = [...vaccinations];
-                  updated[idx].next_due_date = e.target.value;
-                  setVaccinations(updated);
-                }}
-                onBlur={() => saveVaccination(idx)}
-                className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm w-full mb-2"
-              />
+          {/* VACCINE FORM */}
+          <div className="col-span-2 space-y-4">
 
-              <input
-                placeholder="Dosage"
-                value={v.dosage || ""}
-                onChange={(e) => {
-                  const updated = [...vaccinations];
-                  updated[idx].dosage = e.target.value;
-                  setVaccinations(updated);
-                }}
-                onBlur={() => saveVaccination(idx)}
-                className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm w-full mb-2"
-              />
+            {selectedVaccineIndex === null ? (
+              <div className="text-gray-400 text-sm">
+                Select or add a vaccination to edit
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="text-xs text-gray-400">Vaccination Date</label>
+                  <input
+                    type="date"
+                    value={vaccinations[selectedVaccineIndex].date}
+                    onChange={(e) => {
+                      const updated = [...vaccinations];
+                      updated[selectedVaccineIndex].date = e.target.value;
+                      setVaccinations(updated);
+                    }}
+                    onBlur={vaccinations[selectedVaccineIndex].id ? () => saveVaccination(selectedVaccineIndex) : undefined}
+                    className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
 
-              <textarea
-                rows="2"
-                placeholder="Notes"
-                value={v.notes}
-                onChange={(e) => {
-                  const updated = [...vaccinations];
-                  updated[idx].notes = e.target.value;
-                  setVaccinations(updated);
-                }}
-                onBlur={() => saveVaccination(idx)}
-                className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm w-full"
-              />
-            </div>
-          ))}
+                <div>
+                  <label className="text-xs text-gray-400">Vaccine Type</label>
+                  <input
+                    placeholder="Vaccine Type"
+                    value={vaccinations[selectedVaccineIndex].type}
+                    onChange={(e) => {
+                      const updated = [...vaccinations];
+                      updated[selectedVaccineIndex].type = e.target.value;
+                      setVaccinations(updated);
+                    }}
+                    onBlur={vaccinations[selectedVaccineIndex].id ? () => saveVaccination(selectedVaccineIndex) : undefined}
+                    className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-400">Next Due Date</label>
+                  <input
+                    type="date"
+                    value={vaccinations[selectedVaccineIndex].next_due_date || ""}
+                    onChange={(e) => {
+                      const updated = [...vaccinations];
+                      updated[selectedVaccineIndex].next_due_date = e.target.value;
+                      setVaccinations(updated);
+                    }}
+                    onBlur={vaccinations[selectedVaccineIndex].id ? () => saveVaccination(selectedVaccineIndex) : undefined}
+                    className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-400">Dosage</label>
+                  <input
+                    placeholder="Dosage"
+                    value={vaccinations[selectedVaccineIndex].dosage || ""}
+                    onChange={(e) => {
+                      const updated = [...vaccinations];
+                      updated[selectedVaccineIndex].dosage = e.target.value;
+                      setVaccinations(updated);
+                    }}
+                    onBlur={vaccinations[selectedVaccineIndex].id ? () => saveVaccination(selectedVaccineIndex) : undefined}
+                    className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-400">Notes</label>
+                  <textarea
+                    rows="4"
+                    value={vaccinations[selectedVaccineIndex].notes}
+                    onChange={(e) => {
+                      const updated = [...vaccinations];
+                      updated[selectedVaccineIndex].notes = e.target.value;
+                      setVaccinations(updated);
+                    }}
+                    onBlur={vaccinations[selectedVaccineIndex].id ? () => saveVaccination(selectedVaccineIndex) : undefined}
+                    className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+
+              </>
+            )}
+
+          </div>
 
         </div>
-
       </div>
 
       {/* BIRTH INFO */}
@@ -575,7 +632,7 @@ export default function HealthRecords({ animal }) {
         </div>
 
       </div>
-
+      <ToastContainer autoClose="1000" />
     </div>
   );
 }

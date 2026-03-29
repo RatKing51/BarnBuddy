@@ -11,6 +11,7 @@ import {
   getAnimalsUnassigned,
 } from "../api/animal";
 import { getHerdsForUser } from "../api/herd";
+import * as vaccinationsAPI from "../api/vaccinations";
 import { toast } from "react-toastify";
 
 export default function Dashboard() {
@@ -21,6 +22,9 @@ export default function Dashboard() {
   const [animals, setAnimals] = useState([]);
   const [selectedAnimal, setSelectedAnimal] = useState(null);
   const [refreshFlag, setRefreshFlag] = useState(false);
+  const [vaccinationsDue, setVaccinationsDue] = useState(0);
+  const [vaccinationRefresh, setVaccinationRefresh] = useState(0);
+  const [animalUrgencies, setAnimalUrgencies] = useState({});
 
   const handleAnimalsMenuClick = () => {
     setActiveTab("general");
@@ -116,6 +120,56 @@ export default function Dashboard() {
     setSelectedAnimal("")
   }, [selectedHerd])
 
+  // Fetch and calculate herd-wide vaccination dues and urgency per animal
+  useEffect(() => {
+    const computeHerdVaccinationStatus = async () => {
+      if (!animals || animals.length === 0) {
+        setVaccinationsDue(0);
+        setAnimalUrgencies({});
+        return;
+      }
+
+      let herdDueCount = 0;
+      const urgencies = {};
+      const now = new Date();
+      const soonThreshold = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      await Promise.all(
+        animals.map(async (animal) => {
+          try {
+            const res = await vaccinationsAPI.getVaccinations(animal.id);
+            const vaccinations = res.data || [];
+            let hasOverdue = false;
+            let hasSoon = false;
+
+            vaccinations.forEach((vac) => {
+              if (vac.next_due_date) {
+                const dueDate = new Date(vac.next_due_date);
+                if (dueDate < now) {
+                  hasOverdue = true;
+                  herdDueCount += 1;
+                } else if (dueDate <= soonThreshold) {
+                  hasSoon = true;
+                  herdDueCount += 1;
+                }
+              }
+            });
+
+            urgencies[animal.id] = hasOverdue ? "red" : hasSoon ? "yellow" : "green";
+          } catch (err) {
+            console.error(`Error fetching vaccinations for animal ${animal.id}:`, err);
+            urgencies[animal.id] = "green";
+          }
+        })
+      );
+
+      setAnimalUrgencies(urgencies);
+      setVaccinationsDue(herdDueCount);
+    };
+
+    computeHerdVaccinationStatus();
+  }, [animals, refreshFlag, vaccinationRefresh]);
+
   // Add new animal
   const handleAddAnimal = async () => {
     if (!selectedHerd) return;
@@ -205,19 +259,33 @@ export default function Dashboard() {
           </button>
 
           <div className="mt-4 space-y-2">
-            {animals.map((animal) => (
-              <button
-                key={animal.id}
-                onClick={() => setSelectedAnimal(animal)}
-                className={`w-full text-left px-4 py-2 rounded-lg transition border cursor-pointer ${
-                  selectedAnimal?.id === animal.id
-                    ? "bg-blue-600 border-blue-500 text-white shadow"
-                    : "border-gray-600 hover:bg-gray-700 text-gray-200"
-                }`}
-              >
-                {animal.name}
-              </button>
-            ))}
+            {animals.map((animal) => {
+              const urgency = animalUrgencies[animal.id] || "green";
+              return (
+                <button
+                  key={animal.id}
+                  onClick={() => setSelectedAnimal(animal)}
+                  className={`w-full text-left px-4 py-2 rounded-lg transition border cursor-pointer ${
+                    selectedAnimal?.id === animal.id
+                      ? "bg-blue-600 border-blue-500 text-white shadow"
+                      : "border-gray-600 hover:bg-gray-700 text-gray-200"
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      className={`inline-block w-2 h-2 rounded-full ${
+                        urgency === "red"
+                          ? "bg-red-400"
+                          : urgency === "yellow"
+                          ? "bg-yellow-400"
+                          : "bg-emerald-400"
+                      }`}
+                    ></span>
+                    {animal.name}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
           <div className="mt-4 flex flex-col gap-2 px-4">
@@ -259,7 +327,7 @@ export default function Dashboard() {
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           {[
             { title: "Animals", value: animals.length },
-            { title: "Vaccinations Due", value: null },
+            { title: "Vaccinations Due", value: vaccinationsDue },
             { title: "Upcoming Vet Visits", value: null },
           ].map((stat) => (
             <div
@@ -307,11 +375,12 @@ export default function Dashboard() {
                     animal={selectedAnimal}
                     setRefreshFlag={setRefreshFlag}
                     setSelectedAnimal={setSelectedAnimal}
+                    setActiveTab={setActiveTab}
                     herds={herds}
                     selectedHerd={selectedHerd}
                   />
                 )}
-                {activeTab === "health" && <HealthRecords animal={selectedAnimal} />}
+                {activeTab === "health" && <HealthRecords animal={selectedAnimal} onVaccinationUpdate={() => setVaccinationRefresh(prev => prev + 1)} />}
                 {activeTab === "vet" && <VetVisits animal={selectedAnimal} />}
                 {activeTab === "reproduction" && (
                   <Reproductions animal={selectedAnimal} />

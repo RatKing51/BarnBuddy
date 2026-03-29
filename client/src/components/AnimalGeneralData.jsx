@@ -1,8 +1,9 @@
 import { updateAnimal, deleteAnimal, uploadAnimalImage, removeAnimalImage } from "../api/animal";
+import * as vaccinationsAPI from "../api/vaccinations";
 import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from "react-toastify";
 
-export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedAnimal, herds, selectedHerd }) {
+export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedAnimal, setActiveTab, herds, selectedHerd }) {
   const [name, setName] = useState("");
   const [dob, setDob] = useState("");
   const [age, setAge] = useState("");
@@ -17,6 +18,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
   const [imageUrl, setImageUrl] = useState("");
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isRemovingImage, setIsRemovingImage] = useState(false);
+  const [upcomingVaccinations, setUpcomingVaccinations] = useState([]);
   const sexOptionsBySpecies = {
     Cow: ["Cow", "Heifer", "Steer", "Bull", "Calf"],
     Sheep: ["Ewe", "Ram", "Lamb", "Wether"],
@@ -56,6 +58,57 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
     setHerdId(animal.herd_id === null ? "unassigned" : String(animal.herd_id));
     setAnimalId(animal.id || "");
     setImageUrl(animal.image_url || "");
+  }, [animal]);
+
+  useEffect(() => {
+    const loadUpcomingVaccinations = async () => {
+      if (!animal || !animal.id) {
+        setUpcomingVaccinations([]);
+        return;
+      }
+
+      try {
+        const res = await vaccinationsAPI.getVaccinations(animal.id);
+        const now = new Date();
+        const soonThreshold = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+        const upcoming = (res.data || [])
+          .filter((v) => v.next_due_date)
+          .map((v) => {
+            const dueDate = new Date(v.next_due_date);
+            const diffMs = dueDate - now;
+            const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+            let urgency = "green";
+            let dueLabel = "";
+
+            if (diffDays < 0) {
+              urgency = "red";
+              dueLabel = `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? "" : "s"}`;
+            } else if (diffDays <= 7) {
+              urgency = "yellow";
+              dueLabel = `Due in ${diffDays} day${diffDays === 1 ? "" : "s"}`;
+            } else {
+              dueLabel = `Due in ${diffDays} day${diffDays === 1 ? "" : "s"}`;
+            }
+
+            return {
+              id: v.id,
+              date: v.next_due_date,
+              name: v.vaccine_name || v.type || "Vaccine",
+              urgency,
+              dueLabel,
+            };
+          })
+          .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        setUpcomingVaccinations(upcoming);
+      } catch (err) {
+        console.error("Error loading upcoming vaccinations:", err);
+        setUpcomingVaccinations([]);
+      }
+    };
+
+    loadUpcomingVaccinations();
   }, [animal]);
 
   // Save Animal to DB
@@ -283,8 +336,31 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       {/* Bottom Left - Quick Dates */}
       <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-4">
         <h4 className="text-gray-400 font-semibold mb-2">Upcoming Quick Dates</h4>
-        <p className="bg-gray-700 p-3 rounded-lg">Vaccination: </p>
-        <p className="bg-gray-700 p-3 rounded-lg">Vet Visit: </p>
+        {upcomingVaccinations.length === 0 ? (
+          <p className="bg-gray-700 p-3 rounded-lg text-gray-300">No upcoming vaccination dates</p>
+        ) : (
+          upcomingVaccinations.slice(0, 5).map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                if (setSelectedAnimal) setSelectedAnimal(animal);
+                if (setActiveTab) setActiveTab("health");
+              }}
+              className={`w-full cursor-pointer text-left p-3 rounded-lg border mb-1 ${
+                item.urgency === "red"
+                  ? "border-red-500 bg-red-900 text-red-100"
+                  : item.urgency === "yellow"
+                  ? "border-yellow-500 bg-yellow-900 text-yellow-100"
+                  : "border-emerald-500 bg-emerald-900 text-emerald-100"
+              }`}
+            >
+              <span className="font-medium">{item.name}</span>
+              <br />
+              <span className="text-xs text-gray-200">{item.dueLabel}</span>
+            </button>
+          ))
+        )}
+        <p className="bg-gray-700 p-3 rounded-lg">Vet Visit: (see Vet tab)</p>
       </div>
 
       {/* Bottom Right - Other Info */}
