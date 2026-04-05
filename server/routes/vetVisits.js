@@ -78,6 +78,57 @@ router.get("/animal/:animalId", authMiddleware, async (req, res) => {
     }
 });
 
+// Get upcoming vet visits for all animals in a herd
+router.get("/herd/:herdId/upcoming", authMiddleware, async (req, res) => {
+    const { herdId } = req.params;
+    const days = parseInt(req.query.days) || 30; // Default to 30 days
+
+    try {
+        const result = await pool.query(
+            `
+            SELECT vv.*, a.name as animal_name, a.species
+            FROM vet_visits vv
+            JOIN animals a ON vv.animal_id = a.id
+            WHERE a.herd_id = $1 AND a.user_id = $2
+              AND (vv.visit_date >= CURRENT_DATE AND vv.visit_date <= CURRENT_DATE + INTERVAL '${days} days'
+                   OR vv.follow_up_date >= CURRENT_DATE AND vv.follow_up_date <= CURRENT_DATE + INTERVAL '${days} days')
+            ORDER BY vv.visit_date ASC, vv.follow_up_date ASC
+            `,
+            [herdId, req.user.id]
+        );
+
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch upcoming vet visits" });
+    }
+});
+
+// Get upcoming vet visits for unassigned animals
+router.get("/unassigned/upcoming", authMiddleware, async (req, res) => {
+    const days = parseInt(req.query.days) || 30; // Default to 30 days
+
+    try {
+        const result = await pool.query(
+            `
+            SELECT vv.*, a.name as animal_name, a.species
+            FROM vet_visits vv
+            JOIN animals a ON vv.animal_id = a.id
+            WHERE a.herd_id IS NULL AND a.user_id = $1
+              AND (vv.visit_date >= CURRENT_DATE AND vv.visit_date <= CURRENT_DATE + INTERVAL '${days} days'
+                   OR vv.follow_up_date >= CURRENT_DATE AND vv.follow_up_date <= CURRENT_DATE + INTERVAL '${days} days')
+            ORDER BY vv.visit_date ASC, vv.follow_up_date ASC
+            `,
+            [req.user.id]
+        );
+
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch upcoming vet visits for unassigned animals" });
+    }
+});
+
 // get single vet visit
 router.get("/:id", authMiddleware, async (req, res) => {
     try {

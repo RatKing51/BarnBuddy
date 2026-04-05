@@ -1,6 +1,5 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
+const multer = require("multer");
 const pool = require("../data-source");
 const authMiddleware = require("../middleware/authMiddleware");
 
@@ -34,6 +33,120 @@ router.get("/", authMiddleware, async (req, res) => {
         res.status(500).json({ error: "Failed to fetch animals" });
     }
 });
+
+// Multer storage configuration - store in memory as buffer
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: function (req, file, cb) {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only images allowed"), false);
+    }
+  }
+});
+
+// Upload image and store in database
+router.post(
+  "/:id/upload",
+  authMiddleware,
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      const animalId = req.params.id;
+      if (!req.file) {
+        return res.status(400).json({ error: "No image uploaded" });
+      }
+
+      // Check if animal exists
+      const animalCheck = await pool.query(
+        "SELECT id FROM animals WHERE id = $1 AND user_id = $2",
+        [animalId, req.user.id]
+      );
+
+      if (animalCheck.rows.length === 0) {
+        return res.status(404).json({ error: "Animal not found" });
+      }
+
+      // Store image buffer in database
+      const updateResult = await pool.query(
+        "UPDATE animals SET image_data = $1 WHERE id = $2 AND user_id = $3 RETURNING id",
+        [req.file.buffer, animalId, req.user.id]
+      );
+
+      res.json({ message: "Image uploaded successfully", animal_id: animalId });
+
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Upload failed" });
+    }
+  }
+);
+
+// Get image from database
+router.get(
+  "/:id/image",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const animalId = req.params.id;
+
+      const result = await pool.query(
+        "SELECT image_data FROM animals WHERE id = $1 AND user_id = $2",
+        [animalId, req.user.id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "Animal not found" });
+      }
+
+      const imageData = result.rows[0].image_data;
+      if (!imageData) {
+        return res.status(404).json({ error: "No image found for this animal" });
+      }
+
+      res.set("Content-Type", "image/jpeg");
+      res.send(imageData);
+
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to retrieve image" });
+    }
+  }
+);
+
+// Delete image
+router.delete(
+  "/:id/upload",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const animalId = req.params.id;
+
+      const animalResult = await pool.query(
+        "SELECT id FROM animals WHERE id = $1 AND user_id = $2",
+        [animalId, req.user.id]
+      );
+
+      if (animalResult.rows.length === 0) {
+        return res.status(404).json({ error: "Animal not found" });
+      }
+
+      // Clear image data from database
+      await pool.query(
+        "UPDATE animals SET image_data = NULL WHERE id = $1 AND user_id = $2",
+        [animalId, req.user.id]
+      );
+
+      res.json({ message: "Image removed successfully" });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to remove image" });
+    }
+  }
+);
 
 // Get a single animal by ID
 router.get("/:id", authMiddleware, async (req, res) => {
@@ -161,74 +274,7 @@ router.get("/herd/:herdId", authMiddleware, async (req, res) => {
     }
 });
 
-const upload = require("../middleware/upload");
 
-router.post(
-  "/:id/upload",
-  authMiddleware,
-  upload.single("image"),
-  async (req, res) => {
-    try {
-      const animalId = req.params.id;
-      if (!req.file) {
-        return res.status(400).json({ error: "No image uploaded" });
-      }
-      const imagePath = `/uploads/animals/${req.file.filename}`;
-
-      const updateResult = await pool.query(
-        "UPDATE animals SET image_url = $1 WHERE id = $2 AND user_id = $3 RETURNING id",
-        [imagePath, animalId, req.user.id]
-      );
-
-      if (updateResult.rows.length === 0) {
-        return res.status(404).json({ error: "Animal not found" });
-      }
-
-      res.json({ message: "Image uploaded", image_url: imagePath });
-
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Upload failed" });
-    }
-  }
-);
-
-
-router.delete("/:id/upload", authMiddleware, async (req, res) => {
-  try {
-    const animalId = req.params.id;
-
-    const animalResult = await pool.query(
-      "SELECT image_url FROM animals WHERE id = $1 AND user_id = $2",
-      [animalId, req.user.id]
-    );
-
-    if (animalResult.rows.length === 0) {
-      return res.status(404).json({ error: "Animal not found" });
-    }
-
-    const currentImageUrl = animalResult.rows[0].image_url;
-
-    await pool.query(
-      "UPDATE animals SET image_url = NULL WHERE id = $1 AND user_id = $2",
-      [animalId, req.user.id]
-    );
-
-    if (currentImageUrl) {
-      const relativePath = currentImageUrl.replace(/^\/+/, "");
-      const absolutePath = path.resolve(relativePath);
-
-      if (fs.existsSync(absolutePath)) {
-        fs.unlinkSync(absolutePath);
-      }
-    }
-
-    res.json({ message: "Image removed", image_url: null });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to remove image" });
-  }
-});
 
 
 module.exports = router;

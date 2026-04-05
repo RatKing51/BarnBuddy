@@ -16,6 +16,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
   const [herdId, setHerdId] = useState("");
   const [animalId, setAnimalId] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [imageBlobUrl, setImageBlobUrl] = useState("");
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isRemovingImage, setIsRemovingImage] = useState(false);
   const [upcomingVaccinations, setUpcomingVaccinations] = useState([]);
@@ -57,8 +58,48 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
     setBehavior(animal.behavior || "");
     setHerdId(animal.herd_id === null ? "unassigned" : String(animal.herd_id));
     setAnimalId(animal.id || "");
-    setImageUrl(animal.image_url || "");
+    // Image is now retrieved from database, use animal.id as a flag
+    setImageUrl(animal.id ? `stored` : "");
   }, [animal]);
+
+  // Load image from database when animal changes
+  useEffect(() => {
+    const loadImage = async () => {
+      if (!animal?.id || !imageUrl) {
+        setImageBlobUrl("");
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`http://localhost:5000/api/animals/${animal.id}/image`, {
+          headers: {
+            'Authorization': token ? `Bearer ${token}` : ''
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to load image');
+        }
+
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        setImageBlobUrl(blobUrl);
+      } catch (err) {
+        console.error('Error loading image:', err);
+        setImageBlobUrl("");
+      }
+    };
+
+    loadImage();
+
+    // Cleanup blob URL on unmount
+    return () => {
+      if (imageBlobUrl) {
+        URL.revokeObjectURL(imageBlobUrl);
+      }
+    };
+  }, [animal?.id, imageUrl]);
 
   useEffect(() => {
     const loadUpcomingVaccinations = async () => {
@@ -127,7 +168,6 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
         weight,
         behavior,
         tag_id: tag,
-        image_url: imageUrl,
         ...updatedData, // merge in changes like herdId
       };
 
@@ -142,9 +182,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
 
 
 
-  const imageSrc = imageUrl
-    ? `http://localhost:5000${imageUrl}`
-    : "https://via.placeholder.com/600";
+  const imageSrc = imageBlobUrl || "https://via.placeholder.com/600";
 
   async function handleImageUpload(e) {
     const file = e.target.files?.[0];
@@ -152,8 +190,10 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
 
     try {
       setIsUploadingImage(true);
-      const { data } = await uploadAnimalImage(animal.id, file);
-      setImageUrl(data.image_url);
+      await uploadAnimalImage(animal.id, file);
+      setImageUrl("stored"); // Set flag to indicate image is stored
+      // Force reload of image blob
+      setImageBlobUrl("");
       setRefreshFlag((prev) => !prev);
       toast.success("Image uploaded successfully!");
     } catch (err) {
@@ -177,8 +217,9 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       setIsRemovingImage(true);
       await removeAnimalImage(animal.id);
       setImageUrl("");
+      setImageBlobUrl("");
       setRefreshFlag((prev) => !prev);
-      toast.success("Image removed.");
+      toast.success("Image removed successfully.");
     } catch (err) {
       console.error("Image removal failed:", err.response?.data || err.message);
       toast.error("Failed to remove image.");

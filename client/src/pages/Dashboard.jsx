@@ -12,6 +12,7 @@ import {
 } from "../api/animal";
 import { getHerdsForUser } from "../api/herd";
 import * as vaccinationsAPI from "../api/vaccinations";
+import * as vetVisitsAPI from "../api/vetVisits";
 import { toast } from "react-toastify";
 
 export default function Dashboard() {
@@ -25,6 +26,7 @@ export default function Dashboard() {
   const [vaccinationsDue, setVaccinationsDue] = useState(0);
   const [vaccinationRefresh, setVaccinationRefresh] = useState(0);
   const [animalUrgencies, setAnimalUrgencies] = useState({});
+  const [upcomingVetVisits, setUpcomingVetVisits] = useState(0);
 
   const handleAnimalsMenuClick = () => {
     setActiveTab("general");
@@ -122,25 +124,29 @@ export default function Dashboard() {
 
   // Fetch and calculate herd-wide vaccination dues and urgency per animal
   useEffect(() => {
-    const computeHerdVaccinationStatus = async () => {
+    const computeHerdStatus = async () => {
       if (!animals || animals.length === 0) {
         setVaccinationsDue(0);
         setAnimalUrgencies({});
+        setUpcomingVetVisits(0);
         return;
       }
 
       let herdDueCount = 0;
+      let vetVisitsCount = 0;
       const urgencies = {};
       const now = new Date();
       const soonThreshold = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
       await Promise.all(
         animals.map(async (animal) => {
+          let hasOverdue = false;
+          let hasSoon = false;
+
+          // Check vaccinations
           try {
             const res = await vaccinationsAPI.getVaccinations(animal.id);
             const vaccinations = res.data || [];
-            let hasOverdue = false;
-            let hasSoon = false;
 
             vaccinations.forEach((vac) => {
               if (vac.next_due_date) {
@@ -154,20 +160,47 @@ export default function Dashboard() {
                 }
               }
             });
-
-            urgencies[animal.id] = hasOverdue ? "red" : hasSoon ? "yellow" : "green";
           } catch (err) {
             console.error(`Error fetching vaccinations for animal ${animal.id}:`, err);
-            urgencies[animal.id] = "green";
           }
+
+          // Check vet visits
+          try {
+            const res = await vetVisitsAPI.getVetVisitsForAnimal(animal.id);
+            const vetVisits = res.data || [];
+
+            vetVisits.forEach((visit) => {
+              const visitDate = new Date(visit.visit_date);
+              const followUpDate = visit.follow_up_date ? new Date(visit.follow_up_date) : null;
+
+              if (visitDate >= now && visitDate <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)) {
+                vetVisitsCount += 1;
+                if (visitDate <= soonThreshold) {
+                  hasSoon = true;
+                }
+              }
+
+              if (followUpDate && followUpDate >= now && followUpDate <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)) {
+                vetVisitsCount += 1;
+                if (followUpDate <= soonThreshold) {
+                  hasSoon = true;
+                }
+              }
+            });
+          } catch (err) {
+            console.error(`Error fetching vet visits for animal ${animal.id}:`, err);
+          }
+
+          urgencies[animal.id] = hasOverdue ? "red" : hasSoon ? "yellow" : "green";
         })
       );
 
       setAnimalUrgencies(urgencies);
       setVaccinationsDue(herdDueCount);
+      setUpcomingVetVisits(vetVisitsCount);
     };
 
-    computeHerdVaccinationStatus();
+    computeHerdStatus();
   }, [animals, refreshFlag, vaccinationRefresh]);
 
   // Add new animal
@@ -328,7 +361,7 @@ export default function Dashboard() {
           {[
             { title: "Animals", value: animals.length },
             { title: "Vaccinations Due", value: vaccinationsDue },
-            { title: "Upcoming Vet Visits", value: null },
+            { title: "Upcoming Vet Visits", value: upcomingVetVisits },
           ].map((stat) => (
             <div
               key={stat.title}
@@ -381,7 +414,7 @@ export default function Dashboard() {
                   />
                 )}
                 {activeTab === "health" && <HealthRecords animal={selectedAnimal} onVaccinationUpdate={() => setVaccinationRefresh(prev => prev + 1)} />}
-                {activeTab === "vet" && <VetVisits animal={selectedAnimal} />}
+                {activeTab === "vet" && <VetVisits animal={selectedAnimal} onVetVisitUpdate={() => setVaccinationRefresh(prev => prev + 1)} />}
                 {activeTab === "reproduction" && (
                   <Reproductions animal={selectedAnimal} />
                 )}
