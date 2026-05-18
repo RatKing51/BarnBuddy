@@ -48,7 +48,8 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
       type: "Routine",
       notes: "",
       next_due_date: "",
-      dosage: ""
+      dosage: "",
+      completed: false
     };
 
     // Auto-save the new vaccination immediately - it will be added to state with ID
@@ -101,7 +102,8 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           type: vac.vaccine_name || "",
           notes: vac.notes || "",
           next_due_date: vac.next_due_date ? vac.next_due_date.slice(0, 10) : "",
-          dosage: vac.dosage || ""
+          dosage: vac.dosage || "",
+          completed: !vac.next_due_date
         }));
         
         setHealthEvents(transformedEvents);
@@ -217,7 +219,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
         await vaccinationsAPI.updateVaccination(vaccine.id, {
           vaccine_name: vaccine.type || "",
           date_given: vaccine.date || null,
-          next_due_date: vaccine.next_due_date || null,
+          next_due_date: vaccine.completed ? null : vaccine.next_due_date || null,
           dosage: vaccine.dosage || null,
           notes: vaccine.notes
         });
@@ -235,7 +237,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           animal_id: animal.id,
           vaccine_name: vaccine.type,
           date_given: vaccine.date,
-          next_due_date: vaccine.next_due_date || null,
+          next_due_date: vaccine.completed ? null : vaccine.next_due_date || null,
           dosage: vaccine.dosage || null,
           notes: vaccine.notes
         });
@@ -482,8 +484,15 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
                       : "bg-gray-700 border-gray-600 hover:bg-gray-650"
                   }`}
                 >
-                  <div className="text-sm font-medium">
-                    {vaccine.type || "Vaccination"}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium">
+                      {vaccine.type || "Vaccination"}
+                    </span>
+                    {vaccine.completed && (
+                      <span className="text-[10px] rounded-full bg-emerald-500 px-2 py-1 text-white uppercase tracking-[0.15em]">
+                        Completed
+                      </span>
+                    )}
                   </div>
 
                   <div className="text-xs text-gray-400">
@@ -549,10 +558,12 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
                     onChange={(e) => {
                       const updated = [...vaccinations];
                       updated[selectedVaccineIndex].next_due_date = e.target.value;
+                      updated[selectedVaccineIndex].completed = e.target.value === "" ? updated[selectedVaccineIndex].completed : false;
                       setVaccinations(updated);
                     }}
                     onBlur={vaccinations[selectedVaccineIndex].id ? () => saveVaccination(selectedVaccineIndex) : undefined}
-                    className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                    disabled={vaccinations[selectedVaccineIndex].completed}
+                    className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
                   />
                 </div>
 
@@ -570,6 +581,24 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
                     className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
+
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={vaccinations[selectedVaccineIndex].completed || false}
+                    onChange={(e) => {
+                      const updated = [...vaccinations];
+                      updated[selectedVaccineIndex].completed = e.target.checked;
+                      if (e.target.checked) {
+                        updated[selectedVaccineIndex].next_due_date = "";
+                      }
+                      setVaccinations(updated);
+                    }}
+                    onBlur={vaccinations[selectedVaccineIndex].id ? () => saveVaccination(selectedVaccineIndex) : undefined}
+                    className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500"
+                  />
+                  Mark as complete (no next due date)
+                </label>
 
                 <div>
                   <label className="text-xs text-gray-400">Notes</label>

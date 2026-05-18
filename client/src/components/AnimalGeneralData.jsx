@@ -1,5 +1,6 @@
 import { updateAnimal, deleteAnimal, uploadAnimalImage, removeAnimalImage } from "../api/animal";
 import * as vaccinationsAPI from "../api/vaccinations";
+import * as vetVisitsAPI from "../api/vetVisits";
 import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from "react-toastify";
 
@@ -20,6 +21,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isRemovingImage, setIsRemovingImage] = useState(false);
   const [upcomingVaccinations, setUpcomingVaccinations] = useState([]);
+  const [upcomingVetVisitDates, setUpcomingVetVisitDates] = useState([]);
   const sexOptionsBySpecies = {
     Cow: ["Cow", "Heifer", "Steer", "Bull", "Calf"],
     Sheep: ["Ewe", "Ram", "Lamb", "Wether"],
@@ -138,6 +140,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
               name: v.vaccine_name || v.type || "Vaccine",
               urgency,
               dueLabel,
+              type: "vaccination",
             };
           })
           .sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -150,6 +153,72 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
     };
 
     loadUpcomingVaccinations();
+  }, [animal]);
+
+  useEffect(() => {
+    const loadUpcomingVetVisits = async () => {
+      if (!animal || !animal.id) {
+        setUpcomingVetVisitDates([]);
+        return;
+      }
+
+      try {
+        const res = await vetVisitsAPI.getVetVisitsForAnimal(animal.id);
+        const now = new Date();
+        const today = new Date(now);
+        today.setHours(0, 0, 0, 0);
+
+        const upcoming = (res.data || [])
+          .flatMap((visit) => {
+            const nextItems = [];
+            const visitDate = visit.visit_date ? new Date(visit.visit_date) : null;
+            const followUpDate = visit.follow_up_date ? new Date(visit.follow_up_date) : null;
+
+            const buildItem = (date, label, suffix) => {
+              const diffMs = date - now;
+              const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+              let urgency = "green";
+              let dueLabel = "";
+
+              if (diffDays < 0) {
+                urgency = "red";
+                dueLabel = `${label} overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? "" : "s"}`;
+              } else if (diffDays <= 7) {
+                urgency = "yellow";
+                dueLabel = `${label} in ${diffDays} day${diffDays === 1 ? "" : "s"}`;
+              } else {
+                dueLabel = `${label} in ${diffDays} day${diffDays === 1 ? "" : "s"}`;
+              }
+
+              return {
+                id: `${visit.id}-${suffix}`,
+                date: date.toISOString().split("T")[0],
+                name: `${label} with ${visit.vet_name || "Vet"}`,
+                urgency,
+                dueLabel,
+                type: "vet",
+              };
+            };
+
+            if (visitDate && !Number.isNaN(visitDate.getTime()) && visitDate >= today) {
+              nextItems.push(buildItem(visitDate, "Vet Visit", "visit"));
+            }
+            if (followUpDate && !Number.isNaN(followUpDate.getTime()) && followUpDate >= today) {
+              nextItems.push(buildItem(followUpDate, "Follow-up", "followup"));
+            }
+
+            return nextItems;
+          })
+          .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        setUpcomingVetVisitDates(upcoming);
+      } catch (err) {
+        console.error("Error loading upcoming vet visits:", err);
+        setUpcomingVetVisitDates([]);
+      }
+    };
+
+    loadUpcomingVetVisits();
   }, [animal]);
 
   // Save Animal to DB
@@ -181,6 +250,10 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
   }
 
 
+
+  const upcomingQuickDates = [...upcomingVaccinations, ...upcomingVetVisitDates].sort(
+    (a, b) => new Date(a.date) - new Date(b.date)
+  );
 
   const imageSrc = imageBlobUrl || "https://via.placeholder.com/600";
 
@@ -377,15 +450,15 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       {/* Bottom Left - Quick Dates */}
       <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-4">
         <h4 className="text-gray-400 font-semibold mb-2">Upcoming Quick Dates</h4>
-        {upcomingVaccinations.length === 0 ? (
-          <p className="bg-gray-700 p-3 rounded-lg text-gray-300">No upcoming vaccination dates</p>
+        {upcomingQuickDates.length === 0 ? (
+          <p className="bg-gray-700 p-3 rounded-lg text-gray-300">No upcoming dates</p>
         ) : (
-          upcomingVaccinations.slice(0, 5).map((item) => (
+          upcomingQuickDates.slice(0, 5).map((item) => (
             <button
               key={item.id}
               onClick={() => {
                 if (setSelectedAnimal) setSelectedAnimal(animal);
-                if (setActiveTab) setActiveTab("health");
+                if (setActiveTab) setActiveTab(item.type === "vet" ? "vet" : "health");
               }}
               className={`w-full cursor-pointer text-left p-3 rounded-lg border mb-1 ${
                 item.urgency === "red"
@@ -401,7 +474,6 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
             </button>
           ))
         )}
-        <p className="bg-gray-700 p-3 rounded-lg">Vet Visit: (see Vet tab)</p>
       </div>
 
       {/* Bottom Right - Other Info */}

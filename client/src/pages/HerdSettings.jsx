@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
 import axios from "../api/axios"; // your axios instance
 
 export default function HerdSettings() {
@@ -33,7 +34,7 @@ export default function HerdSettings() {
       name,
       description,
     });
-
+    toast.success("Saved Herd!");
     fetchHerds();
   };
 
@@ -47,6 +48,7 @@ export default function HerdSettings() {
     setSelectedHerd(null);
     setName("");
     setDescription("");
+    toast.success("Deleted Herd!");
     fetchHerds();
   };
 
@@ -57,6 +59,7 @@ export default function HerdSettings() {
     });
 
     fetchHerds();
+    toast.success("Created Herd!");
     selectHerd(res.data);
   };
 
@@ -151,6 +154,7 @@ export default function HerdSettings() {
           </>
         )}
       </div>
+      <ToastContainer autoClose="1000" />
     </div>
   );
 }

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import AnimalGeneralData from "../components/AnimalGeneralData";
 import HealthRecords from "../components/HealthRecords";
 import VetVisits from "../components/VetVisits";
-import Reproductions from "../components/Reproductions";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import {
@@ -383,7 +382,7 @@ export default function Dashboard() {
             <>
               {/* TABS */}
               <div className="border-b border-gray-700 flex flex-wrap">
-                {["general", "health", "vet", "reproduction"].map((tab) => (
+                {["general", "health", "vet"].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -396,7 +395,6 @@ export default function Dashboard() {
                     {tab === "general" && "General Data"}
                     {tab === "health" && "Health Records"}
                     {tab === "vet" && "Vet Visits"}
-                    {tab === "reproduction" && "Reproduction"}
                   </button>
                 ))}
               </div>
@@ -415,9 +413,6 @@ export default function Dashboard() {
                 )}
                 {activeTab === "health" && <HealthRecords animal={selectedAnimal} onVaccinationUpdate={() => setVaccinationRefresh(prev => prev + 1)} />}
                 {activeTab === "vet" && <VetVisits animal={selectedAnimal} onVetVisitUpdate={() => setVaccinationRefresh(prev => prev + 1)} />}
-                {activeTab === "reproduction" && (
-                  <Reproductions animal={selectedAnimal} />
-                )}
               </div>
             </>
           )}
