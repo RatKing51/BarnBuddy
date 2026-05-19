@@ -44,6 +44,11 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
     setSelectedVisit(newVisit);
   };
 
+  const handleSelectVisit = (visit) => {
+    const isSameVisit = selectedVisit?.id && visit.id && selectedVisit.id === visit.id;
+    setSelectedVisit(isSameVisit ? null : normalizeVisit(visit));
+  };
+
   const isVisitHasData = (visit) => {
     if (!visit) return false;
     return Boolean(
@@ -232,7 +237,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
             {upcomingVisits.map((visit, idx) => (
               <li
                 key={visit.id || idx}
-                onClick={() => setSelectedVisit(normalizeVisit(visit))}
+                onClick={() => handleSelectVisit(visit)}
                 className={`cursor-pointer p-3 rounded-lg transition ${
                   visit.id === selectedVisit?.id
                     ? "bg-blue-600 text-white"
@@ -264,7 +269,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
             {pastVisits.map((visit, idx) => (
               <li
                 key={visit.id || idx}
-                onClick={() => setSelectedVisit(normalizeVisit(visit))}
+                onClick={() => handleSelectVisit(visit)}
                 className={`cursor-pointer p-3 rounded-lg transition ${
                   visit.id === selectedVisit?.id
                     ? "bg-blue-600 text-white"
@@ -281,7 +286,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
 
           <button
             onClick={handleAddVisit}
-            className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-500 transition"
+            className="cursor-pointer mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-500 transition"
           >
             Add Visit
           </button>
@@ -300,7 +305,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
                 {selectedVisit?.id && (
                   <button
                     onClick={handleDeleteVisit}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-500 transition"
+                    className="cursor-pointer px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-500 transition"
                   >
                     Delete
                   </button>
@@ -315,7 +320,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
                 value={selectedVisit.visit_date || ""}
                 onChange={(e) => handleInputChange("visit_date", e.target.value)}
                 onBlur={handleBlurSave}
-                className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base"
+                className="cursor-text w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base"
               />
             </div>
 
@@ -325,7 +330,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
                 value={selectedVisit.vet_name || ""}
                 onChange={(e) => handleInputChange("vet_name", e.target.value)}
                 onBlur={handleBlurSave}
-                className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base"
+                className="cursor-text w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base"
               />
             </div>
 
@@ -335,7 +340,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
                 value={selectedVisit.reason || ""}
                 onChange={(e) => handleInputChange("reason", e.target.value)}
                 onBlur={handleBlurSave}
-                className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base"
+                className="cursor-text w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base"
               />
             </div>
 
@@ -345,7 +350,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
                 value={selectedVisit.treatment || ""}
                 onChange={(e) => handleInputChange("treatment", e.target.value)}
                 onBlur={handleBlurSave}
-                className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base h-24"
+                className="cursor-text w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base h-24"
               />
             </div>
 
@@ -355,7 +360,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
                 value={selectedVisit.medications || ""}
                 onChange={(e) => handleInputChange("medications", e.target.value)}
                 onBlur={handleBlurSave}
-                className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base h-24"
+                className="cursor-text w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base h-24"
               />
             </div>
 
@@ -366,7 +371,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
                 value={selectedVisit.follow_up_date || ""}
                 onChange={(e) => handleInputChange("follow_up_date", e.target.value)}
                 onBlur={handleBlurSave}
-                className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base"
+                className="cursor-text w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base"
               />
             </div>
 
@@ -377,7 +382,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
                 value={selectedVisit.cost || ""}
                 onChange={(e) => handleInputChange("cost", e.target.value)}
                 onBlur={handleBlurSave}
-                className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base"
+                className="cursor-text w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base"
               />
             </div>
 
@@ -387,7 +392,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
                 value={selectedVisit.notes || ""}
                 onChange={(e) => handleInputChange("notes", e.target.value)}
                 onBlur={handleBlurSave}
-                className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base h-32"
+                className="cursor-text w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base h-32"
               />
             </div>
           </>

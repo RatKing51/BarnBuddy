@@ -29,6 +29,12 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
     Swine: ["Gilt", "Sow", "Boar", "Barrow", "Stag"],
   };
 
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB limit
+
+  function getReadableFileSize(size) {
+    return `${(size / (1024 * 1024)).toFixed(1)}MB`;
+  }
+
 
   function calculateAge(dob) {
     if (!dob) return "";
@@ -259,19 +265,34 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
 
   async function handleImageUpload(e) {
     const file = e.target.files?.[0];
-    if (!file || !animal?.id) return;
+    if (!file || !animal?.id) {
+      if (!animal?.id) toast.error("Save the animal first, then upload an image.");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload a valid image file (JPG, PNG, etc.).");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast.error(`Image is too large. Max file size is ${getReadableFileSize(MAX_IMAGE_SIZE)}.`);
+      e.target.value = "";
+      return;
+    }
 
     try {
       setIsUploadingImage(true);
       await uploadAnimalImage(animal.id, file);
       setImageUrl("stored"); // Set flag to indicate image is stored
-      // Force reload of image blob
       setImageBlobUrl("");
       setRefreshFlag((prev) => !prev);
       toast.success("Image uploaded successfully!");
     } catch (err) {
       console.error("Image upload failed:", err.response?.data || err.message);
-      toast.error("Failed to upload image.");
+      const message = err.response?.data?.error || err.message || "Failed to upload image.";
+      toast.error(message);
     } finally {
       setIsUploadingImage(false);
       e.target.value = "";
@@ -420,6 +441,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
             src={imageSrc}
             alt={`${name || "Animal"} profile`}
             className="w-full h-full object-cover transition duration-300 group-hover:opacity-70"
+            onError={() => setImageBlobUrl("")}
           />
           <input
             type="file"
@@ -428,6 +450,9 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
             onChange={handleImageUpload}
             disabled={isUploadingImage}
           />
+          <div className="absolute bottom-4 left-4 rounded-md bg-black/60 px-3 py-1 text-xs text-white/90">
+            Max 5MB · JPG/PNG only
+          </div>
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition duration-300 bg-black/40 text-white text-lg font-semibold">
             <span>{isUploadingImage ? "Uploading..." : "Change Picture"}</span>
             {imageUrl && (

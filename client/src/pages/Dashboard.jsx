@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import AnimalGeneralData from "../components/AnimalGeneralData";
+import DashboardOverview from "../components/DashboardOverview";
 import HealthRecords from "../components/HealthRecords";
 import VetVisits from "../components/VetVisits";
 import { useAuth } from "../context/AuthContext";
@@ -23,6 +24,7 @@ export default function Dashboard() {
   const [selectedAnimal, setSelectedAnimal] = useState(null);
   const [refreshFlag, setRefreshFlag] = useState(false);
   const [vaccinationsDue, setVaccinationsDue] = useState(0);
+  const [vaccinationsDueSoon, setVaccinationsDueSoon] = useState(0);
   const [vaccinationRefresh, setVaccinationRefresh] = useState(0);
   const [animalUrgencies, setAnimalUrgencies] = useState({});
   const [upcomingVetVisits, setUpcomingVetVisits] = useState(0);
@@ -132,6 +134,7 @@ export default function Dashboard() {
       }
 
       let herdDueCount = 0;
+      let herdDueSoonCount = 0;
       let vetVisitsCount = 0;
       const urgencies = {};
       const now = new Date();
@@ -156,6 +159,7 @@ export default function Dashboard() {
                 } else if (dueDate <= soonThreshold) {
                   hasSoon = true;
                   herdDueCount += 1;
+                  herdDueSoonCount += 1;
                 }
               }
             });
@@ -171,6 +175,12 @@ export default function Dashboard() {
             vetVisits.forEach((visit) => {
               const visitDate = new Date(visit.visit_date);
               const followUpDate = visit.follow_up_date ? new Date(visit.follow_up_date) : null;
+              const isVisitOverdue = visitDate < now;
+              const isFollowUpOverdue = followUpDate && followUpDate < now;
+
+              if (isVisitOverdue || isFollowUpOverdue) {
+                hasOverdue = true;
+              }
 
               if (visitDate >= now && visitDate <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)) {
                 vetVisitsCount += 1;
@@ -196,11 +206,36 @@ export default function Dashboard() {
 
       setAnimalUrgencies(urgencies);
       setVaccinationsDue(herdDueCount);
+      setVaccinationsDueSoon(herdDueSoonCount);
       setUpcomingVetVisits(vetVisitsCount);
     };
 
     computeHerdStatus();
   }, [animals, refreshFlag, vaccinationRefresh]);
+
+  const urgencyCounts = Object.values(animalUrgencies).reduce(
+    (totals, status) => {
+      totals[status] = (totals[status] || 0) + 1;
+      return totals;
+    },
+    { red: 0, yellow: 0, green: 0 }
+  );
+
+  const totalHerds = herds.length;
+  const totalAnimals = animals.length;
+  const careDueCount = vaccinationsDueSoon + upcomingVetVisits;
+  const attentionAnimals = animals
+    .filter((animal) => animalUrgencies[animal.id] !== "green")
+    .sort((a, b) => {
+      const priority = { red: 0, yellow: 1, green: 2 };
+      return (
+        priority[animalUrgencies[a.id] || "green"] -
+        priority[animalUrgencies[b.id] || "green"]
+      );
+    })
+    .slice(0, 3);
+  const issueCount = attentionAnimals.length;
+  const animalsStable = totalAnimals - issueCount;
 
   // Add new animal
   const handleAddAnimal = async () => {
@@ -227,6 +262,12 @@ export default function Dashboard() {
       console.error(err);
       toast.error("Failed to create new animal!");
     }
+  };
+
+  const handleSelectAnimal = (animal) => {
+    setSelectedAnimal((current) =>
+      current?.id === animal.id ? null : animal
+    );
   };
 
   useEffect(() => {
@@ -296,7 +337,7 @@ export default function Dashboard() {
               return (
                 <button
                   key={animal.id}
-                  onClick={() => setSelectedAnimal(animal)}
+                  onClick={() => handleSelectAnimal(animal)}
                   className={`w-full text-left px-4 py-2 rounded-lg transition border cursor-pointer ${
                     selectedAnimal?.id === animal.id
                       ? "bg-blue-600 border-blue-500 text-white shadow"
@@ -375,9 +416,17 @@ export default function Dashboard() {
         {/* ANIMAL DATA */}
         <div className="bg-gray-800 rounded-2xl shadow-md border border-gray-700 flex flex-col min-h-screen">
           {!selectedAnimal ? (
-            <div className="flex flex-1 items-center justify-center text-gray-400 text-lg">
-              No animal selected
-            </div>
+            <DashboardOverview
+              totalAnimals={totalAnimals}
+              vaccinationsDue={vaccinationsDue}
+              upcomingVetVisits={upcomingVetVisits}
+              careDueCount={careDueCount}
+              attentionAnimals={attentionAnimals}
+              issueCount={issueCount}
+              animalsStable={animalsStable}
+              animalUrgencies={animalUrgencies}
+              handleSelectAnimal={handleSelectAnimal}
+            />
           ) : (
             <>
               {/* TABS */}
