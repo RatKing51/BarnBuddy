@@ -1,20 +1,26 @@
 import React, { useState } from 'react'
+import { UserButton, useAuth } from '@clerk/clerk-react'
+import { Link } from 'react-router-dom'
 import '../index.css'
 
 const Navbar = () => {
   const [open, setOpen] = useState(false)
+  const { isLoaded, isSignedIn } = useAuth()
+  const showSignedIn = isLoaded && isSignedIn
+
+  const closeMenu = () => setOpen(false)
 
   return (
     <nav className="bg-[#101D42] text-white">
       <div className="max-w-10xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="flex items-center justify-between h-16">
           {/* Left: Logo */}
-          <a href="/" className="flex items-center flex-shrink-0 z-20">
+          <Link to="/" onClick={closeMenu} className="flex items-center flex-shrink-0 z-20">
             <span className="text-3xl font-bold leading-none">
               <span className="text-blue-500">Barn</span>
               <span className="text-gray-300">Buddy.</span>
             </span>
-          </a>
+          </Link>
 
           {/* Center: Tagline (full-width on md+) */}
           <div className="absolute left-0 right-0 pointer-events-none md:static md:flex md:flex-1 md:justify-center">
@@ -25,18 +31,29 @@ const Navbar = () => {
 
           {/* Right: Desktop links */}
           <div className="hidden md:flex md:items-center md:space-x-6 z-20">
-            <a href="/aboutus" className="text-white text-xl font-bold hover:text-blue-300 transition-colors">
+            <Link to="/aboutus" className="text-white text-xl font-bold hover:text-blue-300 transition-colors">
               About Us
-            </a>
-            <a href="/pricing" className="text-white text-xl font-bold hover:text-blue-300 transition-colors">
+            </Link>
+            <Link to="/pricing" className="text-white text-xl font-bold hover:text-blue-300 transition-colors">
               Pricing
-            </a>
-            <a href="/signup" className="bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-2 px-4 rounded-md transition-colors">
-              Sign Up
-            </a>
-            <a href="/login" className="text-white text-xl font-bold hover:text-orange-400 transition-colors">
-              Login
-            </a>
+            </Link>
+            {showSignedIn ? (
+              <>
+                <Link to="/dashboard" className="bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-2 px-4 rounded-md transition-colors">
+                  Dashboard
+                </Link>
+                <UserButton afterSignOutUrl="/" />
+              </>
+            ) : (
+              <>
+                <Link to="/signup" className="bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-2 px-4 rounded-md transition-colors">
+                Sign Up
+                </Link>
+                <Link to="/login" className="text-white text-xl font-bold hover:text-orange-400 transition-colors">
+                  Login
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -62,18 +79,31 @@ const Navbar = () => {
       {/* Mobile menu (collapsible) */}
       <div className={`md:hidden transition-max-h duration-300 overflow-hidden ${open ? 'max-h-60' : 'max-h-0'}`}>
         <div className="px-4 pt-2 pb-4 space-y-2">
-          <a href="#about" className="block text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
+          <Link to="/aboutus" onClick={closeMenu} className="block text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
             About Us
-          </a>
-          <a href="#pricing" className="block text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
+          </Link>
+          <Link to="/pricing" onClick={closeMenu} className="block text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
             Pricing
-          </a>
-          <a href="/signup" className="block bg-blue-500 hover:bg-blue-600 text-white text-base font-medium py-2 px-3 rounded-md">
-            Sign Up
-          </a>
-          <a href="/login" className="block text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
-            Login
-          </a>
+          </Link>
+          {showSignedIn ? (
+            <>
+              <Link to="/dashboard" onClick={closeMenu} className="block bg-blue-500 hover:bg-blue-600 text-white text-base font-medium py-2 px-3 rounded-md">
+                Dashboard
+              </Link>
+              <div className="py-2 px-2">
+                <UserButton afterSignOutUrl="/" />
+              </div>
+            </>
+          ) : (
+            <>
+              <Link to="/signup" onClick={closeMenu} className="block bg-blue-500 hover:bg-blue-600 text-white text-base font-medium py-2 px-3 rounded-md">
+                Sign Up
+              </Link>
+              <Link to="/login" onClick={closeMenu} className="block text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
+                Login
+              </Link>
+            </>
+          )}
 
           {/* Optional: show tagline on mobile */}
           <div className="pt-2 border-t border-white/10">

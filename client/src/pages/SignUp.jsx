@@ -1,43 +1,67 @@
-import React, { useState } from "react";
+import React from "react";
 import Footer from "../components/Footer";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { SignUp as ClerkSignUp } from "@clerk/clerk-react";
 
+const authAppearance = {
+  variables: {
+    colorPrimary: "#2563eb",
+    colorBackground: "transparent",
+    colorInputBackground: "#102b5a",
+    colorInputText: "#ffffff",
+    colorText: "#ffffff",
+    colorTextSecondary: "rgba(255,255,255,0.72)",
+    colorNeutral: "#ffffff",
+    colorDanger: "#f87171",
+    borderRadius: "0.5rem",
+    fontFamily: "inherit",
+  },
+  elements: {
+    rootBox: "w-full",
+    cardBox: "w-full shadow-none bg-transparent",
+    card: "w-full bg-transparent shadow-none p-0 border-0 gap-5",
+    header: "hidden",
+    headerTitle: "hidden",
+    headerSubtitle: "hidden",
+    main: "bg-transparent p-0",
+    socialButtons: "grid grid-cols-2 gap-3",
+    socialButtonsBlockButton:
+      "h-11 bg-white text-slate-900 border border-slate-200 hover:bg-blue-50 rounded-lg shadow-sm transition opacity-100",
+    socialButtonsBlockButtonText: "text-slate-900 font-semibold",
+    socialButtonsBlockButtonArrow: "text-slate-900",
+    dividerRow: "my-5",
+    dividerLine: "bg-white/10",
+    dividerText: "text-white/60",
+    formFieldLabel: "text-white/80",
+    formFieldInput:
+      "h-11 bg-[#102b5a] text-white border-white/10 placeholder:text-white/40 focus:border-blue-400 focus:ring-blue-400 rounded-lg",
+    formButtonPrimary:
+      "h-11 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-sm transition",
+    footer: "bg-transparent p-0 mt-5",
+    footerAction: "bg-transparent",
+    footerActionText: "text-white/70",
+    footerActionLink: "text-blue-200 hover:text-white font-semibold",
+    footerPages: "hidden",
+    formFieldAction: "text-blue-200 hover:text-white",
+    formFieldErrorText: "text-red-300",
+    formFieldSuccessText: "text-emerald-300",
+    formFieldWarningText: "text-yellow-300",
+    identityPreview: "bg-[#102b5a] border-white/10 text-white rounded-lg",
+    identityPreviewText: "text-white",
+    userPreviewMainIdentifier: "text-white",
+    userPreviewSecondaryIdentifier: "text-white/70",
+    otpCodeFieldInput: "bg-[#102b5a] text-white border-white/10",
+    alternativeMethodsBlockButton:
+      "bg-[#102b5a] border-white/10 text-white hover:bg-[#16376c] rounded-lg",
+    alternativeMethodsBlockButtonText: "text-white",
+    alert: "bg-[#102b5a] border border-white/10 text-white rounded-lg",
+    alertText: "text-white/80",
+    formResendCodeLink: "text-blue-200 hover:text-white",
+    footerPagesLink: "text-white/60",
+    footerPagesText: "text-white/50",
+  },
+};
 
 export default function SignUp() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [agree, setAgree] = useState(false);
-
-  const [message, setMessage] = useState("");
-
-  const { register, loading } = useAuth();
-  const navigate = useNavigate();
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setMessage("");
-
-    // Simple front-end validations
-    if (!agree) {
-      setMessage("You must agree to the terms.");
-      return;
-    }
-    if (password !== passwordConfirm) {
-      setMessage("Passwords do not match.");
-      return;
-    }
-
-    try {
-      await register(name, email, password);
-      navigate("/dashboard");
-    } catch (err) {
-      setMessage(err.message)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-[#0b1730] text-white flex flex-col">
       <main className="flex-grow">
@@ -47,87 +71,25 @@ export default function SignUp() {
             {/* Left: Sign Up form */}
             <div className="lg:col-span-6 flex items-center">
               <div className="w-full max-w-md mx-auto bg-[#0f2650] border border-white/6 rounded-xl p-8 shadow-lg">
-                <h1 className="text-2xl font-semibold mb-6">Sign Up</h1>
-
-                {message && (
-                  <div className="text-yellow-400 text-sm mb-3">{message}</div>
-                )}
-
-                <form className="space-y-4 mt-4" onSubmit={handleSubmit}>
-                  <label className="flex flex-col text-sm">
-                    <span className="mb-2 text-white/80">Name</span>
-                    <input
-                      name="name"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="px-3 py-2 rounded-md bg-white/5 placeholder-white/50 text-white border border-white/8"
-                      placeholder="Your full name"
-                    />
-                  </label>
-
-                  <label className="flex flex-col text-sm">
-                    <span className="mb-2 text-white/80">Email</span>
-                    <input
-                      name="email"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="px-3 py-2 rounded-md bg-white/5 placeholder-white/50 text-white border border-white/8"
-                      placeholder="you@farm.com"
-                    />
-                  </label>
-
-                  <label className="flex flex-col text-sm">
-                    <span className="mb-2 text-white/80">Password</span>
-                    <input
-                      name="password"
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="px-3 py-2 rounded-md bg-white/5 placeholder-white/50 text-white border border-white/8"
-                      placeholder="At least 8 characters"
-                    />
-                  </label>
-
-                  <label className="flex flex-col text-sm">
-                    <span className="mb-2 text-white/80">Confirm Password</span>
-                    <input
-                      name="passwordConfirm"
-                      type="password"
-                      required
-                      value={passwordConfirm}
-                      onChange={(e) => setPasswordConfirm(e.target.value)}
-                      className="px-3 py-2 rounded-md bg-white/5 placeholder-white/50 text-white border border-white/8"
-                      placeholder="Repeat password"
-                    />
-                  </label>
-
-                  <label className="flex items-start gap-3 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={agree}
-                      onChange={(e) => setAgree(e.target.checked)}
-                      className="mt-1 w-4 h-4 rounded border-white/10 bg-white/6"
-                    />
-                    <span className="text-white/80">
-                      I agree to the{" "}
-                      <a href="/termsofserviceandprivacypolicy#tos" className="underline">Terms of Service</a>{" "}
-                      and{" "}
-                      <a href="/termsofserviceandprivacypolicy#pp" className="underline">Privacy Policy</a>
-                    </span>
-                  </label>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full mt-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-md"
-                  >
-                    Create Account
-                  </button>
-                </form>
+                <div className="mb-6">
+                  <h1 className="text-2xl font-semibold">Create your account</h1>
+                  <p className="mt-2 text-sm text-white/70">
+                    Start tracking your animals with one secure sign-in.
+                  </p>
+                </div>
+                <ClerkSignUp
+                  routing="path"
+                  path="/signup"
+                  signInUrl="/login"
+                  fallbackRedirectUrl="/dashboard"
+                  appearance={authAppearance}
+                />
+                <p className="mt-4 text-xs text-white/60">
+                  By signing up, you agree to the{" "}
+                  <a href="/termsofserviceandprivacypolicy#tos" className="underline">Terms of Service</a>{" "}
+                  and{" "}
+                  <a href="/termsofserviceandprivacypolicy#pp" className="underline">Privacy Policy</a>.
+                </p>
               </div>
             </div>
 

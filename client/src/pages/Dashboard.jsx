@@ -14,6 +14,8 @@ import { getHerdsForUser } from "../api/herd";
 import * as vaccinationsAPI from "../api/vaccinations";
 import * as vetVisitsAPI from "../api/vetVisits";
 import { toast } from "react-toastify";
+import { UserButton, useUser } from "@clerk/clerk-react";
+import { LoadingPanel, LoadingSpinner } from "../components/LoadingSpinner";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("general");
@@ -28,6 +30,11 @@ export default function Dashboard() {
   const [vaccinationRefresh, setVaccinationRefresh] = useState(0);
   const [animalUrgencies, setAnimalUrgencies] = useState({});
   const [upcomingVetVisits, setUpcomingVetVisits] = useState(0);
+  const [loadingHerds, setLoadingHerds] = useState(true);
+  const [loadingAnimals, setLoadingAnimals] = useState(false);
+  const [addingAnimal, setAddingAnimal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const handleAnimalsMenuClick = () => {
     setActiveTab("general");
@@ -44,13 +51,39 @@ export default function Dashboard() {
     });
   };
 
-  const { logout } = useAuth();
+  const { logout, deleteAccount } = useAuth();
+  const { user } = useUser();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-    toast.success("Logged out!");
+  const handleLogout = async () => {
+    try {
+      setLoggingOut(true);
+      await logout();
+      navigate("/");
+      toast.success("Logged out!");
+    } finally {
+      setLoggingOut(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "Delete your BarnBuddy account and all farm records? This cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingAccount(true);
+      await deleteAccount();
+      navigate("/");
+      toast.success("Account deleted.");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Failed to delete account");
+    } finally {
+      setDeletingAccount(false);
+    }
   };
 
   // Update clock every second
@@ -76,6 +109,7 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadHerds() {
       try {
+        setLoadingHerds(true);
         const res = await getHerdsForUser();
         setHerds(res.data);
 
@@ -89,6 +123,8 @@ export default function Dashboard() {
       } catch (err) {
         console.error(err);
         toast.error("Failed to load herds");
+      } finally {
+        setLoadingHerds(false);
       }
     }
 
@@ -101,6 +137,7 @@ export default function Dashboard() {
       if (!selectedHerd) return;
 
       try {
+        setLoadingAnimals(true);
         let animalsData = [];
         if (selectedHerd.id === "unassigned") {
           const res = await getAnimalsUnassigned(); // always use dedicated unassigned endpoint
@@ -113,6 +150,8 @@ export default function Dashboard() {
       } catch (err) {
         console.error(err.response?.data || err.message);
         toast.error("Animals failed to load");
+      } finally {
+        setLoadingAnimals(false);
       }
     }
 
@@ -242,6 +281,7 @@ export default function Dashboard() {
     if (!selectedHerd) return;
 
     try {
+      setAddingAnimal(true);
       const filler = {
         herd_id: selectedHerd.id === "unassigned" ? null : selectedHerd.id,
         name: "NewAnimal",
@@ -261,6 +301,8 @@ export default function Dashboard() {
     } catch (err) {
       console.error(err);
       toast.error("Failed to create new animal!");
+    } finally {
+      setAddingAnimal(false);
     }
   };
 
@@ -290,15 +332,21 @@ export default function Dashboard() {
       {/* SIDEBAR */}
       <aside className="w-full md:w-64 bg-gray-800 shadow-lg border-b md:border-b-0 md:border-r border-gray-700 flex flex-col flex-shrink-0">
         <div className="px-6 py-6 border-b border-gray-700">
-          <h1 className="text-2xl font-bold tracking-tight">
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="text-left text-2xl font-bold tracking-tight cursor-pointer hover:opacity-85 transition"
+            aria-label="Go to BarnBuddy home"
+          >
             <span className="text-blue-500">Barn</span>Buddy
-          </h1>
+          </button>
           <p className="text-sm text-gray-400 mt-1">Dashboard</p>
         </div>
 
         <div className="px-4 py-3 border-b border-gray-700">
           <select
             value={selectedHerd ? selectedHerd.id : ""}
+            disabled={loadingHerds}
             onChange={(e) => {
               const value = e.target.value;
               if (value === "unassigned") {
@@ -308,10 +356,10 @@ export default function Dashboard() {
                 setSelectedHerd(herd);
               }
             }}
-            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-gray-100 outline-none cursor-pointer"
+            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-gray-100 outline-none cursor-pointer disabled:cursor-wait disabled:opacity-70"
           >
             <option value="" disabled>
-              Select Herd
+              {loadingHerds ? "Loading herds..." : "Select Herd"}
             </option>
             <option value="unassigned">Unassigned Animals</option>
             {herds.map((herd) => (
@@ -332,7 +380,11 @@ export default function Dashboard() {
           </button>
 
           <div className="mt-4 space-y-2">
-            {animals.map((animal) => {
+            {loadingAnimals ? (
+              <div className="px-4 py-3">
+                <LoadingSpinner label="Loading animals..." />
+              </div>
+            ) : animals.map((animal) => {
               const urgency = animalUrgencies[animal.id] || "green";
               return (
                 <button
@@ -364,9 +416,10 @@ export default function Dashboard() {
           <div className="mt-4 flex flex-col gap-2 px-4">
             <button
               onClick={handleAddAnimal}
-              className="w-full px-3 py-2 bg-blue-600 rounded-lg text-white font-semibold hover:bg-blue-500"
+              disabled={!selectedHerd || addingAnimal}
+              className="w-full px-3 py-2 bg-blue-600 rounded-lg text-white font-semibold hover:bg-blue-500 disabled:cursor-wait disabled:opacity-70"
             >
-              Add
+              {addingAnimal ? "Adding..." : "Add"}
             </button>
           </div>
         </nav>
@@ -380,18 +433,35 @@ export default function Dashboard() {
             <h2 className="text-2xl font-semibold">Welcome Back 👋</h2>
             <p className="text-gray-400">{dateTime}</p>
           </div>
-          <div>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex flex-col items-end">
+              <span className="text-sm font-semibold text-gray-100">
+                {user?.firstName || user?.primaryEmailAddress?.emailAddress || "Profile"}
+              </span>
+              <span className="text-xs text-gray-400">Farm account</span>
+            </div>
+            <div className="rounded-full border border-gray-700 bg-gray-800 p-1">
+              <UserButton afterSignOutUrl="/" />
+            </div>
             <button
-              className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition mr-3"
+              className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition"
               onClick={() => navigate("/settings/herd")}
             >
               Herd Settings
             </button>
             <button
-              className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition"
+              className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition disabled:cursor-wait disabled:opacity-70"
               onClick={handleLogout}
+              disabled={loggingOut || deletingAccount}
             >
-              Logout
+              {loggingOut ? "Logging out..." : "Logout"}
+            </button>
+            <button
+              className="px-5 py-2 bg-red-600 text-white rounded-xl shadow hover:bg-red-500 transition disabled:cursor-wait disabled:opacity-70"
+              onClick={handleDeleteAccount}
+              disabled={deletingAccount || loggingOut}
+            >
+              {deletingAccount ? "Deleting..." : "Delete Account"}
             </button>
           </div>
         </header>
@@ -416,6 +486,11 @@ export default function Dashboard() {
         {/* ANIMAL DATA */}
         <div className="bg-gray-800 rounded-2xl shadow-md border border-gray-700 flex flex-col min-h-screen">
           {!selectedAnimal ? (
+            loadingHerds || loadingAnimals ? (
+              <div className="p-6">
+                <LoadingPanel label={loadingHerds ? "Loading your herds..." : "Loading animals..."} />
+              </div>
+            ) : (
             <DashboardOverview
               totalAnimals={totalAnimals}
               vaccinationsDue={vaccinationsDue}
@@ -427,6 +502,7 @@ export default function Dashboard() {
               animalUrgencies={animalUrgencies}
               handleSelectAnimal={handleSelectAnimal}
             />
+            )
           ) : (
             <>
               {/* TABS */}

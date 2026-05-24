@@ -1,94 +1,85 @@
-import React, { useState } from "react";
+import React from "react";
 import Footer from "../components/Footer";
-import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
-import { toast } from "react-toastify";
+import { SignIn } from "@clerk/clerk-react";
+
+const authAppearance = {
+  variables: {
+    colorPrimary: "#2563eb",
+    colorBackground: "transparent",
+    colorInputBackground: "#102b5a",
+    colorInputText: "#ffffff",
+    colorText: "#ffffff",
+    colorTextSecondary: "rgba(255,255,255,0.72)",
+    colorNeutral: "#ffffff",
+    colorDanger: "#f87171",
+    borderRadius: "0.5rem",
+    fontFamily: "inherit",
+  },
+  elements: {
+    rootBox: "w-full",
+    cardBox: "w-full shadow-none bg-transparent",
+    card: "w-full bg-transparent shadow-none p-0 border-0 gap-5",
+    header: "hidden",
+    headerTitle: "hidden",
+    headerSubtitle: "hidden",
+    main: "bg-transparent p-0",
+    socialButtons: "grid grid-cols-2 gap-3",
+    socialButtonsBlockButton:
+      "h-11 bg-white text-slate-900 border border-slate-200 hover:bg-blue-50 rounded-lg shadow-sm transition opacity-100",
+    socialButtonsBlockButtonText: "text-slate-900 font-semibold",
+    socialButtonsBlockButtonArrow: "text-slate-900",
+    dividerRow: "my-5",
+    dividerLine: "bg-white/10",
+    dividerText: "text-white/60",
+    formFieldLabel: "text-white/80",
+    formFieldInput:
+      "h-11 bg-[#102b5a] text-white border-white/10 placeholder:text-white/40 focus:border-blue-400 focus:ring-blue-400 rounded-lg",
+    formButtonPrimary:
+      "h-11 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-sm transition",
+    footer: "bg-transparent p-0 mt-5",
+    footerAction: "bg-transparent",
+    footerActionText: "text-white/70",
+    footerActionLink: "text-blue-200 hover:text-white font-semibold",
+    footerPages: "hidden",
+    formFieldAction: "text-blue-200 hover:text-white",
+    formFieldErrorText: "text-red-300",
+    formFieldSuccessText: "text-emerald-300",
+    formFieldWarningText: "text-yellow-300",
+    identityPreview: "bg-[#102b5a] border-white/10 text-white rounded-lg",
+    identityPreviewText: "text-white",
+    userPreviewMainIdentifier: "text-white",
+    userPreviewSecondaryIdentifier: "text-white/70",
+    otpCodeFieldInput: "bg-[#102b5a] text-white border-white/10",
+    alternativeMethodsBlockButton:
+      "bg-[#102b5a] border-white/10 text-white hover:bg-[#16376c] rounded-lg",
+    alternativeMethodsBlockButtonText: "text-white",
+    alert: "bg-[#102b5a] border border-white/10 text-white rounded-lg",
+    alertText: "text-white/80",
+    formResendCodeLink: "text-blue-200 hover:text-white",
+    footerPagesLink: "text-white/60",
+    footerPagesText: "text-white/50",
+  },
+};
 
 export default function Login() {
-  const { login, loading, user } = useAuth();
-  const navigate = useNavigate();
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    if (user) {
-      navigate("/dashboard");
-    }
-  }, [user, navigate]);
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setMessage("");
-    try {
-      await login(email, password);
-      toast.success("Logged in!")
-    } catch (err) {
-      toast.error(err.message);
-    }
-  }
-
-  
   return (
     <div className="min-h-screen bg-[#0b1730] text-white flex flex-col">
       <main className="flex-grow flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-md">
           <div className="bg-[#0f2650] border border-white/6 rounded-xl p-8 shadow-lg">
-            <h1 className="text-2xl font-semibold mb-6">LOGIN</h1>
-
-            {message && (
-              <div className="text-yellow-400 text-sm mb-3">{message}</div>
-            )}
-
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <label className="flex flex-col text-sm">
-                <span className="mb-2 text-white/80">Email</span>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="px-3 py-2 rounded-md bg-white/5 text-white border border-white/8"
-                />
-              </label>
-
-              <label className="flex flex-col text-sm">
-                <span className="mb-2 text-white/80">Password</span>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="px-3 py-2 rounded-md bg-white/5 text-white border border-white/8"
-                />
-              </label>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full mt-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-md"
-              >
-                Sign In
-              </button>
-
-              <div className="flex items-center justify-between mt-2 text-sm">
-                <a href="/forgot" className="text-white/70 hover:text-white">
-                  Forgot Password?
-                </a>
-                <a href="/signup" className="text-white/90 font-medium">
-                  Sign Up
-                </a>
-              </div>
-            </form>
-          </div>
-
-          <div className="mt-6 text-center text-sm text-white/70">
-            New here?{" "}
-            <a href="/signup" className="text-white underline">
-              Create an account
-            </a>
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold">Welcome back</h1>
+              <p className="mt-2 text-sm text-white/70">
+                Sign in to keep your farm records moving.
+              </p>
+            </div>
+            <SignIn
+              routing="path"
+              path="/login"
+              signUpUrl="/signup"
+              fallbackRedirectUrl="/dashboard"
+              appearance={authAppearance}
+            />
           </div>
         </div>
       </main>

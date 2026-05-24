@@ -1,6 +1,12 @@
+require("dotenv").config();
+
+process.env.CLERK_PUBLISHABLE_KEY =
+  process.env.CLERK_PUBLISHABLE_KEY || process.env.VITE_CLERK_PUBLISHABLE_KEY;
+
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
+const { clerkMiddleware } = require("@clerk/express");
 
 const animalRoutes = require("./routes/animals");
 const herdRoutes = require("./routes/herds")
@@ -14,6 +20,7 @@ const birthRoutes = require("./routes/births");
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(clerkMiddleware());
 
 app.use("/api/animals", animalRoutes);
 app.use("/api/herds", herdRoutes);
