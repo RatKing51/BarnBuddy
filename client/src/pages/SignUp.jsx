@@ -114,9 +114,9 @@ export default function SignUp() {
                     />
                     <span className="text-white/80">
                       I agree to the{" "}
-                      <a href="/terms" className="underline">Terms of Service</a>{" "}
+                      <a href="/termsofserviceandprivacypolicy#tos" className="underline">Terms of Service</a>{" "}
                       and{" "}
-                      <a href="/privacy" className="underline">Privacy Policy</a>
+                      <a href="/termsofserviceandprivacypolicy#pp" className="underline">Privacy Policy</a>
                     </span>
                   </label>
 

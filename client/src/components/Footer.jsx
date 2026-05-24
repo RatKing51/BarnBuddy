@@ -20,7 +20,7 @@ export default function Footer() {
                   <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53A4.48 4.48 0 0 0 22.43 1s-1.73 1.03-2.62 1.5A4.48 4.48 0 0 0 16.5.5c-2.5 0-4.5 2.24-4 4.7A12.94 12.94 0 0 1 3 2.1S1 7.1 6 9.6a4.48 4.48 0 0 1-2-.55v.06c0 2.2 1.54 4.04 3.6 4.46A4.52 4.52 0 0 1 3 14.4c.53 2 2.04 3.42 3.84 3.46A9 9 0 0 1 1 19.5 12.6 12.6 0 0 0 7.29 21c8.79 0 13.6-7.5 13.6-14v-.64A9.72 9.72 0 0 0 23 3z"/>
                 </svg>
               </a>
-              <a href="#" className="text-white/70 hover:text-white transition-colors" aria-label="Github">
+              <a href="https://github.com/RatKing51/BarnBuddy" className="text-white/70 hover:text-white transition-colors" aria-label="Github">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M12 .5A12 12 0 0 0 0 12.7c0 5.3 3.4 9.8 8.2 11.4.6.1.8-.2.8-.5v-2c-3.3.7-4-1.6-4-1.6-.5-1.3-1.2-1.7-1.2-1.7-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 .1 1.6.7 2 .7.1-.6.4-1 .7-1.2-2.6-.3-5.3-1.3-5.3-6 0-1.3.5-2.3 1.1-3.1-.1-.3-.5-1.6.1-3.2 0 0 .9-.3 3 .9.8-.2 1.7-.3 2.6-.3s1.8.1 2.6.3c2-.1 3-.9 3-.9.6 1.6.2 2.9.1 3.2.7.8 1.1 1.8 1.1 3.1 0 4.7-2.7 5.6-5.3 6 .4.4.8 1 .8 2v3c0 .3.2.6.8.5A12 12 0 0 0 24 .5 12 12 0 0 0 12 .5z"/>
                 </svg>
@@ -40,8 +40,7 @@ export default function Footer() {
             <div>
               <h4 className="text-sm font-semibold mb-3">Product</h4>
               <ul className="space-y-2 text-sm text-white/80">
-                <li><a href="#" className="hover:text-white">Features</a></li>
-                <li><a href="#" className="hover:text-white">Pricing</a></li>
+                <li><a href="/pricing" className="hover:text-white">Pricing</a></li>
                 <li><a href="#" className="hover:text-white">Docs</a></li>
               </ul>
             </div>
@@ -49,9 +48,7 @@ export default function Footer() {
             <div>
               <h4 className="text-sm font-semibold mb-3">Company</h4>
               <ul className="space-y-2 text-sm text-white/80">
-                <li><a href="#" className="hover:text-white">About</a></li>
-                <li><a href="#" className="hover:text-white">Careers</a></li>
-                <li><a href="#" className="hover:text-white">Press</a></li>
+                <li><a href="/aboutus" className="hover:text-white">About</a></li>
               </ul>
             </div>
 
@@ -61,6 +58,7 @@ export default function Footer() {
                 <li><a href="#" className="hover:text-white">Help Center</a></li>
                 <li><a href="#" className="hover:text-white">Contact</a></li>
                 <li><a href="#" className="hover:text-white">Status</a></li>
+                <li><a href="/termsofserviceandprivacypolicy" className="hover:text-white">TOS and PP</a></li>
               </ul>
             </div>
           </div>

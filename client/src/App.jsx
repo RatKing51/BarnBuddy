@@ -9,6 +9,7 @@ import Pricing from "./pages/Pricing";
 import About from "./pages/AboutUs";
 import PrivateRoute from "./routes/PrivateRoute";
 import HerdSettings from "./pages/HerdSettings";
+import TOSandPP from "./pages/TOSandPP";
 import { ToastContainer } from "react-toastify";
 
 function AppContent() {
@@ -26,6 +27,7 @@ function AppContent() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/aboutus" element={<About />} />
         <Route path="/pricing" element={<Pricing />} />
+        <Route path="/termsofserviceandprivacypolicy" element={<TOSandPP />} /> 
 
         {/* Protected routes */}
         <Route element={<PrivateRoute />}>
