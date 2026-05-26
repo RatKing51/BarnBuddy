@@ -37,6 +37,9 @@ const Navbar = () => {
             <Link to="/pricing" className="text-white text-xl font-bold hover:text-blue-300 transition-colors">
               Pricing
             </Link>
+            <Link to="/news" className="text-white text-xl font-bold hover:text-blue-300 transition-colors">
+              News
+            </Link>
             {showSignedIn ? (
               <>
                 <Link to="/dashboard" className="bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-2 px-4 rounded-md transition-colors">
@@ -77,13 +80,16 @@ const Navbar = () => {
       </div>
 
       {/* Mobile menu (collapsible) */}
-      <div className={`md:hidden transition-max-h duration-300 overflow-hidden ${open ? 'max-h-60' : 'max-h-0'}`}>
+      <div className={`md:hidden transition-max-h duration-300 overflow-hidden ${open ? 'max-h-72' : 'max-h-0'}`}>
         <div className="px-4 pt-2 pb-4 space-y-2">
           <Link to="/aboutus" onClick={closeMenu} className="block text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
             About Us
           </Link>
           <Link to="/pricing" onClick={closeMenu} className="block text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
             Pricing
+          </Link>
+          <Link to="/news" onClick={closeMenu} className="block text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
+            News
           </Link>
           {showSignedIn ? (
             <>

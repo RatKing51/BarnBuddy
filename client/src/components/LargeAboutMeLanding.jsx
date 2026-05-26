@@ -4,18 +4,26 @@ import '../index.css'
 export default function LargeAboutMeLanding() {
   return (
     <section className="bg-[#101D42] text-white py-16">
-      <div className="max-w-400 mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Outer border wrapper */}
-        <div className="border border-white/30 rounded-xl p-6 sm:p-8 md:p-10 bg-[#101D42]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="border border-white/14 rounded-2xl p-5 sm:p-8 md:p-10 bg-white/4 shadow-2xl shadow-black/20">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 items-center">
-            {/* Left: Responsive visual placeholder */}
             <div className="w-full flex justify-center lg:justify-end">
-              <div className="w-full h-64 sm:h-80 md:h-[24rem] lg:h-[30rem] xl:h-[36rem] bg-white/5 border border-white/10 rounded-xl flex items-center justify-center p-6 shadow-inner">
-                <span className="text-white/40 text-base sm:text-lg lg:text-xl">Image or graphic goes here</span>
+              <div className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-white/12 bg-white/5 shadow-xl shadow-black/25">
+                <div className="aspect-[4/3] sm:aspect-[16/11] lg:aspect-[4/5] xl:aspect-[5/4]">
+                  <img
+                    src="/IMG_5761.JPEG"
+                    alt="Gage Billings at a Kansas FFA event"
+                    className="h-full w-full object-cover object-[center_38%]"
+                  />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#06112b]/45 via-transparent to-transparent" aria-hidden="true" />
+                <div className="absolute bottom-4 left-4 rounded-lg border border-white/14 bg-[#07102a]/78 px-4 py-3 backdrop-blur">
+                  <p className="text-sm font-semibold">Built by someone in ag</p>
+                  <p className="text-xs text-white/72">FFA roots, small-farm focus</p>
+                </div>
               </div>
             </div>
 
-            {/* Right: Responsive About card */}
             <aside className="w-full flex justify-center lg:justify-start">
               <div className="w-full bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-6 sm:p-8 md:p-10 shadow-lg border border-white/10">
                 <h3 className="text-white text-2xl sm:text-3xl font-semibold mb-4">About Us</h3>

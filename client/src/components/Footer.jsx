@@ -41,7 +41,7 @@ export default function Footer() {
               <h4 className="text-sm font-semibold mb-3">Product</h4>
               <ul className="space-y-2 text-sm text-white/80">
                 <li><a href="/pricing" className="hover:text-white">Pricing</a></li>
-                <li><a href="#" className="hover:text-white">Docs</a></li>
+                <li><a href="/docs" className="hover:text-white">Docs</a></li>
               </ul>
             </div>
 
@@ -49,16 +49,16 @@ export default function Footer() {
               <h4 className="text-sm font-semibold mb-3">Company</h4>
               <ul className="space-y-2 text-sm text-white/80">
                 <li><a href="/aboutus" className="hover:text-white">About</a></li>
+                <li><a href="/news" className="hover:text-white">News</a></li>
               </ul>
             </div>
 
             <div>
               <h4 className="text-sm font-semibold mb-3">Support</h4>
               <ul className="space-y-2 text-sm text-white/80">
-                <li><a href="#" className="hover:text-white">Help Center</a></li>
-                <li><a href="#" className="hover:text-white">Contact</a></li>
-                <li><a href="#" className="hover:text-white">Status</a></li>
-                <li><a href="/termsofserviceandprivacypolicy" className="hover:text-white">TOS and PP</a></li>
+                <li><a href="/help" className="hover:text-white">Help Center</a></li>
+                <li><a href="/contact" className="hover:text-white">Contact</a></li>
+                <li><a href="/status" className="hover:text-white">Status</a></li>
               </ul>
             </div>
           </div>
@@ -83,9 +83,8 @@ export default function Footer() {
         <div className="border-t border-white/6 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between text-sm text-white/70">
           <p>© {new Date().getFullYear()} BarnBuddy. All rights reserved.</p>
           <div className="flex items-center space-x-4 mt-4 sm:mt-0">
-            <a href="#" className="hover:text-white">Privacy</a>
-            <a href="#" className="hover:text-white">Terms</a>
-            <a href="#" className="hover:text-white">Security</a>
+            <a href="/termsofserviceandprivacypolicy#pp" className="hover:text-white">Privacy</a>
+            <a href="/termsofserviceandprivacypolicy#tos" className="hover:text-white">Terms</a>
           </div>
         </div>
       </div>

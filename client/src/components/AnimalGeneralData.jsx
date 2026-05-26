@@ -177,6 +177,8 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
             const nextItems = [];
             const visitDate = visit.visit_date ? new Date(visit.visit_date) : null;
             const followUpDate = visit.follow_up_date ? new Date(visit.follow_up_date) : null;
+            const visitDone = Boolean(visit.completed || visit.visit_completed);
+            const followUpDone = Boolean(visit.completed || visit.follow_up_completed);
 
             const buildItem = (date, label, suffix) => {
               const diffMs = date - now;
@@ -204,10 +206,10 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
               };
             };
 
-            if (visitDate && !Number.isNaN(visitDate.getTime()) && visitDate >= today) {
+            if (!visitDone && visitDate && !Number.isNaN(visitDate.getTime()) && visitDate >= today) {
               nextItems.push(buildItem(visitDate, "Vet Visit", "visit"));
             }
-            if (followUpDate && !Number.isNaN(followUpDate.getTime()) && followUpDate >= today) {
+            if (!followUpDone && followUpDate && !Number.isNaN(followUpDate.getTime()) && followUpDate >= today) {
               nextItems.push(buildItem(followUpDate, "Follow-up", "followup"));
             }
 

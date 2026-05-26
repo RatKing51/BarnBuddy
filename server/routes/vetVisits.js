@@ -4,6 +4,22 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
+async function ensureVetVisitColumns() {
+    await pool.query(
+        "ALTER TABLE vet_visits ADD COLUMN IF NOT EXISTS completed BOOLEAN NOT NULL DEFAULT false"
+    );
+    await pool.query(
+        "ALTER TABLE vet_visits ADD COLUMN IF NOT EXISTS visit_completed BOOLEAN NOT NULL DEFAULT false"
+    );
+    await pool.query(
+        "ALTER TABLE vet_visits ADD COLUMN IF NOT EXISTS follow_up_completed BOOLEAN NOT NULL DEFAULT false"
+    );
+}
+
+ensureVetVisitColumns().catch((err) => {
+    console.error("Failed to ensure vet visit columns:", err);
+});
+
 // Create Visit
 router.post("/", authMiddleware, async (req, res) => {
     const {
@@ -15,7 +31,10 @@ router.post("/", authMiddleware, async (req, res) => {
         medications,
         follow_up_date,
         cost,
-        notes
+        notes,
+        completed = false,
+        visit_completed = false,
+        follow_up_completed = false
     } = req.body;
 
     try {
@@ -31,8 +50,8 @@ router.post("/", authMiddleware, async (req, res) => {
 
         const result = await pool.query(
             `INSERT INTO vet_visits
-            (animal_id, vet_name, visit_date, reason, treatment, medications, follow_up_date, cost, notes)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            (animal_id, vet_name, visit_date, reason, treatment, medications, follow_up_date, cost, notes, completed, visit_completed, follow_up_completed)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             RETURNING *
             `,
             [
@@ -44,7 +63,10 @@ router.post("/", authMiddleware, async (req, res) => {
                 medications,
                 follow_up_date,
                 cost,
-                notes
+                notes,
+                completed,
+                visit_completed,
+                follow_up_completed
             ]
         );
 
@@ -90,8 +112,17 @@ router.get("/herd/:herdId/upcoming", authMiddleware, async (req, res) => {
             FROM vet_visits vv
             JOIN animals a ON vv.animal_id = a.id
             WHERE a.herd_id = $1 AND a.user_id = $2
-              AND (vv.visit_date >= CURRENT_DATE AND vv.visit_date <= CURRENT_DATE + INTERVAL '${days} days'
-                   OR vv.follow_up_date >= CURRENT_DATE AND vv.follow_up_date <= CURRENT_DATE + INTERVAL '${days} days')
+              AND (
+                (COALESCE(vv.completed, false) = false
+                 AND COALESCE(vv.visit_completed, false) = false
+                 AND vv.visit_date >= CURRENT_DATE
+                 AND vv.visit_date <= CURRENT_DATE + INTERVAL '${days} days')
+                OR
+                (COALESCE(vv.completed, false) = false
+                 AND COALESCE(vv.follow_up_completed, false) = false
+                 AND vv.follow_up_date >= CURRENT_DATE
+                 AND vv.follow_up_date <= CURRENT_DATE + INTERVAL '${days} days')
+              )
             ORDER BY vv.visit_date ASC, vv.follow_up_date ASC
             `,
             [herdId, req.user.id]
@@ -115,8 +146,17 @@ router.get("/unassigned/upcoming", authMiddleware, async (req, res) => {
             FROM vet_visits vv
             JOIN animals a ON vv.animal_id = a.id
             WHERE a.herd_id IS NULL AND a.user_id = $1
-              AND (vv.visit_date >= CURRENT_DATE AND vv.visit_date <= CURRENT_DATE + INTERVAL '${days} days'
-                   OR vv.follow_up_date >= CURRENT_DATE AND vv.follow_up_date <= CURRENT_DATE + INTERVAL '${days} days')
+              AND (
+                (COALESCE(vv.completed, false) = false
+                 AND COALESCE(vv.visit_completed, false) = false
+                 AND vv.visit_date >= CURRENT_DATE
+                 AND vv.visit_date <= CURRENT_DATE + INTERVAL '${days} days')
+                OR
+                (COALESCE(vv.completed, false) = false
+                 AND COALESCE(vv.follow_up_completed, false) = false
+                 AND vv.follow_up_date >= CURRENT_DATE
+                 AND vv.follow_up_date <= CURRENT_DATE + INTERVAL '${days} days')
+              )
             ORDER BY vv.visit_date ASC, vv.follow_up_date ASC
             `,
             [req.user.id]
@@ -163,7 +203,10 @@ router.put("/:id", authMiddleware, async (req, res) => {
         medications,
         follow_up_date,
         cost,
-        notes
+        notes,
+        completed = false,
+        visit_completed = false,
+        follow_up_completed = false
     } = req.body;
 
     try {
@@ -176,11 +219,14 @@ router.put("/:id", authMiddleware, async (req, res) => {
                 medications=$5,
                 follow_up_date=$6,
                 cost=$7,
-                notes=$8
+                notes=$8,
+                completed=$9,
+                visit_completed=$10,
+                follow_up_completed=$11
             FROM animals a
-            WHERE vv.id=$9
+            WHERE vv.id=$12
               AND vv.animal_id = a.id
-              AND a.user_id=$10
+              AND a.user_id=$13
             RETURNING vv.*`,
             [
                 vet_name,
@@ -191,6 +237,9 @@ router.put("/:id", authMiddleware, async (req, res) => {
                 follow_up_date,
                 cost,
                 notes,
+                completed,
+                visit_completed,
+                follow_up_completed,
                 req.params.id,
                 req.user.id
             ]

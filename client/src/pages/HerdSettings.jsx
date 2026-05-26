@@ -17,8 +17,13 @@ export default function HerdSettings() {
   }, []);
 
   const fetchHerds = async () => {
-    const res = await axios.get("/herds");
-    setHerds(res.data);
+    try {
+      const res = await axios.get("/herds");
+      setHerds(res.data);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load herds.");
+    }
   };
 
   const selectHerd = (herd) => {
@@ -41,15 +46,20 @@ export default function HerdSettings() {
   const deleteHerd = async () => {
     if (!selectedHerd) return;
 
-    if (!window.confirm("Delete this herd? This cannot be undone.")) return;
+    if (!window.confirm("Delete this herd? Animals in this herd will be moved to Unassigned.")) return;
 
-    await axios.delete(`/herds/${selectedHerd.id}`);
+    try {
+      const res = await axios.delete(`/herds/${selectedHerd.id}`);
 
-    setSelectedHerd(null);
-    setName("");
-    setDescription("");
-    toast.success("Deleted Herd!");
-    fetchHerds();
+      setSelectedHerd(null);
+      setName("");
+      setDescription("");
+      toast.success(`Deleted herd. Moved ${res.data.unassignedAnimals || 0} animal(s) to Unassigned.`);
+      fetchHerds();
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.error || "Failed to delete herd.");
+    }
   };
 
   const createHerd = async () => {

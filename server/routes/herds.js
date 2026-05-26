@@ -77,20 +77,44 @@ router.put("/:id", authMiddleware, async (req, res) => {
 // Delete a herd
 router.delete("/:id", authMiddleware, async (req, res) => {
     const herdId = req.params.id;
+    const client = await pool.connect();
+
     try {
-        const result = await pool.query(
+        await client.query("BEGIN");
+
+        const herdCheck = await client.query(
+            "SELECT * FROM herds WHERE id=$1 AND user_id=$2",
+            [herdId, req.user.id]
+        );
+
+        if (herdCheck.rows.length === 0){
+            await client.query("ROLLBACK");
+            return res.status(404).json({ error: "Herd not found or not authorized" });
+        }
+
+        const movedAnimals = await client.query(
+            "UPDATE animals SET herd_id=NULL WHERE herd_id=$1 AND user_id=$2 RETURNING id",
+            [herdId, req.user.id]
+        );
+
+        const result = await client.query(
             "DELETE FROM herds WHERE id=$1 AND user_id=$2 RETURNING *",
             [herdId, req.user.id]
         );
 
-        if (result.rows.length === 0){
-            return res.status(404).json({ error: "Herd not found or not authoprized" });
-        }
+        await client.query("COMMIT");
 
-        res.json({ message: "Herd deleted successfully", herd: result.rows[0] });
+        res.json({
+            message: "Herd deleted successfully",
+            herd: result.rows[0],
+            unassignedAnimals: movedAnimals.rowCount,
+        });
     } catch (error) {
+        await client.query("ROLLBACK");
         console.error(error);
         res.status(500).json({ error: "Failed to delete herd" });
+    } finally {
+        client.release();
     }
 })
 

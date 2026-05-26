@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [selectedHerd, setSelectedHerd] = useState(null);
   const [herds, setHerds] = useState([]);
   const [animals, setAnimals] = useState([]);
+  const [hasUnassignedAnimals, setHasUnassignedAnimals] = useState(false);
   const [selectedAnimal, setSelectedAnimal] = useState(null);
   const [refreshFlag, setRefreshFlag] = useState(false);
   const [vaccinationsDue, setVaccinationsDue] = useState(0);
@@ -34,7 +35,6 @@ export default function Dashboard() {
   const [loadingAnimals, setLoadingAnimals] = useState(false);
   const [addingAnimal, setAddingAnimal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const handleAnimalsMenuClick = () => {
     setActiveTab("general");
@@ -51,7 +51,7 @@ export default function Dashboard() {
     });
   };
 
-  const { logout, deleteAccount } = useAuth();
+  const { logout } = useAuth();
   const { user } = useUser();
   const navigate = useNavigate();
 
@@ -63,26 +63,6 @@ export default function Dashboard() {
       toast.success("Logged out!");
     } finally {
       setLoggingOut(false);
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    const confirmed = window.confirm(
-      "Delete your BarnBuddy account and all farm records? This cannot be undone."
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setDeletingAccount(true);
-      await deleteAccount();
-      navigate("/");
-      toast.success("Account deleted.");
-    } catch (err) {
-      console.error(err);
-      toast.error(err.message || "Failed to delete account");
-    } finally {
-      setDeletingAccount(false);
     }
   };
 
@@ -110,15 +90,27 @@ export default function Dashboard() {
     async function loadHerds() {
       try {
         setLoadingHerds(true);
-        const res = await getHerdsForUser();
-        setHerds(res.data);
+        const [herdsRes, unassignedRes] = await Promise.all([
+          getHerdsForUser(),
+          getAnimalsUnassigned(),
+        ]);
+        const loadedHerds = herdsRes.data || [];
+        const unassignedAnimals = unassignedRes.data || [];
+        setHerds(loadedHerds);
+        setHasUnassignedAnimals(unassignedAnimals.length > 0);
 
         // Default herd selection
         setSelectedHerd((prev) => {
-          if (prev) return prev;
-          return res.data.length > 0
-            ? res.data[0]
-            : { id: "unassigned", name: "Unassigned" };
+          if (prev) {
+            if (prev.id === "unassigned" && unassignedAnimals.length === 0 && loadedHerds.length > 0) {
+              return loadedHerds[0];
+            }
+            return prev;
+          }
+
+          if (loadedHerds.length > 0) return loadedHerds[0];
+          if (unassignedAnimals.length > 0) return { id: "unassigned", name: "Unassigned" };
+          return null;
         });
       } catch (err) {
         console.error(err);
@@ -142,6 +134,12 @@ export default function Dashboard() {
         if (selectedHerd.id === "unassigned") {
           const res = await getAnimalsUnassigned(); // always use dedicated unassigned endpoint
           animalsData = res.data;
+          setHasUnassignedAnimals(animalsData.length > 0);
+
+          if (animalsData.length === 0 && herds.length > 0) {
+            setSelectedHerd(herds[0]);
+            return;
+          }
         } else {
           const res = await getAnimalsForHerd(selectedHerd.id);
           animalsData = res.data;
@@ -156,7 +154,7 @@ export default function Dashboard() {
     }
 
     loadAnimals();
-  }, [selectedHerd, refreshFlag]);
+  }, [selectedHerd, refreshFlag, herds]);
 
   useEffect(() => {
     setSelectedAnimal("")
@@ -214,21 +212,23 @@ export default function Dashboard() {
             vetVisits.forEach((visit) => {
               const visitDate = new Date(visit.visit_date);
               const followUpDate = visit.follow_up_date ? new Date(visit.follow_up_date) : null;
-              const isVisitOverdue = visitDate < now;
-              const isFollowUpOverdue = followUpDate && followUpDate < now;
+              const visitDone = visit.completed || visit.visit_completed;
+              const followUpDone = visit.completed || visit.follow_up_completed;
+              const isVisitOverdue = visitDate < now && !visitDone;
+              const isFollowUpOverdue = followUpDate && followUpDate < now && !followUpDone;
 
               if (isVisitOverdue || isFollowUpOverdue) {
                 hasOverdue = true;
               }
 
-              if (visitDate >= now && visitDate <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)) {
+              if (!visitDone && visitDate >= now && visitDate <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)) {
                 vetVisitsCount += 1;
                 if (visitDate <= soonThreshold) {
                   hasSoon = true;
                 }
               }
 
-              if (followUpDate && followUpDate >= now && followUpDate <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)) {
+              if (!followUpDone && followUpDate && followUpDate >= now && followUpDate <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)) {
                 vetVisitsCount += 1;
                 if (followUpDate <= soonThreshold) {
                   hasSoon = true;
@@ -361,7 +361,9 @@ export default function Dashboard() {
             <option value="" disabled>
               {loadingHerds ? "Loading herds..." : "Select Herd"}
             </option>
-            <option value="unassigned">Unassigned Animals</option>
+            {hasUnassignedAnimals && (
+              <option value="unassigned">Unassigned Animals</option>
+            )}
             {herds.map((herd) => (
               <option key={herd.id} value={String(herd.id)}>
                 {herd.name}
@@ -445,23 +447,16 @@ export default function Dashboard() {
             </div>
             <button
               className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition"
-              onClick={() => navigate("/settings/herd")}
+              onClick={() => navigate("/settings/account")}
             >
-              Herd Settings
+              Settings
             </button>
             <button
               className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition disabled:cursor-wait disabled:opacity-70"
               onClick={handleLogout}
-              disabled={loggingOut || deletingAccount}
+              disabled={loggingOut}
             >
               {loggingOut ? "Logging out..." : "Logout"}
-            </button>
-            <button
-              className="px-5 py-2 bg-red-600 text-white rounded-xl shadow hover:bg-red-500 transition disabled:cursor-wait disabled:opacity-70"
-              onClick={handleDeleteAccount}
-              disabled={deletingAccount || loggingOut}
-            >
-              {deletingAccount ? "Deleting..." : "Delete Account"}
             </button>
           </div>
         </header>
@@ -470,8 +465,8 @@ export default function Dashboard() {
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           {[
             { title: "Animals", value: animals.length },
-            { title: "Vaccinations Due", value: vaccinationsDue },
-            { title: "Upcoming Vet Visits", value: upcomingVetVisits },
+            { title: "Vaccine Care", value: vaccinationsDue },
+            { title: "Vet Care Upcoming", value: upcomingVetVisits },
           ].map((stat) => (
             <div
               key={stat.title}
