@@ -4,6 +4,7 @@ import * as vetVisitsAPI from "../api/vetVisits";
 import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
+import { API_URL } from "../config/env";
 
 export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedAnimal, setActiveTab, herds, selectedHerd }) {
   const [name, setName] = useState("");
@@ -83,7 +84,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       }
 
       try {
-        const response = await authFetch(`http://localhost:5000/api/animals/${animal.id}/image`);
+        const response = await authFetch(`${API_URL}/api/animals/${animal.id}/image`);
         
         if (!response.ok) {
           throw new Error('Failed to load image');

@@ -3,7 +3,6 @@ import AnimalGeneralData from "../components/AnimalGeneralData";
 import DashboardOverview from "../components/DashboardOverview";
 import HealthRecords from "../components/HealthRecords";
 import VetVisits from "../components/VetVisits";
-import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import {
   createAnimal,
@@ -15,7 +14,8 @@ import * as vaccinationsAPI from "../api/vaccinations";
 import * as vetVisitsAPI from "../api/vetVisits";
 import { toast } from "react-toastify";
 import { UserButton, useUser } from "@clerk/clerk-react";
-import { LoadingPanel, LoadingSpinner } from "../components/LoadingSpinner";
+import { DashboardOverviewSkeleton } from "../components/LoadingSpinner";
+import { usePreferences } from "../context/PreferencesContext";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("general");
@@ -34,7 +34,6 @@ export default function Dashboard() {
   const [loadingHerds, setLoadingHerds] = useState(true);
   const [loadingAnimals, setLoadingAnimals] = useState(false);
   const [addingAnimal, setAddingAnimal] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleAnimalsMenuClick = () => {
     setActiveTab("general");
@@ -51,20 +50,10 @@ export default function Dashboard() {
     });
   };
 
-  const { logout } = useAuth();
   const { user } = useUser();
+  const { preferences } = usePreferences();
   const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    try {
-      setLoggingOut(true);
-      await logout();
-      navigate("/");
-      toast.success("Logged out!");
-    } finally {
-      setLoggingOut(false);
-    }
-  };
+  const isCompact = preferences.dashboardDensity === "compact";
 
   // Update clock every second
   useEffect(() => {
@@ -175,7 +164,8 @@ export default function Dashboard() {
       let vetVisitsCount = 0;
       const urgencies = {};
       const now = new Date();
-      const soonThreshold = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const careWindowDays = Number(preferences.careWindow) || 7;
+      const soonThreshold = new Date(now.getTime() + careWindowDays * 24 * 60 * 60 * 1000);
 
       await Promise.all(
         animals.map(async (animal) => {
@@ -250,17 +240,8 @@ export default function Dashboard() {
     };
 
     computeHerdStatus();
-  }, [animals, refreshFlag, vaccinationRefresh]);
+  }, [animals, refreshFlag, vaccinationRefresh, preferences.careWindow]);
 
-  const urgencyCounts = Object.values(animalUrgencies).reduce(
-    (totals, status) => {
-      totals[status] = (totals[status] || 0) + 1;
-      return totals;
-    },
-    { red: 0, yellow: 0, green: 0 }
-  );
-
-  const totalHerds = herds.length;
   const totalAnimals = animals.length;
   const careDueCount = vaccinationsDueSoon + upcomingVetVisits;
   const attentionAnimals = animals
@@ -328,9 +309,9 @@ export default function Dashboard() {
 
 
   return (
-    <div className="flex flex-col md:flex-row max-h-screen bg-gray-900 text-gray-100">
+    <div className={`dashboard-page flex min-h-screen flex-col bg-gray-950 text-gray-100 md:h-screen md:flex-row md:overflow-hidden ${isCompact ? "dashboard-compact" : "dashboard-comfortable"}`}>
       {/* SIDEBAR */}
-      <aside className="w-full md:w-64 bg-gray-800 shadow-lg border-b md:border-b-0 md:border-r border-gray-700 flex flex-col flex-shrink-0">
+      <aside className="w-full md:w-64 bg-gray-800 shadow-lg border-b md:border-b-0 md:border-r border-gray-700 flex flex-col flex-shrink-0 md:h-screen">
         <div className="px-6 py-6 border-b border-gray-700">
           <button
             type="button"
@@ -338,7 +319,7 @@ export default function Dashboard() {
             className="text-left text-2xl font-bold tracking-tight cursor-pointer hover:opacity-85 transition"
             aria-label="Go to BarnBuddy home"
           >
-            <span className="text-blue-500">Barn</span>Buddy
+            <span className="text-blue-500">Barn</span>Buddy.
           </button>
           <p className="text-sm text-gray-400 mt-1">Dashboard</p>
         </div>
@@ -381,10 +362,15 @@ export default function Dashboard() {
             Animals
           </button>
 
-          <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-2">
             {loadingAnimals ? (
-              <div className="px-4 py-3">
-                <LoadingSpinner label="Loading animals..." />
+              <div className="space-y-2">
+                {[0, 1, 2, 3, 4].map((item) => (
+                  <div
+                    key={item}
+                    className="h-10 w-full animate-pulse rounded-lg border border-gray-700 bg-gray-700/60"
+                  />
+                ))}
               </div>
             ) : animals.map((animal) => {
               const urgency = animalUrgencies[animal.id] || "green";
@@ -428,11 +414,11 @@ export default function Dashboard() {
       </aside>
 
       {/* MAIN AREA */}
-      <main className="flex-1 p-6 md:p-8 overflow-y-scroll">
+      <main className={`dashboard-main flex-1 overflow-y-scroll bg-gray-950 ${isCompact ? "p-4 md:p-5" : "p-6 md:p-8"}`}>
         {/* HEADER */}
-        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
+        <header className={`flex flex-col sm:flex-row items-start sm:items-center justify-between ${isCompact ? "mb-4" : "mb-6"}`}>
           <div className="mb-4 sm:mb-0">
-            <h2 className="text-2xl font-semibold">Welcome Back 👋</h2>
+            <h2 className="text-2xl font-semibold">Welcome back</h2>
             <p className="text-gray-400">{dateTime}</p>
           </div>
           <div className="flex items-center gap-3">
@@ -451,18 +437,11 @@ export default function Dashboard() {
             >
               Settings
             </button>
-            <button
-              className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition disabled:cursor-wait disabled:opacity-70"
-              onClick={handleLogout}
-              disabled={loggingOut}
-            >
-              {loggingOut ? "Logging out..." : "Logout"}
-            </button>
           </div>
         </header>
 
         {/* QUICK STATS */}
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <section className={`grid grid-cols-1 sm:grid-cols-3 ${isCompact ? "gap-3 mb-4" : "gap-4 mb-6"}`}>
           {[
             { title: "Animals", value: animals.length },
             { title: "Vaccine Care", value: vaccinationsDue },
@@ -470,23 +449,32 @@ export default function Dashboard() {
           ].map((stat) => (
             <div
               key={stat.title}
-              className="bg-gray-800 shadow-md border border-gray-700 rounded-2xl p-4 sm:p-6 flex flex-col items-start"
+              className={`bg-gray-900 shadow-md border border-gray-800 rounded-2xl flex flex-col items-start justify-between ${isCompact ? "min-h-20 p-4" : "min-h-28 p-4 sm:p-6"}`}
             >
-              <p className="text-gray-400 text-sm">{stat.title}</p>
-              <h3 className="text-2xl sm:text-3xl font-bold mt-1">{stat.value}</h3>
+              {loadingHerds || loadingAnimals ? (
+                <>
+                  <div className="h-4 w-28 animate-pulse rounded bg-gray-800" />
+                  <div className="mt-3 h-8 w-16 animate-pulse rounded bg-gray-800" />
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-400 text-sm">{stat.title}</p>
+                  <h3 className="text-2xl sm:text-3xl font-bold mt-1">{stat.value}</h3>
+                </>
+              )}
             </div>
           ))}
         </section>
 
         {/* ANIMAL DATA */}
-        <div className="bg-gray-800 rounded-2xl shadow-md border border-gray-700 flex flex-col min-h-screen">
+        <div className="rounded-2xl border border-gray-800 bg-gray-900 shadow-md">
           {!selectedAnimal ? (
             loadingHerds || loadingAnimals ? (
-              <div className="p-6">
-                <LoadingPanel label={loadingHerds ? "Loading your herds..." : "Loading animals..."} />
-              </div>
+              <DashboardOverviewSkeleton label={loadingHerds ? "Loading your herds..." : "Loading animals..."} />
             ) : (
             <DashboardOverview
+              animals={animals}
+              selectedHerd={selectedHerd}
               totalAnimals={totalAnimals}
               vaccinationsDue={vaccinationsDue}
               upcomingVetVisits={upcomingVetVisits}

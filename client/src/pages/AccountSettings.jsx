@@ -3,12 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { UserButton, useUser } from "@clerk/clerk-react";
 import { toast, ToastContainer } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
-
-const preferenceDefaults = {
-  careWindow: "7",
-  dashboardDensity: "comfortable",
-  emailUpdates: true,
-};
+import { usePreferences } from "../context/PreferencesContext";
 
 export default function AccountSettings() {
   const navigate = useNavigate();
@@ -19,7 +14,7 @@ export default function AccountSettings() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
-  const [preferences, setPreferences] = useState(preferenceDefaults);
+  const { preferences, loadingPreferences, savingPreferences, updatePreference } = usePreferences();
 
   useEffect(() => {
     if (!user) return;
@@ -27,22 +22,13 @@ export default function AccountSettings() {
     setLastName(user.lastName || "");
   }, [user]);
 
-  useEffect(() => {
-    const stored = window.localStorage.getItem("barnbuddy.accountPreferences");
-    if (!stored) return;
-
-    try {
-      setPreferences({ ...preferenceDefaults, ...JSON.parse(stored) });
-    } catch {
-      setPreferences(preferenceDefaults);
+  const handlePreferenceChange = async (field, value) => {
+    const result = await updatePreference(field, value);
+    if (result.ok) {
+      toast.success("Preference saved.");
+    } else {
+      toast.error("Failed to save preference.");
     }
-  }, []);
-
-  const updatePreference = (field, value) => {
-    const nextPreferences = { ...preferences, [field]: value };
-    setPreferences(nextPreferences);
-    window.localStorage.setItem("barnbuddy.accountPreferences", JSON.stringify(nextPreferences));
-    toast.success("Preference saved.");
   };
 
   const saveProfile = async () => {
@@ -187,14 +173,17 @@ export default function AccountSettings() {
 
             <section className="rounded-2xl border border-gray-700 bg-gray-800 p-6">
               <h2 className="text-xl font-semibold text-white">Preferences</h2>
-              <p className="mt-2 text-sm text-gray-400">Local app preferences for how BarnBuddy feels on this device.</p>
+              <p className="mt-2 text-sm text-gray-400">
+                Saved app preferences for this BarnBuddy account.
+                {loadingPreferences && " Loading preferences..."}
+              </p>
 
               <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block">
                   <span className="text-sm text-gray-400">Care due soon window</span>
                   <select
                     value={preferences.careWindow}
-                    onChange={(e) => updatePreference("careWindow", e.target.value)}
+                    onChange={(e) => handlePreferenceChange("careWindow", e.target.value)}
                     className="mt-2 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-3 text-white outline-none focus:border-blue-400"
                   >
                     <option value="7">7 days</option>
@@ -207,11 +196,23 @@ export default function AccountSettings() {
                   <span className="text-sm text-gray-400">Dashboard density</span>
                   <select
                     value={preferences.dashboardDensity}
-                    onChange={(e) => updatePreference("dashboardDensity", e.target.value)}
+                    onChange={(e) => handlePreferenceChange("dashboardDensity", e.target.value)}
                     className="mt-2 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-3 text-white outline-none focus:border-blue-400"
                   >
                     <option value="comfortable">Comfortable</option>
                     <option value="compact">Compact</option>
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="text-sm text-gray-400">Theme</span>
+                  <select
+                    value={preferences.appTheme}
+                    onChange={(e) => handlePreferenceChange("appTheme", e.target.value)}
+                    className="mt-2 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-3 text-white outline-none focus:border-blue-400"
+                  >
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
                   </select>
                 </label>
               </div>
@@ -224,10 +225,14 @@ export default function AccountSettings() {
                 <input
                   type="checkbox"
                   checked={preferences.emailUpdates}
-                  onChange={(e) => updatePreference("emailUpdates", e.target.checked)}
+                  onChange={(e) => handlePreferenceChange("emailUpdates", e.target.checked)}
                   className="h-5 w-5 accent-blue-600"
                 />
               </label>
+
+              {savingPreferences && (
+                <p className="mt-3 text-sm text-blue-300">Saving preference...</p>
+              )}
             </section>
 
             <section className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6">

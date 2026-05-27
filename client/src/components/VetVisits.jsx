@@ -17,6 +17,67 @@ const emptyVisit = (animalId) => ({
   follow_up_completed: false,
 });
 
+function SkeletonBlock({ className = "" }) {
+  return <div className={`animate-pulse rounded-lg bg-gray-700/70 ${className}`} />;
+}
+
+function VetVisitsSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(280px,360px)_1fr]" aria-busy="true">
+      <aside className="space-y-4">
+        <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-2">
+              <SkeletonBlock className="h-5 w-28" />
+              <SkeletonBlock className="h-4 w-44" />
+            </div>
+            <SkeletonBlock className="h-9 w-16" />
+          </div>
+          <div className="mt-5 grid grid-cols-3 gap-2">
+            {[0, 1, 2].map((item) => (
+              <div key={item} className="rounded-lg bg-gray-700/50 p-3">
+                <SkeletonBlock className="h-6 w-8" />
+                <SkeletonBlock className="mt-2 h-3 w-12" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-gray-700 bg-gray-800 p-4">
+          <div className="grid grid-cols-3 gap-2">
+            {[0, 1, 2].map((item) => (
+              <SkeletonBlock key={item} className="h-10 w-full" />
+            ))}
+          </div>
+        </div>
+      </aside>
+
+      <section className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <div className="space-y-2">
+            <SkeletonBlock className="h-5 w-40" />
+            <SkeletonBlock className="h-4 w-64" />
+          </div>
+          <SkeletonBlock className="h-8 w-24" />
+        </div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {[0, 1, 2, 3].map((item) => (
+            <div key={item} className="rounded-xl border border-gray-700 bg-gray-900/70 p-4">
+              <div className="mb-4 flex justify-between gap-4">
+                <SkeletonBlock className="h-5 w-32" />
+                <SkeletonBlock className="h-6 w-20 rounded-full" />
+              </div>
+              <SkeletonBlock className="h-4 w-full" />
+              <SkeletonBlock className="mt-3 h-4 w-3/4" />
+              <SkeletonBlock className="mt-5 h-9 w-full" />
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export default function VetVisits({ animal, onVetVisitUpdate }) {
   const [visits, setVisits] = useState([]);
   const [selectedVisit, setSelectedVisit] = useState(null);
@@ -274,11 +335,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
     "w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-3 text-base outline-none focus:border-blue-400";
 
   if (loading) {
-    return (
-      <div className="rounded-2xl border border-gray-700 bg-gray-800 p-8 text-gray-300">
-        Loading vet visits...
-      </div>
-    );
+    return <VetVisitsSkeleton />;
   }
 
   return (

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
 import { useAuth as useClerkAuth, useUser } from "@clerk/clerk-react";
 import { setAuthTokenGetter } from "../api/axios";
+import { API_URL } from "../config/env";
 
 const AuthContext = createContext(null);
 
@@ -35,7 +36,7 @@ export function AuthProvider({ children }) {
     }, [getToken]);
 
     const deleteAccount = useCallback(async function deleteAccount() {
-        const res = await authFetch("http://localhost:5000/auth/me", {
+        const res = await authFetch(`${API_URL}/auth/me`, {
             method: "DELETE",
         });
 
