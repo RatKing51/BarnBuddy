@@ -1,20 +1,24 @@
-const jwt = require("jsonwebtoken");
-require("dotenv").config()
+const { getAuth } = require("@clerk/express");
+const { findOrCreateLocalUserFromAuth } = require("../services/clerkUserSync");
 
-module.exports = function authMiddleware(req, res, next) {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-        return res.status(401).json({ message: "No token provided "});
-    }
-
-    const token = authHeader.split(" ")[1];
-
+module.exports = async function authMiddleware(req, res, next) {
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
+        const auth = getAuth(req);
+
+        if (!auth.isAuthenticated || !auth.userId) {
+            return res.status(401).json({ message: "Not authenticated" });
+        }
+
+        const user = await findOrCreateLocalUserFromAuth(auth);
+        req.user = {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            clerkUserId: auth.userId,
+        };
         next();
     } catch (err) {
-        return res.status(401).json({ message: "Invalid token" });
+        console.error("Auth middleware failed:", err);
+        return res.status(500).json({ message: "Authentication failed" });
     }
 }

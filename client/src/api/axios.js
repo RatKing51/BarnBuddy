@@ -1,12 +1,19 @@
 import axios from "axios";
+import { API_BASE_URL } from "../config/env";
+
+let authTokenGetter = null;
+
+export function setAuthTokenGetter(getToken) {
+    authTokenGetter = getToken;
+}
 
 const api = axios.create({
-    baseURL: "http://localhost:5000/api",
+    baseURL: API_BASE_URL,
 });
 
 api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem("token");
+    async (config) => {
+        const token = authTokenGetter ? await authTokenGetter() : null;
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }

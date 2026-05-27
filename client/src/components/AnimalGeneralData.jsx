@@ -3,6 +3,8 @@ import * as vaccinationsAPI from "../api/vaccinations";
 import * as vetVisitsAPI from "../api/vetVisits";
 import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from "react-toastify";
+import { useAuth } from "../context/AuthContext";
+import { API_URL } from "../config/env";
 
 export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedAnimal, setActiveTab, herds, selectedHerd }) {
   const [name, setName] = useState("");
@@ -22,6 +24,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
   const [isRemovingImage, setIsRemovingImage] = useState(false);
   const [upcomingVaccinations, setUpcomingVaccinations] = useState([]);
   const [upcomingVetVisitDates, setUpcomingVetVisitDates] = useState([]);
+  const { authFetch } = useAuth();
   const sexOptionsBySpecies = {
     Cow: ["Cow", "Heifer", "Steer", "Bull", "Calf"],
     Sheep: ["Ewe", "Ram", "Lamb", "Wether"],
@@ -72,6 +75,8 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
 
   // Load image from database when animal changes
   useEffect(() => {
+    let objectUrl = "";
+
     const loadImage = async () => {
       if (!animal?.id || !imageUrl) {
         setImageBlobUrl("");
@@ -79,20 +84,15 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       }
 
       try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(`http://localhost:5000/api/animals/${animal.id}/image`, {
-          headers: {
-            'Authorization': token ? `Bearer ${token}` : ''
-          }
-        });
+        const response = await authFetch(`${API_URL}/api/animals/${animal.id}/image`);
         
         if (!response.ok) {
           throw new Error('Failed to load image');
         }
 
         const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        setImageBlobUrl(blobUrl);
+        objectUrl = URL.createObjectURL(blob);
+        setImageBlobUrl(objectUrl);
       } catch (err) {
         console.error('Error loading image:', err);
         setImageBlobUrl("");
@@ -103,11 +103,11 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
 
     // Cleanup blob URL on unmount
     return () => {
-      if (imageBlobUrl) {
-        URL.revokeObjectURL(imageBlobUrl);
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [animal?.id, imageUrl]);
+  }, [animal?.id, imageUrl, authFetch]);
 
   useEffect(() => {
     const loadUpcomingVaccinations = async () => {
@@ -119,7 +119,6 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       try {
         const res = await vaccinationsAPI.getVaccinations(animal.id);
         const now = new Date();
-        const soonThreshold = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
         const upcoming = (res.data || [])
           .filter((v) => v.next_due_date)
@@ -179,6 +178,8 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
             const nextItems = [];
             const visitDate = visit.visit_date ? new Date(visit.visit_date) : null;
             const followUpDate = visit.follow_up_date ? new Date(visit.follow_up_date) : null;
+            const visitDone = Boolean(visit.completed || visit.visit_completed);
+            const followUpDone = Boolean(visit.completed || visit.follow_up_completed);
 
             const buildItem = (date, label, suffix) => {
               const diffMs = date - now;
@@ -206,10 +207,10 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
               };
             };
 
-            if (visitDate && !Number.isNaN(visitDate.getTime()) && visitDate >= today) {
+            if (!visitDone && visitDate && !Number.isNaN(visitDate.getTime()) && visitDate >= today) {
               nextItems.push(buildItem(visitDate, "Vet Visit", "visit"));
             }
-            if (followUpDate && !Number.isNaN(followUpDate.getTime()) && followUpDate >= today) {
+            if (!followUpDone && followUpDate && !Number.isNaN(followUpDate.getTime()) && followUpDate >= today) {
               nextItems.push(buildItem(followUpDate, "Follow-up", "followup"));
             }
 

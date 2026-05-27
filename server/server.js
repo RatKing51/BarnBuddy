@@ -1,6 +1,11 @@
+const env = require("./config/env");
+
+process.env.CLERK_PUBLISHABLE_KEY = env.clerk.publishableKey;
+
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
+const { clerkMiddleware } = require("@clerk/express");
 
 const animalRoutes = require("./routes/animals");
 const herdRoutes = require("./routes/herds")
@@ -10,10 +15,22 @@ const healthEventRoutes = require("./routes/healthEvents");
 const authRoutes = require("./routes/auth");
 const reproductionRoutes = require("./routes/reproductions");
 const birthRoutes = require("./routes/births");
+const clerkWebhookRoutes = require("./routes/clerkWebhooks");
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || env.clientUrls.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+}));
+app.use("/webhooks/clerk", express.raw({ type: "application/json" }), clerkWebhookRoutes);
 app.use(express.json());
+app.use(clerkMiddleware());
 
 app.use("/api/animals", animalRoutes);
 app.use("/api/herds", herdRoutes);
@@ -42,5 +59,8 @@ app.use((err, req, res, next) => {
   next();
 });
 
-const PORT = 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
+app.get("/health", (req, res) => {
+  res.json({ ok: true, environment: env.nodeEnv });
+});
+
+app.listen(env.port, () => console.log(`Server running on port ${env.port}`))

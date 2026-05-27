@@ -1,101 +1,68 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
+import { useAuth as useClerkAuth, useUser } from "@clerk/clerk-react";
+import { setAuthTokenGetter } from "../api/axios";
+import { API_URL } from "../config/env";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const { isLoaded, isSignedIn, getToken, signOut } = useClerkAuth();
+    const { user: clerkUser } = useUser();
 
-    // Load user on refresh
     useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) {
-            setLoading(false);
-            return;
+        setAuthTokenGetter(getToken);
+    }, [getToken]);
+
+    const logout = useCallback(async function logout() {
+        await signOut();
+    }, [signOut]);
+
+    const authFetch = useCallback(async function authFetch(url, options = {}) {
+        const token = await getToken();
+        const headers = new Headers(options.headers || {});
+
+        if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
+            headers.set("Content-Type", "application/json");
         }
 
-        fetch("http://localhost:5000/auth/me", {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.user) {
-                    setUser(data.user);
-                }
-            })
-            .finally(() => setLoading(false));
-    }, []);
-
-    async function login(email, password) {
-        setLoading(true);
-
-        const res = await fetch("http://localhost:5000/auth/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            setLoading(false);
-            throw new Error(data.error || "Login failed");
+        if (token) {
+            headers.set("Authorization", `Bearer ${token}`);
         }
-
-        localStorage.setItem("token", data.token);
-        setUser(data.user);
-        setLoading(false);
-    }
-
-    async function register(name, email, password) {
-        setLoading(true);
-
-        const res = await fetch("http://localhost:5000/auth/signup", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, email, password }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            setLoading(false);
-            throw new Error(data.error || "Register failed");
-        }
-
-        // auto-login after signup
-        await login(email, password);
-    }
-
-    function logout() {
-        localStorage.removeItem("token");
-        setUser(null);
-    }
-
-    function authFetch(url, options = {}) {
-        const token = localStorage.getItem("token");
 
         return fetch(url, {
             ...options,
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-                ...(options.headers || {}),
-            },
+            headers,
         });
-    }
+    }, [getToken]);
+
+    const deleteAccount = useCallback(async function deleteAccount() {
+        const res = await authFetch(`${API_URL}/auth/me`, {
+            method: "DELETE",
+        });
+
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || "Failed to delete account");
+        }
+
+        await signOut();
+    }, [authFetch, signOut]);
+
+    const user = isSignedIn ? clerkUser : null;
+    const loading = !isLoaded;
+    const value = useMemo(
+        () => ({ user, logout, deleteAccount, loading, authFetch }),
+        [user, logout, deleteAccount, loading, authFetch]
+    );
 
     return (
-        <AuthContext.Provider
-            value={{ user, login, register, logout, loading, authFetch }}
-        >
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
     return useContext(AuthContext);
 }
