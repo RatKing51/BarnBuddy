@@ -10,5 +10,8 @@
             "database": "BarnBuddy",
             "username": "postgres"
         }
-    ]
+    ],
+    "chat.tools.terminal.autoApprove": {
+        "npm run dev": true
+    }
 }

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { DashboardOverviewSkeleton } from "./LoadingSpinner";
 
 const statusMeta = {
   red: {
@@ -134,7 +135,9 @@ export default function DashboardOverview({
   animalUrgencies,
   handleSelectAnimal,
   selectedHerd,
+  loading = false,
 }) {
+  if (loading) return <DashboardOverviewSkeleton />;
   const [tableFilter, setTableFilter] = useState("all");
 
   const analytics = useMemo(() => {

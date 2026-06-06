@@ -4,6 +4,122 @@ import * as healthEventsAPI from "../api/healthEvents";
 import * as vaccinationsAPI from "../api/vaccinations";
 import * as birthDataAPI from "../api/birthData";
 
+function SkeletonBlock({ className = "" }) {
+  return <div className={`animate-pulse rounded-lg bg-gray-800 ${className}`} />;
+}
+
+function HealthRecordsSkeleton() {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch" aria-busy="true">
+      <div className="lg:col-span-2 bg-gray-800 border border-gray-700 rounded-xl p-5">
+        <div className="flex justify-between items-center mb-4">
+          <div className="space-y-1">
+            <SkeletonBlock className="h-5 w-44" />
+            <SkeletonBlock className="h-3 w-64" />
+          </div>
+          <div className="flex items-center gap-3">
+            <SkeletonBlock className="h-9 w-20" />
+            <SkeletonBlock className="h-9 w-9 rounded-full" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-6">
+          {/* Event list (left) */}
+          <div className="col-span-1 space-y-3 max-h-[360px] overflow-y-auto">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex gap-3 items-center p-3 rounded-lg bg-gray-700 border border-gray-600">
+                <SkeletonBlock className="h-10 w-10 rounded-full" />
+                <div className="flex-1">
+                  <SkeletonBlock className="h-4 w-32 mb-2" />
+                  <div className="flex items-center justify-between">
+                    <SkeletonBlock className="h-3 w-20" />
+                    <SkeletonBlock className="h-3 w-16" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Event form (right) */}
+          <div className="col-span-2 space-y-4">
+            <div className="bg-gray-900 border border-gray-700 rounded-2xl p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <SkeletonBlock className="h-5 w-48" />
+                  <SkeletonBlock className="h-3 w-56 mt-2" />
+                </div>
+                <SkeletonBlock className="h-9 w-20" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <SkeletonBlock className="h-3 w-24 mb-2" />
+                  <SkeletonBlock className="h-10 w-full" />
+                </div>
+                <div>
+                  <SkeletonBlock className="h-3 w-24 mb-2" />
+                  <SkeletonBlock className="h-10 w-full" />
+                </div>
+              </div>
+
+              <div>
+                <SkeletonBlock className="h-3 w-24 mb-2" />
+                <SkeletonBlock className="h-20 w-full" />
+              </div>
+
+              <div className="flex items-center gap-4">
+                <SkeletonBlock className="h-4 w-28" />
+                <SkeletonBlock className="h-4 w-28" />
+              </div>
+            </div>
+
+            {/* Secondary cards */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gray-900 border border-gray-700 rounded-2xl p-4">
+                <SkeletonBlock className="h-5 w-36 mb-3" />
+                <SkeletonBlock className="h-10 w-full" />
+              </div>
+              <div className="bg-gray-900 border border-gray-700 rounded-2xl p-4">
+                <SkeletonBlock className="h-5 w-36 mb-3" />
+                <SkeletonBlock className="h-10 w-full" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Vaccinations card */}
+      <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
+        <div className="flex justify-between items-center mb-4">
+          <SkeletonBlock className="h-5 w-36" />
+          <SkeletonBlock className="h-9 w-20" />
+        </div>
+
+        <div className="grid grid-cols-3 gap-6">
+          <div className="col-span-1 space-y-3 max-h-[320px] overflow-y-auto">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="p-3 rounded-lg bg-gray-700 border border-gray-600">
+                <SkeletonBlock className="h-4 w-28 mb-2" />
+                <SkeletonBlock className="h-3 w-20" />
+              </div>
+            ))}
+          </div>
+
+          <div className="col-span-2 space-y-4">
+            {[0, 1].map((i) => (
+              <div key={i} className="bg-gray-900 border border-gray-700 rounded-2xl p-4">
+                <SkeletonBlock className="h-5 w-48 mb-3" />
+                <SkeletonBlock className="h-10 w-full" />
+                <SkeletonBlock className="h-10 w-full mt-3" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HealthRecords({ animal, onVaccinationUpdate }) {
 
   const [healthEvents, setHealthEvents] = useState([]);
@@ -125,6 +241,8 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
     
     fetchData();
   }, [animal]);
+
+  if (loading) return <HealthRecordsSkeleton />;
 
   const saveBirthData = async () => {
     if (!animal) return;

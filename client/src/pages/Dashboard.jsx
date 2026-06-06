@@ -14,7 +14,6 @@ import * as vaccinationsAPI from "../api/vaccinations";
 import * as vetVisitsAPI from "../api/vetVisits";
 import { toast } from "react-toastify";
 import { UserButton, useUser } from "@clerk/clerk-react";
-import { DashboardOverviewSkeleton } from "../components/LoadingSpinner";
 import { usePreferences } from "../context/PreferencesContext";
 
 export default function Dashboard() {
@@ -469,10 +468,8 @@ export default function Dashboard() {
         {/* ANIMAL DATA */}
         <div className="rounded-2xl border border-gray-800 bg-gray-900 shadow-md">
           {!selectedAnimal ? (
-            loadingHerds || loadingAnimals ? (
-              <DashboardOverviewSkeleton label={loadingHerds ? "Loading your herds..." : "Loading animals..."} />
-            ) : (
             <DashboardOverview
+              loading={loadingHerds || loadingAnimals}
               animals={animals}
               selectedHerd={selectedHerd}
               totalAnimals={totalAnimals}
@@ -485,7 +482,6 @@ export default function Dashboard() {
               animalUrgencies={animalUrgencies}
               handleSelectAnimal={handleSelectAnimal}
             />
-            )
           ) : (
             <>
               {/* TABS */}
