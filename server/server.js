@@ -24,6 +24,7 @@ app.use(cors({
       return callback(null, true);
     }
 
+    console.warn("Blocked by CORS:", origin);
     return callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
@@ -51,6 +52,10 @@ app.use((err, req, res, next) => {
 
     if (err.message === "Only images allowed") {
       return res.status(400).json({ error: "Only image files are allowed." });
+    }
+
+    if (err.message === "Not allowed by CORS") {
+      return res.status(403).json({ error: "Not allowed by CORS" });
     }
 
     console.error("Server error:", err);

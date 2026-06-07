@@ -6,6 +6,10 @@ module.exports = async function authMiddleware(req, res, next) {
         const auth = getAuth(req);
 
         if (!auth.isAuthenticated || !auth.userId) {
+            console.warn("Rejected unauthenticated request:", {
+                method: req.method,
+                path: req.originalUrl,
+            });
             return res.status(401).json({ message: "Not authenticated" });
         }
 
@@ -18,7 +22,14 @@ module.exports = async function authMiddleware(req, res, next) {
         };
         next();
     } catch (err) {
-        console.error("Auth middleware failed:", err);
-        return res.status(500).json({ message: "Authentication failed" });
+        console.error("Auth middleware failed:", {
+            method: req.method,
+            path: req.originalUrl,
+            error: err.message,
+        });
+        return res.status(500).json({
+            message: "Authentication failed",
+            error: err.message,
+        });
     }
 }

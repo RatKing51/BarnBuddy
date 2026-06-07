@@ -20,6 +20,31 @@ router.get("/unassigned", authMiddleware, async (req, res) => {
     }
 });
 
+// Get animals by herd
+router.get("/herd/:herdId", authMiddleware, async (req, res) => {
+    const { herdId } = req.params;
+
+    try {
+        let result;
+        if (herdId === "unassigned") {
+            result = await pool.query(
+                `SELECT * FROM animals WHERE herd_id IS NULL AND user_id=$1 ORDER BY name ASC`,
+                [req.user.id]
+            );
+        } else {
+            result = await pool.query(
+                `SELECT * FROM animals WHERE herd_id=$1 AND user_id=$2 ORDER BY name ASC`,
+                [herdId, req.user.id]
+            );
+        }
+
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to get animals for herd" });
+    }
+});
+
 // Get all animals for logged in user
 router.get("/", authMiddleware, async (req, res) => {
     try {
@@ -248,33 +273,5 @@ router.delete("/:id", authMiddleware, async (req, res) => {
         res.status(500).json({ error: "Failed to delete animal" });
     }
 });
-
-// Get animals by herd
-router.get("/herd/:herdId", authMiddleware, async (req, res) => {
-    const { herdId } = req.params;
-
-    try {
-        let result;
-        if (herdId === "unassigned") {
-            result = await pool.query(
-                `SELECT * FROM animals WHERE herd_id IS NULL AND user_id=$1 ORDER BY name ASC`,
-                [req.user.id]
-            );
-        } else {
-            result = await pool.query(
-                `SELECT * FROM animals WHERE herd_id=$1 AND user_id=$2 ORDER BY name ASC`,
-                [herdId, req.user.id]
-            );
-        }
-
-        res.json(result.rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to get animals for herd" });
-    }
-});
-
-
-
 
 module.exports = router;

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { updateHerd, deleteHerd } from "../api/herds";
+import { updateHerd, deleteHerd } from "../api/herd";
 
 export default function HerdCard({ herd, onRefresh }) {
   const [name, setName] = useState(herd.name);

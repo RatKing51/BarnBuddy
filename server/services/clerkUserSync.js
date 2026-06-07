@@ -6,12 +6,31 @@ let schemaReadyPromise;
 function ensureSchema() {
   if (!schemaReadyPromise) {
     schemaReadyPromise = pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name TEXT,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS herds (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        location TEXT DEFAULT ''
+      );
+
       ALTER TABLE users
         ADD COLUMN IF NOT EXISTS clerk_user_id TEXT UNIQUE,
         ADD COLUMN IF NOT EXISTS care_window_days INTEGER DEFAULT 7,
         ADD COLUMN IF NOT EXISTS dashboard_density TEXT DEFAULT 'comfortable',
         ADD COLUMN IF NOT EXISTS app_theme TEXT DEFAULT 'dark',
-        ADD COLUMN IF NOT EXISTS email_updates BOOLEAN DEFAULT true
+        ADD COLUMN IF NOT EXISTS email_updates BOOLEAN DEFAULT true;
+
+      ALTER TABLE herds
+        ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '',
+        ADD COLUMN IF NOT EXISTS location TEXT DEFAULT ''
     `);
   }
 
@@ -65,8 +84,8 @@ async function getClerkProfileFromAuth(auth) {
     }
 
     const clerkUser = await clerkClient.users.getUser(auth.userId);
-    email = clerkUser.primaryEmailAddress?.emailAddress;
-    name = clerkUser.fullName || clerkUser.firstName || email;
+    email = getEmailFromClerkUser(clerkUser);
+    name = getNameFromClerkUser(clerkUser, email);
   }
 
   if (!email) {
@@ -92,6 +111,10 @@ function getClerkProfileFromWebhookUser(clerkUser) {
 
 async function findOrCreateLocalUser({ clerkUserId, email, name }) {
   await ensureSchema();
+  console.info("Syncing Clerk user to local database:", {
+    clerkUserId,
+    email,
+  });
 
   const existingByClerkId = await pool.query(
     "SELECT id, name, email FROM users WHERE clerk_user_id = $1",
@@ -116,30 +139,38 @@ async function findOrCreateLocalUser({ clerkUserId, email, name }) {
       [clerkUserId, name, email, user.id]
     );
     user = updated.rows[0];
+    console.info("Re-linked Clerk user to existing email user:", { userId: user.id, clerkUserId });
   } else if (user) {
     const updated = await pool.query(
       "UPDATE users SET clerk_user_id = $1, name = $2, email = $3 WHERE id = $4 RETURNING id, name, email",
       [clerkUserId, name, email, user.id]
     );
     user = updated.rows[0];
+    console.info("Linked Clerk user by email:", { userId: user.id, clerkUserId });
   } else if (clerkLinkedUser) {
     const updated = await pool.query(
       "UPDATE users SET name = $1, email = $2 WHERE clerk_user_id = $3 RETURNING id, name, email",
       [name, email, clerkUserId]
     );
     user = updated.rows[0];
+    console.info("Updated existing Clerk-linked user:", { userId: user.id, clerkUserId });
   } else {
     const inserted = await pool.query(
       "INSERT INTO users (clerk_user_id, name, email, password) VALUES ($1, $2, $3, $4) RETURNING id, name, email",
       [clerkUserId, name, email, "clerk_managed"]
     );
     user = inserted.rows[0];
+    console.info("Created local user for Clerk signup:", { userId: user.id, clerkUserId });
   }
 
-  await pool.query(
-    "INSERT INTO herds (user_id, name) SELECT $1, $2 WHERE NOT EXISTS (SELECT 1 FROM herds WHERE user_id = $1)",
-    [user.id, "Default Herd"]
+  const herdResult = await pool.query(
+    "INSERT INTO herds (user_id, name, description, location) SELECT $1, $2, $3, $4 WHERE NOT EXISTS (SELECT 1 FROM herds WHERE user_id = $1)",
+    [user.id, "Default Herd", "", ""]
   );
+  console.info("Ensured default herd for user:", {
+    userId: user.id,
+    inserted: herdResult.rowCount > 0,
+  });
 
   return user;
 }
