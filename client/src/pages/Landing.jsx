@@ -25,11 +25,20 @@ export default function Landing() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-              {landingReviews.map((review) => (
-                <ReviewLandingCard key={`${review.name}-${review.date}`} {...review} />
-              ))}
-            </div>
+            {landingReviews.length > 0 ? (
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                {landingReviews.map((review) => (
+                  <ReviewLandingCard key={`${review.name}-${review.date}`} {...review} />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-white/16 bg-white/6 p-8 text-center">
+                <h3 className="text-lg font-semibold text-white">No reviews yet</h3>
+                <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-white/68">
+                  BarnBuddy is still gathering feedback from small farms and livestock owners.
+                </p>
+              </div>
+            )}
           </div>
         </section>
         <div>

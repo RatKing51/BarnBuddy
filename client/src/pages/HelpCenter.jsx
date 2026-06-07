@@ -22,7 +22,7 @@ const helpTopics = [
 
 const quickAnswers = [
   ['Can I use BarnBuddy for one animal?', 'Yes. It works for a single project animal or a small herd.'],
-  ['Does the Help Center submit tickets yet?', 'Not yet. This is filler content until real support tooling is connected.'],
+  ['Does the Help Center submit tickets yet?', 'Not yet. '],
   ['Where do I ask for help?', 'Use the Contact page for now and include your account email plus what you were trying to do.'],
 ]
 

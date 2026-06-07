@@ -12,7 +12,7 @@ export default function LargeAboutMeLanding() {
                 <div className="aspect-[4/3] sm:aspect-[16/11] lg:aspect-[4/5] xl:aspect-[5/4]">
                   <img
                     src="/IMG_5761.JPEG"
-                    alt="Gage Billings at a Kansas FFA event"
+                    alt="Gage Billinger at a Kansas FFA event"
                     className="h-full w-full object-cover object-[center_38%]"
                   />
                 </div>
@@ -29,7 +29,7 @@ export default function LargeAboutMeLanding() {
                 <h3 className="text-white text-2xl sm:text-3xl font-semibold mb-4">About Us</h3>
 
                 <p className="text-white/90 text-sm sm:text-base lg:text-lg leading-relaxed mb-6">
-                  Hi, I’m <strong>Gage Billings</strong>, a 16-year-old living and working on a small farm located in the United States. I built this site because I know firsthand how hard it is to keep items neat, organized, simple, and useful. So I built this site to help.
+                  Hi, I’m <strong>Gage Billinger</strong>, a 16-year-old who lives on a small rural farm in KS where we raise meat goats. I built this site because I know firsthand how hard it is to keep items neat, organized, simple, and useful. So I built this site to help.
                 </p>
 
                 <div className="flex items-center justify-between">
