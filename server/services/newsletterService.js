@@ -86,18 +86,16 @@ async function unsubscribeFromNewsletter({ email }) {
   }
 
   const result = await pool.query(
-    `INSERT INTO newsletter_subscribers (email, status, source, unsubscribed_at)
-     VALUES ($1, 'unsubscribed', 'account-settings', CURRENT_TIMESTAMP)
-     ON CONFLICT (email)
-     DO UPDATE SET
-       status = 'unsubscribed',
-       unsubscribed_at = CURRENT_TIMESTAMP,
-       updated_at = CURRENT_TIMESTAMP
+    `DELETE FROM newsletter_subscribers
+     WHERE email = $1
      RETURNING id, email, status, source, subscribed_at, unsubscribed_at, updated_at`,
     [normalizedEmail]
   );
 
-  return result.rows[0];
+  return result.rows[0] || {
+    email: normalizedEmail,
+    status: "unsubscribed",
+  };
 }
 
 module.exports = {
