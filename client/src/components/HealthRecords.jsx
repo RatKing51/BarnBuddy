@@ -210,7 +210,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
         ]);
         
         // Transform API data to match component field names
-        const transformedEvents = (eventsRes.data || []).map(event => ({
+        const transformedEvents = (Array.isArray(eventsRes.data) ? eventsRes.data : []).map(event => ({
           id: event.id,
           date: event.event_date ? event.event_date.slice(0, 10) : "",
           type: event.type || "",
@@ -220,7 +220,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           notes: event.notes || ""
         }));
         
-        const transformedVaccinations = (vaccinationsRes.data || []).map(vac => ({
+        const transformedVaccinations = (Array.isArray(vaccinationsRes.data) ? vaccinationsRes.data : []).map(vac => ({
           id: vac.id,
           date: vac.date_given ? vac.date_given.slice(0, 10) : "",
           type: vac.vaccine_name || "",

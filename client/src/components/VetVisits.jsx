@@ -200,7 +200,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
     setLoading(true);
     try {
       const response = await getVetVisitsForAnimal(animal.id);
-      const normalizedVisits = response.data.map(normalizeVisit);
+      const normalizedVisits = Array.isArray(response.data) ? response.data.map(normalizeVisit) : [];
       const sorted = normalizedVisits.sort((a, b) => {
         const aDate = getDateOnly(a.visit_date)?.getTime() || 0;
         const bDate = getDateOnly(b.visit_date)?.getTime() || 0;

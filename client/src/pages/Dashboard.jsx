@@ -82,8 +82,8 @@ export default function Dashboard() {
           getHerdsForUser(),
           getAnimalsUnassigned(),
         ]);
-        const loadedHerds = herdsRes.data || [];
-        const unassignedAnimals = unassignedRes.data || [];
+        const loadedHerds = Array.isArray(herdsRes.data) ? herdsRes.data : [];
+        const unassignedAnimals = Array.isArray(unassignedRes.data) ? unassignedRes.data : [];
         setHerds(loadedHerds);
         setHasUnassignedAnimals(unassignedAnimals.length > 0);
 
@@ -121,7 +121,7 @@ export default function Dashboard() {
         let animalsData = [];
         if (selectedHerd.id === "unassigned") {
           const res = await getAnimalsUnassigned(); // always use dedicated unassigned endpoint
-          animalsData = res.data;
+          animalsData = Array.isArray(res.data) ? res.data : [];
           setHasUnassignedAnimals(animalsData.length > 0);
 
           if (animalsData.length === 0 && herds.length > 0) {
@@ -130,7 +130,7 @@ export default function Dashboard() {
           }
         } else {
           const res = await getAnimalsForHerd(selectedHerd.id);
-          animalsData = res.data;
+          animalsData = Array.isArray(res.data) ? res.data : [];
         }
         setAnimals(animalsData);
       } catch (err) {
@@ -145,13 +145,14 @@ export default function Dashboard() {
   }, [selectedHerd, refreshFlag, herds]);
 
   useEffect(() => {
-    setSelectedAnimal("")
-  }, [selectedHerd])
+    setSelectedAnimal(null);
+  }, [selectedHerd]);
 
   // Fetch and calculate herd-wide vaccination dues and urgency per animal
   useEffect(() => {
     const computeHerdStatus = async () => {
-      if (!animals || animals.length === 0) {
+      const herdAnimals = Array.isArray(animals) ? animals : [];
+      if (herdAnimals.length === 0) {
         setVaccinationsDue(0);
         setAnimalUrgencies({});
         setUpcomingVetVisits(0);
@@ -167,7 +168,7 @@ export default function Dashboard() {
       const soonThreshold = new Date(now.getTime() + careWindowDays * 24 * 60 * 60 * 1000);
 
       await Promise.all(
-        animals.map(async (animal) => {
+        herdAnimals.map(async (animal) => {
           let hasOverdue = false;
           let hasSoon = false;
 
