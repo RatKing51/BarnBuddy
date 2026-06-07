@@ -34,19 +34,9 @@ export default function Dashboard() {
   const [loadingAnimals, setLoadingAnimals] = useState(false);
   const [addingAnimal, setAddingAnimal] = useState(false);
 
-  const handleAnimalsMenuClick = () => {
+  const handleFarmOverviewClick = () => {
     setActiveTab("general");
-
-    if (!animals.length) {
-      setSelectedAnimal(null);
-      toast.info("No animals yet. Add one to get started.");
-      return;
-    }
-
-    setSelectedAnimal((current) => {
-      if (current?.id) return current;
-      return animals[0];
-    });
+    setSelectedAnimal(null);
   };
 
   const { user } = useUser();
@@ -410,13 +400,21 @@ export default function Dashboard() {
         <nav className="flex-1 px-4 py-6 space-y-3 overflow-y-auto">
           <button
             type="button"
-            onClick={handleAnimalsMenuClick}
-            className="w-full text-left px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold shad transition border-2 border-blue-500 hover:bg-blue-500 cursor-pointer"
+            onClick={handleFarmOverviewClick}
+            className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition border cursor-pointer ${
+              !selectedAnimal
+                ? "bg-blue-600 border-blue-500 text-white shadow"
+                : "border-gray-600 hover:bg-gray-700 text-gray-200"
+            }`}
           >
-            Animals
+            Farm Overview
           </button>
 
-        <div className="mt-4 space-y-2">
+          <div className="mt-4 px-4 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+            Animals
+          </div>
+
+        <div className="mt-2 space-y-2">
             {loadingAnimals ? (
               <div className="space-y-2">
                 {[0, 1, 2, 3, 4].map((item) => (

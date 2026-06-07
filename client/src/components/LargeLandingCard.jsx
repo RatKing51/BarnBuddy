@@ -27,6 +27,7 @@ export default function LargeLandingCard() {
   const [activeSlide, setActiveSlide] = useState(0)
   const { isLoaded, isSignedIn } = useAuth()
   const showSignUp = isLoaded && !isSignedIn
+  const showDashboardLink = isLoaded && isSignedIn
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -62,6 +63,18 @@ export default function LargeLandingCard() {
                 aria-label="Sign up for BarnBuddy"
               >
                 Sign Up
+              </a>
+            </div>
+          )}
+
+          {showDashboardLink && (
+            <div>
+              <a
+                href="/dashboard"
+                className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 sm:py-4 sm:px-8 rounded-lg shadow-md transition-colors text-base sm:text-lg"
+                aria-label="Go to your BarnBuddy farm dashboard"
+              >
+                Go to Farm Dashboard
               </a>
             </div>
           )}
