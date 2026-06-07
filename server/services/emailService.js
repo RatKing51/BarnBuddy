@@ -87,8 +87,28 @@ async function sendContactEmail({ name, email, topic, message }) {
   });
 }
 
+async function sendTestEmail({ to, requestedBy }) {
+  const safeRequestedBy = escapeHtml(requestedBy || to);
+  const sentAt = new Date().toISOString();
+
+  return sendEmail({
+    to,
+    subject: "BarnBuddy Resend test email",
+    text: `This is a BarnBuddy test email requested by ${requestedBy || to} at ${sentAt}.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #172033; line-height: 1.6;">
+        <h1 style="margin: 0 0 12px;">BarnBuddy email test</h1>
+        <p>Resend is connected and BarnBuddy can send email.</p>
+        <p><strong>Requested by:</strong> ${safeRequestedBy}</p>
+        <p><strong>Sent at:</strong> ${sentAt}</p>
+      </div>
+    `,
+  });
+}
+
 module.exports = {
   sendEmail,
   sendContactEmail,
+  sendTestEmail,
   sendWelcomeEmail,
 };

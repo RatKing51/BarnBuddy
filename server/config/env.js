@@ -37,6 +37,14 @@ const env = {
     resendApiKey: process.env.RESEND_API_KEY || "",
     from: process.env.RESEND_FROM_EMAIL || "BarnBuddy <onboarding@resend.dev>",
     contactTo: process.env.CONTACT_TO_EMAIL || process.env.RESEND_TO_EMAIL || "",
+    testAllowedEmails: (process.env.EMAIL_TEST_ALLOWED_EMAILS || "")
+      .split(",")
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
+    testAllowedClerkUserIds: (process.env.EMAIL_TEST_ALLOWED_CLERK_IDS || "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean),
   },
 };
 

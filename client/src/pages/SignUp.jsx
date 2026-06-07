@@ -83,12 +83,6 @@ export default function SignUp() {
                   fallbackRedirectUrl="/dashboard"
                   appearance={authAppearance}
                 />
-                <p className="mt-4 text-xs text-white/60">
-                  By signing up, you agree to the{" "}
-                  <a href="/termsofserviceandprivacypolicy#tos" className="underline">Terms of Service</a>{" "}
-                  and{" "}
-                  <a href="/termsofserviceandprivacypolicy#pp" className="underline">Privacy Policy</a>.
-                </p>
               </div>
             </div>
 
