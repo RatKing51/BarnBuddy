@@ -113,11 +113,6 @@ export default function Dashboard() {
           const res = await getAnimalsUnassigned(); // always use dedicated unassigned endpoint
           animalsData = Array.isArray(res.data) ? res.data : [];
           setHasUnassignedAnimals(animalsData.length > 0);
-
-          if (animalsData.length === 0 && herds.length > 0) {
-            setSelectedHerd(herds[0]);
-            return;
-          }
         } else {
           const res = await getAnimalsForHerd(selectedHerd.id);
           animalsData = Array.isArray(res.data) ? res.data : [];
@@ -386,9 +381,7 @@ export default function Dashboard() {
             <option value="" disabled>
               {loadingHerds ? "Loading herds..." : "Select Herd"}
             </option>
-            {hasUnassignedAnimals && (
-              <option value="unassigned">Unassigned Animals</option>
-            )}
+            <option value="unassigned">Unassigned Animals</option>
             {herds.map((herd) => (
               <option key={herd.id} value={String(herd.id)}>
                 {herd.name}
