@@ -33,15 +33,15 @@ export default function Pricing() {
               </div>
 
               <ul className="mt-6 space-y-3 text-sm text-white/80">
-                <li>• Basic record keeping (animals, supplies, notes)</li>
-                <li>• One user account</li>
-                <li>• Local export (CSV) for simple reports</li>
+                <li>• Easy to use workflow</li>
+                <li>• Basic record keeping (animals, notes, health)</li>
+                <li>• Local export (PDF) for simple reports</li>
                 <li>• Mobile-friendly workflows</li>
               </ul>
 
               <div className="mt-6 flex items-center justify-between">
                 <span className="text-sm text-white/70">No credit card required</span>
-                <button className="ml-4 bg-white text-blue-700 px-4 py-2 rounded-md font-semibold hover:bg-blue-100 transition-colors">
+                <button className="ml-4 bg-white text-blue-700 px-4 py-2 rounded-md font-semibold hover:bg-blue-100 transition-colors" href="/signup">
                   Get started
                 </button>
               </div>
@@ -61,9 +61,9 @@ export default function Pricing() {
               </div>
 
               <ul className="mt-6 space-y-3 text-sm text-white/95">
-                <li>• Data exports and scheduled exports</li>
-                <li>• Analytics dashboard and trends</li>
-                <li>• Herd comparisons and cohort reports</li>
+                <li>• Personalized Data exports and scheduled exports</li>
+                <li>• Automatic Reminders</li>
+                <li>• Advacned Record keeping tools (Reprodcution, Finances, Feed)</li>
                 <li>• Multi-user access and shared farm accounts</li>
               </ul>
 
