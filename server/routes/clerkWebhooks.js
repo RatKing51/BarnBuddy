@@ -31,11 +31,21 @@ function verifyClerkWebhook(req) {
 }
 
 function getPrimaryEmail(clerkUser) {
-  const primaryEmail = clerkUser.email_addresses?.find(
-    (email) => email.id === clerkUser.primary_email_address_id
-  );
+  const emailAddresses = clerkUser.email_addresses || clerkUser.emailAddresses || [];
+  const primaryEmailId = clerkUser.primary_email_address_id || clerkUser.primaryEmailAddressId;
+  const primaryEmail =
+    clerkUser.primaryEmailAddress ||
+    emailAddresses.find(
+      (email) => email.id === primaryEmailId
+    );
 
-  return primaryEmail?.email_address || clerkUser.email_addresses?.[0]?.email_address || null;
+  return (
+    primaryEmail?.email_address ||
+    primaryEmail?.emailAddress ||
+    emailAddresses[0]?.email_address ||
+    emailAddresses[0]?.emailAddress ||
+    null
+  );
 }
 
 router.post("/", async (req, res) => {

@@ -36,6 +36,7 @@ const env = {
     enabled: process.env.EMAIL_ENABLED === "true",
     resendApiKey: process.env.RESEND_API_KEY || "",
     from: process.env.RESEND_FROM_EMAIL || "BarnBuddy <onboarding@resend.dev>",
+    contactTo: process.env.CONTACT_TO_EMAIL || process.env.RESEND_TO_EMAIL || "",
   },
 };
 

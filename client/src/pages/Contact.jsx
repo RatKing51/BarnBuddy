@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Footer from '../components/Footer'
+import { API_URL } from '../config/env'
 
 const contactMethods = [
   {
@@ -22,6 +23,52 @@ const contactMethods = [
 const supportTopics = ['Account help', 'Feature ideas', 'School or chapter plans', 'Bug reports']
 
 export default function Contact() {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    topic: 'General question',
+    message: '',
+  })
+  const [status, setStatus] = useState({ type: '', message: '' })
+  const [submitting, setSubmitting] = useState(false)
+
+  function updateField(field, value) {
+    setForm((current) => ({ ...current, [field]: value }))
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setStatus({ type: '', message: '' })
+
+    try {
+      setSubmitting(true)
+      const res = await fetch(`${API_URL}/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send message.')
+      }
+
+      setForm({
+        name: '',
+        email: '',
+        topic: 'General question',
+        message: '',
+      })
+      setStatus({ type: 'success', message: 'Message sent. We will get back to you soon.' })
+    } catch (err) {
+      setStatus({ type: 'error', message: err.message })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#0b1730] text-white flex flex-col">
       <main className="flex-grow">
@@ -70,18 +117,21 @@ export default function Contact() {
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <h2 className="text-2xl font-semibold">Send a message</h2>
-                    <p className="mt-2 text-sm text-white/65">Filler form for now. It is styled, but not connected to email yet.</p>
+                    <p className="mt-2 text-sm text-white/65">Send questions, support notes, or program inquiries straight to the BarnBuddy inbox.</p>
                   </div>
-                  <span className="rounded-full bg-blue-500/16 px-3 py-1 text-xs font-semibold text-blue-100">Coming soon</span>
+                  <span className="rounded-full bg-emerald-500/16 px-3 py-1 text-xs font-semibold text-emerald-100">Email enabled</span>
                 </div>
 
-                <form className="mt-7 space-y-5">
+                <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <label className="block">
                       <span className="text-sm font-medium text-white/78">Name</span>
                       <input
                         type="text"
+                        value={form.name}
+                        onChange={(e) => updateField('name', e.target.value)}
                         placeholder="Your name"
+                        required
                         className="mt-2 w-full rounded-lg border border-white/10 bg-[#101D42] px-4 py-3 text-white placeholder-white/38 outline-none transition-colors focus:border-blue-300"
                       />
                     </label>
@@ -90,7 +140,10 @@ export default function Contact() {
                       <span className="text-sm font-medium text-white/78">Email</span>
                       <input
                         type="email"
+                        value={form.email}
+                        onChange={(e) => updateField('email', e.target.value)}
                         placeholder="you@farm.com"
+                        required
                         className="mt-2 w-full rounded-lg border border-white/10 bg-[#101D42] px-4 py-3 text-white placeholder-white/38 outline-none transition-colors focus:border-blue-300"
                       />
                     </label>
@@ -98,7 +151,11 @@ export default function Contact() {
 
                   <label className="block">
                     <span className="text-sm font-medium text-white/78">Topic</span>
-                    <select className="mt-2 w-full rounded-lg border border-white/10 bg-[#101D42] px-4 py-3 text-white outline-none transition-colors focus:border-blue-300">
+                    <select
+                      value={form.topic}
+                      onChange={(e) => updateField('topic', e.target.value)}
+                      className="mt-2 w-full rounded-lg border border-white/10 bg-[#101D42] px-4 py-3 text-white outline-none transition-colors focus:border-blue-300"
+                    >
                       <option>General question</option>
                       <option>Support request</option>
                       <option>School or chapter pricing</option>
@@ -110,16 +167,30 @@ export default function Contact() {
                     <span className="text-sm font-medium text-white/78">Message</span>
                     <textarea
                       rows="6"
+                      value={form.message}
+                      onChange={(e) => updateField('message', e.target.value)}
                       placeholder="Tell us what is going on..."
+                      required
                       className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-[#101D42] px-4 py-3 text-white placeholder-white/38 outline-none transition-colors focus:border-blue-300"
                     />
                   </label>
 
+                  {status.message && (
+                    <p className={`rounded-lg border px-4 py-3 text-sm ${
+                      status.type === 'success'
+                        ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
+                        : 'border-red-400/30 bg-red-500/10 text-red-100'
+                    }`}>
+                      {status.message}
+                    </p>
+                  )}
+
                   <button
-                    type="button"
-                    className="w-full rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-blue-500 sm:w-auto"
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-blue-500 disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                   >
-                    Send message
+                    {submitting ? 'Sending...' : 'Send message'}
                   </button>
                 </form>
               </section>

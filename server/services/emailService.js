@@ -54,7 +54,41 @@ async function sendWelcomeEmail({ to, name }) {
   });
 }
 
+async function sendContactEmail({ name, email, topic, message }) {
+  if (!env.email.contactTo) {
+    throw new Error("CONTACT_TO_EMAIL is required to receive contact form messages.");
+  }
+
+  const safeName = escapeHtml(name || "BarnBuddy visitor");
+  const safeEmail = escapeHtml(email || "No email provided");
+  const safeTopic = escapeHtml(topic || "General question");
+  const safeMessage = escapeHtml(message || "").replace(/\n/g, "<br />");
+
+  return sendEmail({
+    to: env.email.contactTo,
+    subject: `BarnBuddy contact: ${topic || "General question"}`,
+    text: [
+      `Name: ${name || "BarnBuddy visitor"}`,
+      `Email: ${email || "No email provided"}`,
+      `Topic: ${topic || "General question"}`,
+      "",
+      message || "",
+    ].join("\n"),
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #172033; line-height: 1.6;">
+        <h1 style="margin: 0 0 12px;">New BarnBuddy contact message</h1>
+        <p><strong>Name:</strong> ${safeName}</p>
+        <p><strong>Email:</strong> ${safeEmail}</p>
+        <p><strong>Topic:</strong> ${safeTopic}</p>
+        <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 18px 0;" />
+        <p>${safeMessage}</p>
+      </div>
+    `,
+  });
+}
+
 module.exports = {
   sendEmail,
+  sendContactEmail,
   sendWelcomeEmail,
 };
