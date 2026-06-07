@@ -42,6 +42,39 @@ select {
   font: inherit;
 }
 
+.signup-page .cl-rootBox,
+.signup-page .cl-cardBox,
+.signup-page .cl-card,
+.signup-page .cl-main,
+.signup-page .cl-form,
+.signup-page .cl-formField,
+.signup-page .cl-formFieldInput,
+.signup-page .cl-footer,
+.signup-page .cl-socialButtons,
+.signup-page .cl-socialButtonsBlockButton {
+  max-width: 100%;
+}
+
+.signup-page .cl-card {
+  width: 100%;
+}
+
+.signup-page .cl-formButtonPrimary,
+.signup-page .cl-socialButtonsBlockButton {
+  min-height: 44px;
+}
+
+@media (max-width: 420px) {
+  .signup-page .cl-socialButtons {
+    grid-template-columns: 1fr !important;
+  }
+
+  .signup-page .cl-socialButtonsBlockButton,
+  .signup-page .cl-formButtonPrimary {
+    width: 100%;
+  }
+}
+
 .bb-light .dashboard-page {
   color: #182234;
   background:
@@ -184,4 +217,100 @@ select {
 
 .bb-compact .dashboard-page .space-y-6 > :not([hidden]) ~ :not([hidden]) {
   margin-top: 1rem;
+}
+
+@media print {
+  @page {
+    margin: 0.5in;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #health-records-pdf,
+  #health-records-pdf * {
+    visibility: visible;
+  }
+
+  #health-records-pdf {
+    display: block !important;
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    color: #111827;
+    background: #ffffff;
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  #health-records-pdf header {
+    margin-bottom: 20px;
+    border-bottom: 2px solid #1d4ed8;
+    padding-bottom: 12px;
+  }
+
+  #health-records-pdf h1 {
+    margin: 4px 0;
+    color: #0f172a;
+    font-size: 24px;
+    line-height: 1.2;
+  }
+
+  #health-records-pdf h2 {
+    margin: 18px 0 8px;
+    color: #1e3a8a;
+    font-size: 15px;
+  }
+
+  #health-records-pdf p {
+    margin: 0 0 8px;
+  }
+
+  #health-records-pdf dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 18px;
+    margin: 0;
+  }
+
+  #health-records-pdf dt {
+    color: #4b5563;
+    font-weight: 700;
+  }
+
+  #health-records-pdf dd {
+    margin: 0;
+  }
+
+  #health-records-pdf .pdf-notes {
+    margin-top: 10px;
+    border-left: 3px solid #bfdbfe;
+    padding-left: 10px;
+  }
+
+  #health-records-pdf table {
+    width: 100%;
+    border-collapse: collapse;
+    break-inside: auto;
+  }
+
+  #health-records-pdf tr {
+    break-inside: avoid;
+  }
+
+  #health-records-pdf th,
+  #health-records-pdf td {
+    border: 1px solid #d1d5db;
+    padding: 6px 8px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  #health-records-pdf th {
+    background: #eff6ff;
+    color: #1e3a8a;
+    font-weight: 700;
+  }
 }

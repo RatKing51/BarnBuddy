@@ -23,9 +23,9 @@ function HealthRecordsSkeleton() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
           {/* Event list (left) */}
-          <div className="col-span-1 space-y-3 max-h-[360px] overflow-y-auto">
+          <div className="space-y-3 max-h-[360px] overflow-y-auto md:col-span-1">
             {[0, 1, 2, 3, 4].map((i) => (
               <div key={i} className="flex gap-3 items-center p-3 rounded-lg bg-gray-700 border border-gray-600">
                 <SkeletonBlock className="h-10 w-10 rounded-full" />
@@ -41,7 +41,7 @@ function HealthRecordsSkeleton() {
           </div>
 
           {/* Event form (right) */}
-          <div className="col-span-2 space-y-4">
+          <div className="space-y-4 md:col-span-2">
             <div className="bg-gray-900 border border-gray-700 rounded-2xl p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -51,7 +51,7 @@ function HealthRecordsSkeleton() {
                 <SkeletonBlock className="h-9 w-20" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <SkeletonBlock className="h-3 w-24 mb-2" />
                   <SkeletonBlock className="h-10 w-full" />
@@ -74,7 +74,7 @@ function HealthRecordsSkeleton() {
             </div>
 
             {/* Secondary cards */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="bg-gray-900 border border-gray-700 rounded-2xl p-4">
                 <SkeletonBlock className="h-5 w-36 mb-3" />
                 <SkeletonBlock className="h-10 w-full" />
@@ -95,8 +95,8 @@ function HealthRecordsSkeleton() {
           <SkeletonBlock className="h-9 w-20" />
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
-          <div className="col-span-1 space-y-3 max-h-[320px] overflow-y-auto">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
+          <div className="space-y-3 max-h-[320px] overflow-y-auto md:col-span-1">
             {[0, 1, 2].map((i) => (
               <div key={i} className="p-3 rounded-lg bg-gray-700 border border-gray-600">
                 <SkeletonBlock className="h-4 w-28 mb-2" />
@@ -105,7 +105,7 @@ function HealthRecordsSkeleton() {
             ))}
           </div>
 
-          <div className="col-span-2 space-y-4">
+          <div className="space-y-4 md:col-span-2">
             {[0, 1].map((i) => (
               <div key={i} className="bg-gray-900 border border-gray-700 rounded-2xl p-4">
                 <SkeletonBlock className="h-5 w-48 mb-3" />
@@ -147,6 +147,12 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
     if (severity === "High") return "bg-red-500 text-white";
     if (severity === "Medium") return "bg-yellow-500 text-black";
     return "bg-emerald-500 text-white";
+  };
+
+  const formatDate = (value) => value || "Not recorded";
+
+  const handleExportPdf = () => {
+    window.print();
   };
 
   const handleAddEvent = () => {
@@ -409,21 +415,30 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
       {/* HEALTH EVENTS */}
       <div className="lg:col-span-2 bg-gray-800 border border-gray-700 rounded-xl p-5">
 
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-gray-200 font-semibold text-lg">Health Events</h2>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-lg font-semibold text-gray-200">Health Events</h2>
 
-          <button
-            onClick={handleAddEvent}
-            className="cursor-pointer bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium"
-          >
-            + Add Event
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              className="cursor-pointer rounded-lg border border-gray-600 bg-gray-700 px-4 py-2 text-sm font-medium text-gray-100 hover:bg-gray-600"
+            >
+              Export PDF
+            </button>
+            <button
+              onClick={handleAddEvent}
+              className="cursor-pointer bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium"
+            >
+              + Add Event
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
 
           {/* EVENT LIST */}
-          <div className="col-span-1 space-y-2 max-h-[360px] overflow-y-auto">
+          <div className="space-y-2 max-h-[360px] overflow-y-auto md:col-span-1">
 
             {healthEvents.length === 0 && (
               <div className="text-gray-400 text-sm">
@@ -465,7 +480,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           </div>
 
           {/* EVENT FORM */}
-          <div className="col-span-2 space-y-4">
+          <div className="space-y-4 md:col-span-2">
             {selectedEventIndex === null ? (
               <div className="text-gray-400 text-sm">
                 Select or add a health event to edit
@@ -593,8 +608,8 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
       {/* VACCINATIONS */}
       <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
 
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-gray-200 font-semibold text-lg">Vaccinations</h2>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-lg font-semibold text-gray-200">Vaccinations</h2>
 
           <button
             onClick={handleAddVaccine}
@@ -604,10 +619,10 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
 
           {/* VACCINE LIST */}
-          <div className="col-span-1 space-y-2 max-h-[360px] overflow-y-auto">
+          <div className="space-y-2 max-h-[360px] overflow-y-auto md:col-span-1">
 
             {vaccinations.length === 0 && (
               <div className="text-gray-400 text-sm">
@@ -645,7 +660,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           </div>
 
           {/* VACCINE FORM */}
-          <div className="col-span-2 space-y-4">
+          <div className="space-y-4 md:col-span-2">
             {selectedVaccineIndex === null ? (
               <div className="text-gray-400 text-sm">
                 Select or add a vaccination to edit
@@ -805,6 +820,102 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
         </div>
 
       </div>
+      <section id="health-records-pdf" className="pdf-export-report hidden">
+        <header>
+          <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+            BarnBuddy Health Report
+          </p>
+          <h1>{animal?.name || "Animal"} Health Records</h1>
+          <p>Generated {new Date().toLocaleDateString()}</p>
+        </header>
+
+        <section>
+          <h2>Animal Summary</h2>
+          <dl>
+            <div>
+              <dt>Name</dt>
+              <dd>{animal?.name || "Not recorded"}</dd>
+            </div>
+            <div>
+              <dt>Species</dt>
+              <dd>{animal?.species || "Not recorded"}</dd>
+            </div>
+            <div>
+              <dt>Tag</dt>
+              <dd>{animal?.tag_id || "Not recorded"}</dd>
+            </div>
+            <div>
+              <dt>Birth Date</dt>
+              <dd>{formatDate(birthDate)}</dd>
+            </div>
+            <div>
+              <dt>Birth Weight</dt>
+              <dd>{birthWeight || "Not recorded"}</dd>
+            </div>
+          </dl>
+          {birthNotes && <p className="pdf-notes">{birthNotes}</p>}
+        </section>
+
+        <section>
+          <h2>Health Events</h2>
+          {healthEvents.length === 0 ? (
+            <p>No health events recorded.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Severity</th>
+                  <th>Status</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {healthEvents.map((event, idx) => (
+                  <tr key={`event-${event.id || idx}`}>
+                    <td>{formatDate(event.date)}</td>
+                    <td>{event.type || "Health Event"}</td>
+                    <td>{event.severity || "Low"}</td>
+                    <td>{event.resolved ? "Resolved" : "Open"}</td>
+                    <td>{event.notes || event.description || ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+
+        <section>
+          <h2>Vaccinations</h2>
+          {vaccinations.length === 0 ? (
+            <p>No vaccinations recorded.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Vaccine</th>
+                  <th>Dosage</th>
+                  <th>Next Due</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vaccinations.map((vaccine, idx) => (
+                  <tr key={`vaccine-${vaccine.id || idx}`}>
+                    <td>{formatDate(vaccine.date)}</td>
+                    <td>{vaccine.type || "Vaccination"}</td>
+                    <td>{vaccine.dosage || ""}</td>
+                    <td>{vaccine.completed ? "Completed" : formatDate(vaccine.next_due_date)}</td>
+                    <td>{vaccine.notes || ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      </section>
       <ToastContainer autoClose="1000" />
     </div>
   );
