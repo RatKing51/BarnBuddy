@@ -21,6 +21,26 @@ const contactMethods = [
 ]
 
 const supportTopics = ['Account help', 'Feature ideas', 'School or chapter plans', 'Bug reports']
+const CONTACT_COOLDOWN_KEY = 'barnbuddy_contact_last_sent_at'
+const CONTACT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
+
+function getContactCooldown() {
+  const lastSentAt = Number(window.localStorage.getItem(CONTACT_COOLDOWN_KEY) || 0)
+
+  if (!lastSentAt) return { active: false, remainingDays: 0 }
+
+  const remainingMs = CONTACT_COOLDOWN_MS - (Date.now() - lastSentAt)
+
+  if (remainingMs <= 0) {
+    window.localStorage.removeItem(CONTACT_COOLDOWN_KEY)
+    return { active: false, remainingDays: 0 }
+  }
+
+  return {
+    active: true,
+    remainingDays: Math.ceil(remainingMs / (24 * 60 * 60 * 1000)),
+  }
+}
 
 export default function Contact() {
   const [form, setForm] = useState({
@@ -31,6 +51,7 @@ export default function Contact() {
   })
   const [status, setStatus] = useState({ type: '', message: '' })
   const [submitting, setSubmitting] = useState(false)
+  const [cooldown, setCooldown] = useState(() => getContactCooldown())
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
@@ -41,6 +62,13 @@ export default function Contact() {
     setStatus({ type: '', message: '' })
 
     try {
+      const currentCooldown = getContactCooldown()
+      setCooldown(currentCooldown)
+
+      if (currentCooldown.active) {
+        throw new Error(`You can send one contact message per device each week. Try again in ${currentCooldown.remainingDays} day${currentCooldown.remainingDays === 1 ? '' : 's'}.`)
+      }
+
       setSubmitting(true)
       const res = await fetch(`${API_URL}/contact`, {
         method: 'POST',
@@ -61,6 +89,8 @@ export default function Contact() {
         topic: 'General question',
         message: '',
       })
+      window.localStorage.setItem(CONTACT_COOLDOWN_KEY, String(Date.now()))
+      setCooldown(getContactCooldown())
       setStatus({ type: 'success', message: 'Message sent. We will get back to you soon.' })
     } catch (err) {
       setStatus({ type: 'error', message: err.message })
@@ -187,11 +217,16 @@ export default function Contact() {
 
                   <button
                     type="submit"
-                    disabled={submitting}
+                    disabled={submitting || cooldown.active}
                     className="w-full rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-blue-500 disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                   >
-                    {submitting ? 'Sending...' : 'Send message'}
+                    {submitting ? 'Sending...' : cooldown.active ? 'Message sent this week' : 'Send message'}
                   </button>
+                  {cooldown.active && (
+                    <p className="text-sm text-white/60">
+                      You can send another message from this device in {cooldown.remainingDays} day{cooldown.remainingDays === 1 ? '' : 's'}.
+                    </p>
+                  )}
                 </form>
               </section>
             </div>
