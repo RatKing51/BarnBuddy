@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth as useClerkAuth, useUser } from "@clerk/clerk-react";
 import { setAuthTokenGetter } from "../api/axios";
 import { API_URL } from "../config/env";
@@ -8,6 +8,9 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
     const { isLoaded, isSignedIn, getToken, signOut } = useClerkAuth();
     const { user: clerkUser } = useUser();
+    const [backendUser, setBackendUser] = useState(null);
+    const [backendAuthLoading, setBackendAuthLoading] = useState(true);
+    const [backendAuthError, setBackendAuthError] = useState(null);
 
     useEffect(() => {
         setAuthTokenGetter(getToken);
@@ -35,6 +38,53 @@ export function AuthProvider({ children }) {
         });
     }, [getToken]);
 
+    useEffect(() => {
+        let cancelled = false;
+
+        async function syncBackendUser() {
+            if (!isLoaded) return;
+
+            if (!isSignedIn) {
+                setBackendUser(null);
+                setBackendAuthError(null);
+                setBackendAuthLoading(false);
+                return;
+            }
+
+            try {
+                setBackendAuthLoading(true);
+                setBackendAuthError(null);
+
+                const res = await authFetch(`${API_URL}/auth/me`);
+                const data = await res.json().catch(() => ({}));
+
+                if (!res.ok) {
+                    throw new Error(data.error || data.message || "Failed to sync account");
+                }
+
+                if (!cancelled) {
+                    setBackendUser(data.user || null);
+                }
+            } catch (err) {
+                console.error("Backend account sync failed:", err);
+                if (!cancelled) {
+                    setBackendUser(null);
+                    setBackendAuthError(err);
+                }
+            } finally {
+                if (!cancelled) {
+                    setBackendAuthLoading(false);
+                }
+            }
+        }
+
+        syncBackendUser();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [authFetch, isLoaded, isSignedIn]);
+
     const deleteAccount = useCallback(async function deleteAccount() {
         const res = await authFetch(`${API_URL}/auth/me`, {
             method: "DELETE",
@@ -51,8 +101,26 @@ export function AuthProvider({ children }) {
     const user = isSignedIn ? clerkUser : null;
     const loading = !isLoaded;
     const value = useMemo(
-        () => ({ user, logout, deleteAccount, loading, authFetch }),
-        [user, logout, deleteAccount, loading, authFetch]
+        () => ({
+            user,
+            backendUser,
+            backendAuthLoading,
+            backendAuthError,
+            logout,
+            deleteAccount,
+            loading,
+            authFetch,
+        }),
+        [
+            user,
+            backendUser,
+            backendAuthLoading,
+            backendAuthError,
+            logout,
+            deleteAccount,
+            loading,
+            authFetch,
+        ]
     );
 
     return (

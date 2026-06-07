@@ -12,7 +12,7 @@ const preferenceDefaults = {
 const PreferencesContext = createContext(null);
 
 export function PreferencesProvider({ children }) {
-  const { user, loading, authFetch } = useAuth();
+  const { user, loading, backendAuthLoading, authFetch } = useAuth();
   const [preferences, setPreferences] = useState(preferenceDefaults);
   const [loadingPreferences, setLoadingPreferences] = useState(true);
   const [savingPreferences, setSavingPreferences] = useState(false);
@@ -27,7 +27,7 @@ export function PreferencesProvider({ children }) {
     let cancelled = false;
 
     async function loadPreferences() {
-      if (loading) return;
+      if (loading || backendAuthLoading) return;
 
       if (!user) {
         setPreferences(preferenceDefaults);
@@ -56,7 +56,7 @@ export function PreferencesProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [authFetch, loading, user]);
+  }, [authFetch, backendAuthLoading, loading, user]);
 
   const updatePreference = useCallback(async (field, value) => {
     const nextPreferences = { ...preferences, [field]: value };
