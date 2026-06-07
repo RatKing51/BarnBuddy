@@ -21,6 +21,7 @@ const clerkWebhookRoutes = require("./routes/clerkWebhooks");
 const contactRoutes = require("./routes/contact");
 const emailRoutes = require("./routes/email");
 const newsletterRoutes = require("./routes/newsletter");
+const ensureAnimalSchema = require("./services/ensureAnimalSchema");
 
 const app = express();
 app.use(cors({
@@ -76,4 +77,14 @@ app.get("/health", (req, res) => {
   res.json({ ok: true, environment: env.nodeEnv });
 });
 
-app.listen(env.port, () => console.log(`Server running on port ${env.port}`))
+async function startServer() {
+  try {
+    await ensureAnimalSchema();
+    app.listen(env.port, () => console.log(`Server running on port ${env.port}`));
+  } catch (err) {
+    console.error("Failed to start server:", err);
+    process.exit(1);
+  }
+}
+
+startServer();
