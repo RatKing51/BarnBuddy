@@ -1,6 +1,42 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { API_BASE_URL } from '../config/env'
 
 export default function Footer() {
+  const [email, setEmail] = useState('')
+  const [status, setStatus] = useState({ type: '', message: '' })
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleNewsletterSubmit(e) {
+    e.preventDefault()
+    setStatus({ type: '', message: '' })
+
+    try {
+      setSubmitting(true)
+      const res = await fetch(`${API_BASE_URL}/newsletter/subscribe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          source: 'footer',
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Could not subscribe right now.')
+      }
+
+      setEmail('')
+      setStatus({ type: 'success', message: 'You are on the list.' })
+    } catch (err) {
+      setStatus({ type: 'error', message: err.message })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <footer className="bg-[#07102a] text-white mt-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -55,16 +91,30 @@ export default function Footer() {
           <div className="md:col-span-3 lg:col-span-1">
             <h4 className="text-sm font-semibold mb-3">Get updates</h4>
             <p className="text-sm text-white/80 mb-4">Short updates about new features, guides, and tips for small farms.</p>
-            <form className="flex items-center gap-3">
+            <form className="flex items-center gap-3" onSubmit={handleNewsletterSubmit}>
               <input
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@farm.com"
+                required
                 className="w-full px-3 py-2 rounded-md bg-white/6 placeholder-white/60 text-white focus:outline-none border border-white/8"
               />
-              <button className="px-4 py-2 bg-blue-600 rounded-md font-semibold hover:bg-blue-500 transition-colors">
-                Subscribe
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-4 py-2 bg-blue-600 rounded-md font-semibold hover:bg-blue-500 transition-colors disabled:cursor-wait disabled:opacity-70"
+              >
+                {submitting ? 'Saving...' : 'Subscribe'}
               </button>
             </form>
+            {status.message && (
+              <p className={`mt-3 text-sm ${
+                status.type === 'success' ? 'text-emerald-200' : 'text-red-200'
+              }`}>
+                {status.message}
+              </p>
+            )}
           </div>
         </div>
 

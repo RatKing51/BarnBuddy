@@ -20,6 +20,7 @@ const birthRoutes = require("./routes/births");
 const clerkWebhookRoutes = require("./routes/clerkWebhooks");
 const contactRoutes = require("./routes/contact");
 const emailRoutes = require("./routes/email");
+const newsletterRoutes = require("./routes/newsletter");
 
 const app = express();
 app.use(cors({
@@ -43,6 +44,7 @@ app.use("/api/vaccinations", vaccinationRoutes);
 app.use("/api/vetVisits", vetVisitRoutes);
 app.use("/api/healthEvents", healthEventRoutes);
 app.use("/api/email", emailRoutes);
+app.use("/api/newsletter", newsletterRoutes);
 app.use("/auth", authRoutes);
 app.use("/contact", contactRoutes);
 app.use("/api/reproductions", reproductionRoutes);

@@ -4,16 +4,20 @@ import { UserButton, useUser } from "@clerk/clerk-react";
 import { toast, ToastContainer } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 import { usePreferences } from "../context/PreferencesContext";
+import { API_BASE_URL } from "../config/env";
 
 export default function AccountSettings() {
   const navigate = useNavigate();
   const { user } = useUser();
-  const { logout, deleteAccount } = useAuth();
+  const { logout, deleteAccount, authFetch } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
+  const [loadingNewsletter, setLoadingNewsletter] = useState(true);
+  const [savingNewsletter, setSavingNewsletter] = useState(false);
   const { preferences, loadingPreferences, savingPreferences, updatePreference } = usePreferences();
 
   useEffect(() => {
@@ -22,12 +26,72 @@ export default function AccountSettings() {
     setLastName(user.lastName || "");
   }, [user]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadNewsletterStatus() {
+      if (!user) return;
+
+      try {
+        setLoadingNewsletter(true);
+        const res = await authFetch(`${API_BASE_URL}/newsletter/me`);
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load newsletter status.");
+        }
+
+        if (!cancelled) {
+          setNewsletterSubscribed(Boolean(data.subscribed));
+        }
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) {
+          setNewsletterSubscribed(false);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingNewsletter(false);
+        }
+      }
+    }
+
+    loadNewsletterStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authFetch, user]);
+
   const handlePreferenceChange = async (field, value) => {
     const result = await updatePreference(field, value);
     if (result.ok) {
       toast.success("Preference saved.");
     } else {
       toast.error("Failed to save preference.");
+    }
+  };
+
+  const handleNewsletterChange = async (subscribed) => {
+    try {
+      setSavingNewsletter(true);
+      const res = await authFetch(`${API_BASE_URL}/newsletter/me`, {
+        method: "PATCH",
+        body: JSON.stringify({ subscribed }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update newsletter setting.");
+      }
+
+      setNewsletterSubscribed(Boolean(data.subscribed));
+      toast.success(data.subscribed ? "Product updates enabled." : "Product updates disabled.");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Failed to update newsletter setting.");
+    } finally {
+      setSavingNewsletter(false);
     }
   };
 
@@ -220,18 +284,27 @@ export default function AccountSettings() {
               <label className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3">
                 <div>
                   <p className="font-semibold text-white">Product updates</p>
-                  <p className="text-sm text-gray-400">Placeholder setting for future email/news updates.</p>
+                  <p className="text-sm text-gray-400">
+                    {loadingNewsletter
+                      ? "Checking newsletter status..."
+                      : newsletterSubscribed
+                      ? "Your email is subscribed to BarnBuddy updates."
+                      : "Your email is not subscribed to BarnBuddy updates."}
+                  </p>
                 </div>
                 <input
                   type="checkbox"
-                  checked={preferences.emailUpdates}
-                  onChange={(e) => handlePreferenceChange("emailUpdates", e.target.checked)}
+                  checked={newsletterSubscribed}
+                  disabled={loadingNewsletter || savingNewsletter}
+                  onChange={(e) => handleNewsletterChange(e.target.checked)}
                   className="h-5 w-5 accent-blue-600"
                 />
               </label>
 
-              {savingPreferences && (
-                <p className="mt-3 text-sm text-blue-300">Saving preference...</p>
+              {(savingPreferences || savingNewsletter) && (
+                <p className="mt-3 text-sm text-blue-300">
+                  {savingNewsletter ? "Saving newsletter setting..." : "Saving preference..."}
+                </p>
               )}
             </section>
 
