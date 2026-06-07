@@ -70,7 +70,7 @@ export default function Pricing() {
               <div className="mt-6 flex items-center justify-between">
                 <span className="text-sm text-white/80">Billed monthly. Cancel anytime.</span>
                 <button className="ml-4 bg-white text-blue-700 px-4 py-2 rounded-md font-semibold hover:bg-blue-100 transition-colors">
-                  Buy
+                  Coming Soon!
                 </button>
               </div>
             </section>

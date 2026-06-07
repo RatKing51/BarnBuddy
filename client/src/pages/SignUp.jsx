@@ -78,8 +78,7 @@ export default function SignUp() {
                   </p>
                 </div>
                 <ClerkSignUp
-                  routing="path"
-                  path="/signup"
+                  routing="hash"
                   signInUrl="/login"
                   fallbackRedirectUrl="/dashboard"
                   appearance={authAppearance}

@@ -26,6 +26,11 @@ function AppContent() {
   const showShell = !hiddenPaths.includes(location.pathname);
 
   useEffect(() => {
+    if (location.pathname.startsWith("/login") || location.pathname.startsWith("/signup")) {
+      setPageLoading(false);
+      return undefined;
+    }
+
     setPageLoading(true);
     const timer = window.setTimeout(() => setPageLoading(false), 250);
     return () => window.clearTimeout(timer);
