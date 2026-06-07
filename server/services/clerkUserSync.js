@@ -45,18 +45,36 @@ function getClaimValue(claims, keys) {
   return null;
 }
 
-function getEmailFromClerkUser(clerkUser) {
-  const primaryEmail = clerkUser.email_addresses?.find(
-    (email) => email.id === clerkUser.primary_email_address_id
-  );
+function getFallbackEmailForClerkUserId(clerkUserId) {
+  return `clerk-${clerkUserId}@users.barnbuddy.local`;
+}
 
-  return primaryEmail?.email_address || clerkUser.email_addresses?.[0]?.email_address || null;
+function getEmailAddressValue(emailAddress) {
+  return emailAddress?.email_address || emailAddress?.emailAddress || null;
+}
+
+function getEmailFromClerkUser(clerkUser) {
+  const emailAddresses = clerkUser.email_addresses || clerkUser.emailAddresses || [];
+  const primaryEmailId = clerkUser.primary_email_address_id || clerkUser.primaryEmailAddressId;
+  const primaryEmail =
+    clerkUser.primaryEmailAddress ||
+    emailAddresses.find(
+      (email) => email.id === primaryEmailId
+    );
+
+  return (
+    getEmailAddressValue(primaryEmail) ||
+    getEmailAddressValue(emailAddresses[0]) ||
+    null
+  );
 }
 
 function getNameFromClerkUser(clerkUser, fallbackEmail) {
   return (
     clerkUser.full_name ||
+    clerkUser.fullName ||
     [clerkUser.first_name, clerkUser.last_name].filter(Boolean).join(" ") ||
+    [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") ||
     clerkUser.username ||
     fallbackEmail
   );
@@ -89,18 +107,19 @@ async function getClerkProfileFromAuth(auth) {
   }
 
   if (!email) {
-    throw new Error("Clerk user does not have a primary email address.");
+    email = getFallbackEmailForClerkUserId(auth.userId);
+    name = name || email;
+    console.warn("Clerk user did not expose an email address; using Clerk-id fallback email.", {
+      clerkUserId: auth.userId,
+      fallbackEmail: email,
+    });
   }
 
   return { clerkUserId: auth.userId, email, name };
 }
 
 function getClerkProfileFromWebhookUser(clerkUser) {
-  const email = getEmailFromClerkUser(clerkUser);
-
-  if (!email) {
-    throw new Error("Clerk webhook user does not have an email address.");
-  }
+  const email = getEmailFromClerkUser(clerkUser) || getFallbackEmailForClerkUserId(clerkUser.id);
 
   return {
     clerkUserId: clerkUser.id,
