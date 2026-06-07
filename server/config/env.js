@@ -39,4 +39,14 @@ const env = {
   },
 };
 
+if (env.nodeEnv === "production") {
+  if (env.clerk.publishableKey.startsWith("pk_test_")) {
+    throw new Error("Production is using a Clerk test publishable key. Set CLERK_PUBLISHABLE_KEY to a pk_live key.");
+  }
+
+  if (env.clerk.secretKey.startsWith("sk_test_")) {
+    throw new Error("Production is using a Clerk test secret key. Set CLERK_SECRET_KEY to a sk_live key.");
+  }
+}
+
 module.exports = env;

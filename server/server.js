@@ -1,6 +1,8 @@
 const env = require("./config/env");
 
 process.env.CLERK_PUBLISHABLE_KEY = env.clerk.publishableKey;
+console.log("Clerk publishable key mode:", env.clerk.publishableKey.startsWith("pk_live_") ? "live" : "test-or-missing");
+console.log("Clerk secret key mode:", env.clerk.secretKey.startsWith("sk_live_") ? "live" : "test-or-missing");
 
 const express = require("express");
 const cors = require("cors");

@@ -12,6 +12,14 @@ if (!PUBLISHABLE_KEY) {
   throw new Error('Add VITE_CLERK_PUBLISHABLE_KEY to client/.env');
 }
 
+if (
+  typeof window !== "undefined" &&
+  !["localhost", "127.0.0.1"].includes(window.location.hostname) &&
+  PUBLISHABLE_KEY.startsWith("pk_test_")
+) {
+  throw new Error("Production is using a Clerk test publishable key. Set VITE_CLERK_PUBLISHABLE_KEY to a pk_live key.");
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ClerkProvider
