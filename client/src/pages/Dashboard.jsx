@@ -169,6 +169,11 @@ export default function Dashboard() {
 
       await Promise.all(
         herdAnimals.map(async (animal) => {
+          if (animal.status === "deceased") {
+            urgencies[animal.id] = "deceased";
+            return;
+          }
+
           let hasOverdue = false;
           let hasSoon = false;
 
@@ -243,9 +248,13 @@ export default function Dashboard() {
   }, [animals, refreshFlag, vaccinationRefresh, preferences.careWindow]);
 
   const totalAnimals = animals.length;
+  const activeAnimals = animals.filter((animal) => animal.status !== "deceased");
+  const deceasedAnimals = animals.filter((animal) => animal.status === "deceased");
+  const totalActiveAnimals = activeAnimals.length;
+  const deceasedCount = deceasedAnimals.length;
   const careDueCount = vaccinationsDueSoon + upcomingVetVisits;
   const attentionAnimalsAll = animals
-    .filter((animal) => animalUrgencies[animal.id] !== "green")
+    .filter((animal) => animal.status !== "deceased" && animalUrgencies[animal.id] !== "green")
     .sort((a, b) => {
       const priority = { red: 0, yellow: 1, green: 2 };
       return (
@@ -255,21 +264,26 @@ export default function Dashboard() {
     });
   const attentionAnimals = attentionAnimalsAll.slice(0, 3);
   const issueCount = attentionAnimalsAll.length;
-  const animalsStable = totalAnimals - issueCount;
+  const animalsStable = Math.max(0, totalActiveAnimals - issueCount);
   const careStatusCounts = animals.reduce(
     (counts, animal) => {
+      if (animal.status === "deceased") {
+        counts.deceased += 1;
+        return counts;
+      }
       const urgency = animalUrgencies[animal.id] || "green";
       if (urgency === "red") counts.needsAttention += 1;
       else if (urgency === "yellow") counts.dueSoon += 1;
       else counts.current += 1;
       return counts;
     },
-    { current: 0, dueSoon: 0, needsAttention: 0 }
+    { current: 0, dueSoon: 0, needsAttention: 0, deceased: 0 }
   );
   const careStatusSegments = [
     { key: "current", label: "Good", value: careStatusCounts.current, color: "#10b981" },
     { key: "dueSoon", label: "Due soon", value: careStatusCounts.dueSoon, color: "#f59e0b" },
     { key: "needsAttention", label: "Needs attention", value: careStatusCounts.needsAttention, color: "#ef4444" },
+    { key: "deceased", label: "Deceased", value: careStatusCounts.deceased, color: "#6b7280" },
   ];
   const generatedDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",
@@ -278,9 +292,15 @@ export default function Dashboard() {
   });
 
   const getStatusLabel = (urgency) => {
+    if (urgency === "deceased") return "Deceased";
     if (urgency === "red") return "Needs attention";
     if (urgency === "yellow") return "Due soon";
     return "Current";
+  };
+
+  const getAnimalStatus = (animal) => {
+    if (animal.status === "deceased") return "deceased";
+    return animalUrgencies[animal.id] || "green";
   };
 
   const handleExportDashboardPdf = () => {
@@ -304,6 +324,9 @@ export default function Dashboard() {
         weight: "0.00",
         behavior: "None",
         tag_id: "0000",
+        status: "active",
+        deceased_date: null,
+        deceased_notes: null,
       };
 
       await createAnimal(filler);
@@ -341,7 +364,7 @@ export default function Dashboard() {
   return (
     <div className={`dashboard-page flex min-h-screen flex-col bg-gray-950 text-gray-100 md:h-screen md:flex-row md:overflow-hidden ${isCompact ? "dashboard-compact" : "dashboard-comfortable"}`}>
       {/* SIDEBAR */}
-      <aside className="w-full md:w-64 bg-gray-800 shadow-lg border-b md:border-b-0 md:border-r border-gray-700 flex flex-col flex-shrink-0 md:h-screen">
+      <aside className="w-full md:w-72 bg-gray-800 shadow-lg border-b md:border-b-0 md:border-r border-gray-700 flex flex-col flex-shrink-0 md:h-screen">
         <div className="px-6 py-6 border-b border-gray-700">
           <button
             type="button"
@@ -353,6 +376,7 @@ export default function Dashboard() {
           </button>
           <p className="text-sm text-gray-400 mt-1">Dashboard</p>
         </div>
+
 
         <div className="px-4 py-3 border-b border-gray-700">
           <select
@@ -403,7 +427,7 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : animals.map((animal) => {
-              const urgency = animalUrgencies[animal.id] || "green";
+              const urgency = getAnimalStatus(animal);
               return (
                 <button
                   key={animal.id}
@@ -421,6 +445,8 @@ export default function Dashboard() {
                           ? "bg-red-400"
                           : urgency === "yellow"
                           ? "bg-yellow-400"
+                          : urgency === "deceased"
+                          ? "bg-gray-500"
                           : "bg-emerald-400"
                       }`}
                     ></span>
@@ -478,9 +504,10 @@ export default function Dashboard() {
         </header>
 
         {/* QUICK STATS */}
-        <section className={`grid grid-cols-1 sm:grid-cols-3 ${isCompact ? "gap-3 mb-4" : "gap-4 mb-6"}`}>
+        <section className={`grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 ${isCompact ? "gap-3 mb-4" : "gap-4 mb-6"}`}>
           {[
             { title: "Animals", value: animals.length },
+            { title: "Active", value: totalActiveAnimals },
             { title: "Vaccine Care", value: vaccinationsDue },
             { title: "Vet Care Upcoming", value: upcomingVetVisits },
           ].map((stat) => (
@@ -511,6 +538,8 @@ export default function Dashboard() {
               animals={animals}
               selectedHerd={selectedHerd}
               totalAnimals={totalAnimals}
+              totalActiveAnimals={totalActiveAnimals}
+              deceasedCount={deceasedCount}
               vaccinationsDue={vaccinationsDue}
               upcomingVetVisits={upcomingVetVisits}
               careDueCount={careDueCount}
@@ -581,12 +610,12 @@ export default function Dashboard() {
               <dd>{totalAnimals}</dd>
             </div>
             <div>
-              <dt>Animals current</dt>
-              <dd>{animalsStable}</dd>
+              <dt>Active animals</dt>
+              <dd>{totalActiveAnimals}</dd>
             </div>
             <div>
-              <dt>Need attention</dt>
-              <dd>{issueCount}</dd>
+              <dt>Deceased</dt>
+              <dd>{deceasedCount}</dd>
             </div>
           </dl>
         </section>
@@ -659,7 +688,7 @@ export default function Dashboard() {
                     <td>{animal.sex || ""}</td>
                     <td>{animal.birthdate ? animal.birthdate.slice(0, 10) : ""}</td>
                     <td>{animal.weight || ""}</td>
-                    <td>{getStatusLabel(animalUrgencies[animal.id])}</td>
+                    <td>{getStatusLabel(getAnimalStatus(animal))}</td>
                   </tr>
                 ))}
               </tbody>

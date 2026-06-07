@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useAuth } from '@clerk/clerk-react'
 import '../index.css'
 
 const previewSlides = [
@@ -24,6 +25,8 @@ const previewSlides = [
 
 export default function LargeLandingCard() {
   const [activeSlide, setActiveSlide] = useState(0)
+  const { isLoaded, isSignedIn } = useAuth()
+  const showSignUp = isLoaded && !isSignedIn
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -51,15 +54,17 @@ export default function LargeLandingCard() {
             Get clear herd histories, automated reminders, and simple reporting so you can spend less time on paperwork and more time with your animals.
           </p>
 
-          <div>
-            <a
-              href="/signup"
-              className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 sm:py-4 sm:px-8 rounded-lg shadow-md transition-colors text-base sm:text-lg"
-              aria-label="Sign up for BarnBuddy"
-            >
-              Sign Up
-            </a>
-          </div>
+          {showSignUp && (
+            <div>
+              <a
+                href="/signup"
+                className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 sm:py-4 sm:px-8 rounded-lg shadow-md transition-colors text-base sm:text-lg"
+                aria-label="Sign up for BarnBuddy"
+              >
+                Sign Up
+              </a>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-center md:justify-end">

@@ -5,6 +5,11 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
+const normalizeAnimalStatus = (status) => {
+    if (status === "deceased") return "deceased";
+    return "active";
+};
+
 // Get unassigned animals
 router.get("/unassigned", authMiddleware, async (req, res) => {
     try {
@@ -191,18 +196,38 @@ router.get("/:id", authMiddleware, async (req, res) => {
 
 // Create a new animal
 router.post("/", authMiddleware, async (req, res) => {
-    let { herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url } = req.body;
+    let {
+        herd_id,
+        name,
+        species,
+        sex,
+        birthdate,
+        age,
+        comments,
+        weight,
+        behavior,
+        tag_id,
+        image_url,
+        status,
+        deceased_date,
+        deceased_notes,
+    } = req.body;
 
     // Handle "unassigned" herd
     herd_id = herd_id === "unassigned" ? null : herd_id;
+    status = normalizeAnimalStatus(status);
+    if (status !== "deceased") {
+        deceased_date = null;
+        deceased_notes = null;
+    }
 
     try {
         const result = await pool.query(
             `INSERT INTO animals
-            (user_id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url, birth_weight, birth_notes)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NULL, NULL) 
+            (user_id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url, birth_weight, birth_notes, status, deceased_date, deceased_notes)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NULL, NULL, $13, $14, $15) 
             RETURNING *`,
-            [req.user.id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url]
+            [req.user.id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url, status, deceased_date || null, deceased_notes || null]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -214,17 +239,51 @@ router.post("/", authMiddleware, async (req, res) => {
 // Update an existing animal
 router.put("/:id", authMiddleware, async (req, res) => {
     const { id } = req.params;
-    let { herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url } = req.body;
+    let {
+        herd_id,
+        name,
+        species,
+        sex,
+        birthdate,
+        age,
+        comments,
+        weight,
+        behavior,
+        tag_id,
+        image_url,
+        status,
+        deceased_date,
+        deceased_notes,
+    } = req.body;
 
     // Handle "unassigned" herd
     herd_id = herd_id === "unassigned" ? null : herd_id;
+    status = normalizeAnimalStatus(status);
+    if (status !== "deceased") {
+        deceased_date = null;
+        deceased_notes = null;
+    }
 
     try {
         const result = await pool.query(
-            `UPDATE animals SET herd_id=$1, name=$2, species=$3, sex=$4, birthdate=$5, age=$6, comments=$7, weight=$8, behavior=$9, tag_id=$10, image_url = $13
+            `UPDATE animals
+             SET herd_id=$1,
+                 name=$2,
+                 species=$3,
+                 sex=$4,
+                 birthdate=$5,
+                 age=$6,
+                 comments=$7,
+                 weight=$8,
+                 behavior=$9,
+                 tag_id=$10,
+                 image_url=$13,
+                 status=$14,
+                 deceased_date=$15,
+                 deceased_notes=$16
              WHERE id=$11 AND user_id=$12
              RETURNING *`,
-            [herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, id, req.user.id, image_url]
+            [herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, id, req.user.id, image_url, status, deceased_date || null, deceased_notes || null]
         );
 
         if (result.rows.length === 0) return res.status(404).json({ error: "Animal not found" });

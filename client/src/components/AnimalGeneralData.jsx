@@ -18,6 +18,9 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
   const [behavior, setBehavior] = useState("");
   const [herdId, setHerdId] = useState("");
   const [animalId, setAnimalId] = useState("");
+  const [status, setStatus] = useState("active");
+  const [deceasedDate, setDeceasedDate] = useState("");
+  const [deceasedNotes, setDeceasedNotes] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [imageBlobUrl, setImageBlobUrl] = useState("");
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -69,6 +72,9 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
     setBehavior(animal.behavior || "");
     setHerdId(animal.herd_id === null ? "unassigned" : String(animal.herd_id));
     setAnimalId(animal.id || "");
+    setStatus(animal.status === "deceased" ? "deceased" : "active");
+    setDeceasedDate(animal.deceased_date ? animal.deceased_date.slice(0, 10) : "");
+    setDeceasedNotes(animal.deceased_notes || "");
     // Image is now retrieved from database, use animal.id as a flag
     setImageUrl(animal.id ? `stored` : "");
   }, [animal]);
@@ -244,6 +250,9 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
         weight,
         behavior,
         tag_id: tag,
+        status,
+        deceased_date: status === "deceased" ? deceasedDate || null : null,
+        deceased_notes: status === "deceased" ? deceasedNotes : null,
         ...updatedData, // merge in changes like herdId
       };
 
@@ -258,9 +267,11 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
 
 
 
-  const upcomingQuickDates = [...upcomingVaccinations, ...upcomingVetVisitDates].sort(
-    (a, b) => new Date(a.date) - new Date(b.date)
-  );
+  const upcomingQuickDates = status === "deceased"
+    ? []
+    : [...upcomingVaccinations, ...upcomingVetVisitDates].sort(
+        (a, b) => new Date(a.date) - new Date(b.date)
+      );
 
   const imageSrc = imageBlobUrl || "https://via.placeholder.com/600";
 
@@ -326,15 +337,14 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
   async function handleDelete() {
     if (!animal) return;
 
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete ${animal.name}? This action cannot be undone!`
+    );
+
+    if (!confirmDelete) return;
+
     try {
       await deleteAnimal(animal.id);
-      
-      // Show confirmation dialog
-      const confirmDelete = window.confirm(
-        `Are you sure you want to delete ${animal.name}? This action cannot be undone!`
-      );
-
-      if (!confirmDelete) return; // If user cancels, stop here
 
       setSelectedAnimal(null);
       setName("");
@@ -348,6 +358,9 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       setBehavior("");
       setHerdId("");
       setAnimalId("");
+      setStatus("active");
+      setDeceasedDate("");
+      setDeceasedNotes("");
 
       setRefreshFlag((prev) => !prev);
     } catch (err) {
@@ -574,11 +587,73 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
               ))}
           </select>
         </div>
+      </div>
 
-        <div>
+      {/* Full Width - Life Status */}
+      <div className="lg:col-span-2 bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-4">
+        <div className="flex flex-col gap-1">
+          <h4 className="text-gray-400 font-semibold">Life Status</h4>
+          <p className="text-sm text-gray-500">
+            Mark animals deceased to keep records without counting them as active care.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div>
+            <label className="block text-gray-400 text-sm mb-1">Status</label>
+            <select
+              value={status}
+              onChange={async (e) => {
+                const nextStatus = e.target.value;
+                const defaultDate = new Date().toISOString().slice(0, 10);
+                setStatus(nextStatus);
+                if (nextStatus === "deceased" && !deceasedDate) {
+                  setDeceasedDate(defaultDate);
+                }
+                await saveAnimal({
+                  status: nextStatus,
+                  deceased_date: nextStatus === "deceased" ? deceasedDate || defaultDate : null,
+                  deceased_notes: nextStatus === "deceased" ? deceasedNotes : null,
+                });
+              }}
+              className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
+            >
+              <option value="active">Active</option>
+              <option value="deceased">Deceased</option>
+            </select>
+          </div>
+
+          {status === "deceased" && (
+            <>
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Date of Death</label>
+                <input
+                  type="date"
+                  value={deceasedDate}
+                  onChange={(e) => setDeceasedDate(e.target.value)}
+                  onBlur={() => saveAnimal()}
+                  className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Death Notes</label>
+                <textarea
+                  rows="3"
+                  value={deceasedNotes}
+                  onChange={(e) => setDeceasedNotes(e.target.value)}
+                  onBlur={() => saveAnimal()}
+                  placeholder="Cause, treatment history, disposal notes, or other farm records"
+                  className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="border-t border-gray-700 pt-4">
           <label className="block text-gray-400 text-sm mb-1">Delete Animal</label>
           <button
-            className="w-full bg-red-500 text-gray-300 border-red-600 rounded-lg px-3 py-2 hover:bg-red-400 transition"
+            className="w-full bg-red-500 text-gray-300 border-red-600 rounded-lg px-3 py-2 hover:bg-red-400 transition sm:w-auto"
             onClick={handleDelete}
           >
             Delete {animal.name}
