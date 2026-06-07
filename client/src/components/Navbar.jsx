@@ -22,9 +22,9 @@ const Navbar = () => {
             </span>
           </Link>
 
-          {/* Center: Tagline (full-width on md+) */}
-          <div className="absolute left-0 right-0 pointer-events-none md:static md:flex md:flex-1 md:justify-center">
-            <h1 className="mx-auto text-center text-white text-lg font-bold pointer-events-auto md:text-lg lg:text-xl">
+          {/* Center: Tagline only on desktop */}
+          <div className="hidden md:flex md:flex-1 md:justify-center">
+            <h1 className="mx-auto text-center text-white text-lg font-bold md:text-lg lg:text-xl">
               Doing for the Small
             </h1>
           </div>

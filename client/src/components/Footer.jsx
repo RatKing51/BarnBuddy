@@ -91,7 +91,7 @@ export default function Footer() {
           <div className="md:col-span-3 lg:col-span-1">
             <h4 className="text-sm font-semibold mb-3">Get updates</h4>
             <p className="text-sm text-white/80 mb-4">Short updates about new features, guides, and tips for small farms.</p>
-            <form className="flex items-center gap-3" onSubmit={handleNewsletterSubmit}>
+            <form className="flex flex-col gap-3 sm:flex-row sm:items-center" onSubmit={handleNewsletterSubmit}>
               <input
                 type="email"
                 value={email}
@@ -103,7 +103,7 @@ export default function Footer() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-4 py-2 bg-blue-600 rounded-md font-semibold hover:bg-blue-500 transition-colors disabled:cursor-wait disabled:opacity-70"
+                className="w-full sm:w-auto px-4 py-2 bg-blue-600 rounded-md font-semibold hover:bg-blue-500 transition-colors disabled:cursor-wait disabled:opacity-70"
               >
                 {submitting ? 'Saving...' : 'Subscribe'}
               </button>

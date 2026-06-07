@@ -63,7 +63,7 @@ export default function LargeLandingCard() {
         </div>
 
         <div className="flex justify-center md:justify-end">
-          <div className="relative w-full max-w-md md:max-w-2xl">
+          <div className="relative w-full max-w-full md:max-w-2xl">
             <div className="absolute -inset-5 rounded-[2rem] bg-blue-500/14 blur-2xl" aria-hidden="true" />
             <div className="relative overflow-hidden rounded-2xl border border-white/12 bg-[#07102a] shadow-2xl shadow-black/35">
               <div className="flex items-center justify-between gap-4 border-b border-white/10 bg-white px-5 py-4">

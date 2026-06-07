@@ -20,7 +20,7 @@ export default function RecentNewsCard({
         <img
           src={image}
           alt={imageAlt}
-          className={`h-full w-full ${imageFit === 'contain' ? 'object-contain p-5' : 'object-cover object-center'}`}
+          className={`min-h-full w-full ${imageFit === 'contain' ? 'object-contain p-5' : 'object-cover object-center'}`}
         />
       </div>
 
