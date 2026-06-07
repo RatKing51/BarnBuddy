@@ -149,12 +149,6 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
     return "bg-emerald-500 text-white";
   };
 
-  const formatDate = (value) => value || "Not recorded";
-
-  const handleExportPdf = () => {
-    window.print();
-  };
-
   const handleAddEvent = () => {
     const newEvent = {
       date: getTodayDate(),
@@ -418,21 +412,12 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold text-gray-200">Health Events</h2>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <button
-              type="button"
-              onClick={handleExportPdf}
-              className="cursor-pointer rounded-lg border border-gray-600 bg-gray-700 px-4 py-2 text-sm font-medium text-gray-100 hover:bg-gray-600"
-            >
-              Export PDF
-            </button>
-            <button
-              onClick={handleAddEvent}
-              className="cursor-pointer bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium"
-            >
-              + Add Event
-            </button>
-          </div>
+          <button
+            onClick={handleAddEvent}
+            className="cursor-pointer bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium"
+          >
+            + Add Event
+          </button>
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
@@ -820,102 +805,6 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
         </div>
 
       </div>
-      <section id="health-records-pdf" className="pdf-export-report hidden">
-        <header>
-          <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-            BarnBuddy Health Report
-          </p>
-          <h1>{animal?.name || "Animal"} Health Records</h1>
-          <p>Generated {new Date().toLocaleDateString()}</p>
-        </header>
-
-        <section>
-          <h2>Animal Summary</h2>
-          <dl>
-            <div>
-              <dt>Name</dt>
-              <dd>{animal?.name || "Not recorded"}</dd>
-            </div>
-            <div>
-              <dt>Species</dt>
-              <dd>{animal?.species || "Not recorded"}</dd>
-            </div>
-            <div>
-              <dt>Tag</dt>
-              <dd>{animal?.tag_id || "Not recorded"}</dd>
-            </div>
-            <div>
-              <dt>Birth Date</dt>
-              <dd>{formatDate(birthDate)}</dd>
-            </div>
-            <div>
-              <dt>Birth Weight</dt>
-              <dd>{birthWeight || "Not recorded"}</dd>
-            </div>
-          </dl>
-          {birthNotes && <p className="pdf-notes">{birthNotes}</p>}
-        </section>
-
-        <section>
-          <h2>Health Events</h2>
-          {healthEvents.length === 0 ? (
-            <p>No health events recorded.</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Severity</th>
-                  <th>Status</th>
-                  <th>Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {healthEvents.map((event, idx) => (
-                  <tr key={`event-${event.id || idx}`}>
-                    <td>{formatDate(event.date)}</td>
-                    <td>{event.type || "Health Event"}</td>
-                    <td>{event.severity || "Low"}</td>
-                    <td>{event.resolved ? "Resolved" : "Open"}</td>
-                    <td>{event.notes || event.description || ""}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-
-        <section>
-          <h2>Vaccinations</h2>
-          {vaccinations.length === 0 ? (
-            <p>No vaccinations recorded.</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Vaccine</th>
-                  <th>Dosage</th>
-                  <th>Next Due</th>
-                  <th>Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vaccinations.map((vaccine, idx) => (
-                  <tr key={`vaccine-${vaccine.id || idx}`}>
-                    <td>{formatDate(vaccine.date)}</td>
-                    <td>{vaccine.type || "Vaccination"}</td>
-                    <td>{vaccine.dosage || ""}</td>
-                    <td>{vaccine.completed ? "Completed" : formatDate(vaccine.next_due_date)}</td>
-                    <td>{vaccine.notes || ""}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-      </section>
       <ToastContainer autoClose="1000" />
     </div>
   );

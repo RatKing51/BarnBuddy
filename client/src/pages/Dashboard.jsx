@@ -244,7 +244,7 @@ export default function Dashboard() {
 
   const totalAnimals = animals.length;
   const careDueCount = vaccinationsDueSoon + upcomingVetVisits;
-  const attentionAnimals = animals
+  const attentionAnimalsAll = animals
     .filter((animal) => animalUrgencies[animal.id] !== "green")
     .sort((a, b) => {
       const priority = { red: 0, yellow: 1, green: 2 };
@@ -252,10 +252,40 @@ export default function Dashboard() {
         priority[animalUrgencies[a.id] || "green"] -
         priority[animalUrgencies[b.id] || "green"]
       );
-    })
-    .slice(0, 3);
-  const issueCount = attentionAnimals.length;
+    });
+  const attentionAnimals = attentionAnimalsAll.slice(0, 3);
+  const issueCount = attentionAnimalsAll.length;
   const animalsStable = totalAnimals - issueCount;
+  const careStatusCounts = animals.reduce(
+    (counts, animal) => {
+      const urgency = animalUrgencies[animal.id] || "green";
+      if (urgency === "red") counts.needsAttention += 1;
+      else if (urgency === "yellow") counts.dueSoon += 1;
+      else counts.current += 1;
+      return counts;
+    },
+    { current: 0, dueSoon: 0, needsAttention: 0 }
+  );
+  const careStatusSegments = [
+    { key: "current", label: "Good", value: careStatusCounts.current, color: "#10b981" },
+    { key: "dueSoon", label: "Due soon", value: careStatusCounts.dueSoon, color: "#f59e0b" },
+    { key: "needsAttention", label: "Needs attention", value: careStatusCounts.needsAttention, color: "#ef4444" },
+  ];
+  const generatedDate = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+
+  const getStatusLabel = (urgency) => {
+    if (urgency === "red") return "Needs attention";
+    if (urgency === "yellow") return "Due soon";
+    return "Current";
+  };
+
+  const handleExportDashboardPdf = () => {
+    window.print();
+  };
 
   // Add new animal
   const handleAddAnimal = async () => {
@@ -421,7 +451,7 @@ export default function Dashboard() {
             <h2 className="text-2xl font-semibold">Welcome back</h2>
             <p className="text-gray-400">{dateTime}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:justify-end">
             <div className="hidden sm:flex flex-col items-end">
               <span className="text-sm font-semibold text-gray-100">
                 {user?.firstName || user?.primaryEmailAddress?.emailAddress || "Profile"}
@@ -431,6 +461,13 @@ export default function Dashboard() {
             <div className="rounded-full border border-gray-700 bg-gray-800 p-1">
               <UserButton afterSignOutUrl="/" />
             </div>
+            <button
+              type="button"
+              onClick={handleExportDashboardPdf}
+              className="rounded-xl border border-gray-700 bg-gray-800 px-4 py-2 text-white shadow transition hover:bg-gray-700"
+            >
+              Export PDF
+            </button>
             <button
               className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition"
               onClick={() => navigate("/settings/account")}
@@ -523,6 +560,113 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+
+      <section id="dashboard-pdf" className="hidden">
+        <header>
+          <p className="report-eyebrow">BarnBuddy Farm Report</p>
+          <h1>{selectedHerd?.name || "Farm"} Dashboard Summary</h1>
+          <p>
+            Generated {generatedDate}
+            {user?.primaryEmailAddress?.emailAddress
+              ? ` for ${user.primaryEmailAddress.emailAddress}`
+              : ""}
+          </p>
+        </header>
+
+        <section>
+          <h2>Animal Count</h2>
+          <dl className="report-metrics">
+            <div>
+              <dt>Total animals</dt>
+              <dd>{totalAnimals}</dd>
+            </div>
+            <div>
+              <dt>Animals current</dt>
+              <dd>{animalsStable}</dd>
+            </div>
+            <div>
+              <dt>Need attention</dt>
+              <dd>{issueCount}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section>
+          <h2>Care Status</h2>
+          <div className="report-chart-row">
+            <svg viewBox="0 0 36 36" className="report-pie-chart" role="img" aria-label="Care status pie chart">
+              <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#e5e7eb" strokeWidth="6" />
+              {careStatusSegments.reduce(
+                (segments, segment) => {
+                  const percent = totalAnimals > 0 ? (segment.value / totalAnimals) * 100 : 0;
+                  const currentOffset = segments.offset;
+                  if (percent > 0) {
+                    segments.items.push(
+                      <circle
+                        key={segment.key}
+                        cx="18"
+                        cy="18"
+                        r="15.9155"
+                        fill="transparent"
+                        stroke={segment.color}
+                        strokeWidth="6"
+                        strokeDasharray={`${percent} ${100 - percent}`}
+                        strokeDashoffset={25 - currentOffset}
+                      />
+                    );
+                  }
+                  segments.offset += percent;
+                  return segments;
+                },
+                { offset: 0, items: [] }
+              ).items}
+            </svg>
+            <div className="report-chart-legend">
+              {careStatusSegments.map((segment) => (
+                <div key={segment.key}>
+                  <span style={{ backgroundColor: segment.color }}></span>
+                  <strong>{segment.label}</strong>
+                  <em>{segment.value}</em>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>Animal Roster</h2>
+          {animals.length === 0 ? (
+            <p>No animals are listed for this herd yet.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Tag</th>
+                  <th>Species</th>
+                  <th>Sex</th>
+                  <th>Birth Date</th>
+                  <th>Weight</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {animals.map((animal) => (
+                  <tr key={animal.id}>
+                    <td>{animal.name || "Unnamed"}</td>
+                    <td>{animal.tag_id || ""}</td>
+                    <td>{animal.species || ""}</td>
+                    <td>{animal.sex || ""}</td>
+                    <td>{animal.birthdate ? animal.birthdate.slice(0, 10) : ""}</td>
+                    <td>{animal.weight || ""}</td>
+                    <td>{getStatusLabel(animalUrgencies[animal.id])}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      </section>
     </div>
   );
 }

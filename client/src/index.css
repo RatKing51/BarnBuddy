@@ -224,19 +224,41 @@ select {
     margin: 0.5in;
   }
 
-  body * {
-    visibility: hidden;
+  html,
+  body,
+  #root {
+    background: #ffffff !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
 
-  #health-records-pdf,
-  #health-records-pdf * {
-    visibility: visible;
-  }
-
-  #health-records-pdf {
+  .dashboard-page {
+    background: #ffffff !important;
+    color: #111827 !important;
     display: block !important;
-    position: absolute;
-    inset: 0 auto auto 0;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .dashboard-page > aside,
+  .dashboard-page > .dashboard-main {
+    display: none !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  #dashboard-pdf,
+  #dashboard-pdf * {
+    visibility: visible !important;
+  }
+
+  #dashboard-pdf {
+    display: block !important;
+    position: static !important;
     width: 100%;
     color: #111827;
     background: #ffffff;
@@ -245,72 +267,129 @@ select {
     line-height: 1.45;
   }
 
-  #health-records-pdf header {
+  #dashboard-pdf header {
     margin-bottom: 20px;
     border-bottom: 2px solid #1d4ed8;
     padding-bottom: 12px;
   }
 
-  #health-records-pdf h1 {
+  #dashboard-pdf .report-eyebrow {
+    color: #2563eb;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin: 0 0 4px;
+    text-transform: uppercase;
+  }
+
+  #dashboard-pdf h1 {
     margin: 4px 0;
     color: #0f172a;
     font-size: 24px;
     line-height: 1.2;
   }
 
-  #health-records-pdf h2 {
+  #dashboard-pdf h2 {
     margin: 18px 0 8px;
     color: #1e3a8a;
     font-size: 15px;
   }
 
-  #health-records-pdf p {
+  #dashboard-pdf p {
     margin: 0 0 8px;
   }
 
-  #health-records-pdf dl {
+  #dashboard-pdf .report-metrics {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px 18px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
     margin: 0;
   }
 
-  #health-records-pdf dt {
+  #dashboard-pdf .report-metrics div {
+    border: 1px solid #d1d5db;
+    padding: 8px;
+  }
+
+  #dashboard-pdf dt {
     color: #4b5563;
     font-weight: 700;
   }
 
-  #health-records-pdf dd {
+  #dashboard-pdf dd {
     margin: 0;
+    color: #111827;
+    font-size: 18px;
+    font-weight: 700;
   }
 
-  #health-records-pdf .pdf-notes {
-    margin-top: 10px;
-    border-left: 3px solid #bfdbfe;
-    padding-left: 10px;
+  #dashboard-pdf .report-chart-row {
+    align-items: center;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: 130px 1fr;
   }
 
-  #health-records-pdf table {
+  #dashboard-pdf .report-pie-chart {
+    height: 120px;
+    overflow: visible;
+    transform: rotate(-90deg);
+    width: 120px;
+  }
+
+  #dashboard-pdf .report-pie-chart circle {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  #dashboard-pdf .report-chart-legend {
+    display: grid;
+    gap: 6px;
+  }
+
+  #dashboard-pdf .report-chart-legend div {
+    align-items: center;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 12px minmax(0, 1fr) auto;
+  }
+
+  #dashboard-pdf .report-chart-legend span {
+    border-radius: 999px;
+    height: 10px;
+    print-color-adjust: exact;
+    width: 10px;
+    -webkit-print-color-adjust: exact;
+  }
+
+  #dashboard-pdf .report-chart-legend em {
+    color: #111827;
+    font-style: normal;
+    font-weight: 700;
+  }
+
+  #dashboard-pdf table {
     width: 100%;
     border-collapse: collapse;
     break-inside: auto;
   }
 
-  #health-records-pdf tr {
+  #dashboard-pdf tr {
     break-inside: avoid;
   }
 
-  #health-records-pdf th,
-  #health-records-pdf td {
+  #dashboard-pdf th,
+  #dashboard-pdf td {
     border: 1px solid #d1d5db;
     padding: 6px 8px;
     text-align: left;
     vertical-align: top;
   }
 
-  #health-records-pdf th {
+  #dashboard-pdf th {
     background: #eff6ff;
     color: #1e3a8a;
     font-weight: 700;
   }
+
 }
