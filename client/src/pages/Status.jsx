@@ -47,7 +47,7 @@ export default function Status() {
               <div className="mt-8 rounded-xl border border-white/10 bg-[#101D42] p-5">
                 <h2 className="text-lg font-semibold">Recent updates</h2>
                 <p className="mt-2 text-sm leading-relaxed text-white/65">
-                  No incidents reported. Replace this with real incident history or a status provider later.
+                  No incidents reported.
                 </p>
               </div>
             </div>
