@@ -60,7 +60,7 @@ Instead of using messy notebooks or scattered spreadsheets, BarnBuddy keeps ever
 
 ## 📸 Preview
 
-> Add screenshots here later.
-
-```md
-![BarnBuddy Dashboard](./screenshots/dashboard.png)
+### Dashboard
+![BarnBuddy Dashboard](./client/public/dashboard.png)
+### General Data
+![BarnBuddy General Data](./client/public/generaldata.png)
