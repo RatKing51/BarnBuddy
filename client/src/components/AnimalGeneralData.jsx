@@ -24,6 +24,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
   const [deceasedNotes, setDeceasedNotes] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [imageBlobUrl, setImageBlobUrl] = useState("");
+  const [imageRefreshKey, setImageRefreshKey] = useState(0);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isRemovingImage, setIsRemovingImage] = useState(false);
   const [upcomingVaccinations, setUpcomingVaccinations] = useState([]);
@@ -82,7 +83,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
     setImageUrl(animal.id ? `stored` : "");
   }, [animal]);
 
-  // Load image from database when animal changes
+  // Load image from database when animal changes or after a new upload.
   useEffect(() => {
     let objectUrl = "";
 
@@ -93,7 +94,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       }
 
       try {
-        const response = await authFetch(`${API_URL}/api/animals/${animal.id}/image`);
+        const response = await authFetch(`${API_URL}/api/animals/${animal.id}/image?refresh=${imageRefreshKey}`);
         
         if (!response.ok) {
           throw new Error('Failed to load image');
@@ -116,7 +117,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [animal?.id, imageUrl, authFetch]);
+  }, [animal?.id, imageRefreshKey, imageUrl, authFetch]);
 
   useEffect(() => {
     const loadUpcomingVaccinations = async () => {
@@ -276,7 +277,26 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
         (a, b) => new Date(a.date) - new Date(b.date)
       );
 
-  const imageSrc = imageBlobUrl || "https://via.placeholder.com/600";
+  const hasAnimalImage = Boolean(imageBlobUrl);
+  const animalInitial = (name || tag || species || "B").trim().charAt(0).toUpperCase();
+  const imageSrc = hasAnimalImage
+    ? imageBlobUrl
+    : `data:image/svg+xml,${encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+        <defs>
+          <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stop-color="#111827"/>
+            <stop offset="55%" stop-color="#1f2937"/>
+            <stop offset="100%" stop-color="#172554"/>
+          </linearGradient>
+        </defs>
+        <rect width="800" height="600" fill="url(#bg)"/>
+        <circle cx="400" cy="255" r="76" fill="#2563eb" fill-opacity="0.28" stroke="#93c5fd" stroke-opacity="0.42" stroke-width="4"/>
+        <text x="400" y="282" text-anchor="middle" font-family="Arial, sans-serif" font-size="76" font-weight="700" fill="#dbeafe">${animalInitial}</text>
+        <text x="400" y="380" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#ffffff">No photo yet</text>
+        <text x="400" y="424" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#9ca3af">Upload a clear ID photo</text>
+      </svg>
+    `)}`;
   const nameField = (
     <div>
       <label className="block text-gray-400 text-sm mb-1">
@@ -323,9 +343,14 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
 
     try {
       setIsUploadingImage(true);
+      const previewUrl = URL.createObjectURL(file);
+      setImageBlobUrl((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return previewUrl;
+      });
       await uploadAnimalImage(animal.id, file);
       setImageUrl("stored"); // Set flag to indicate image is stored
-      setImageBlobUrl("");
+      setImageRefreshKey((current) => current + 1);
       setRefreshFlag((prev) => !prev);
       toast.success("Image uploaded successfully!");
     } catch (err) {
@@ -350,7 +375,11 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       setIsRemovingImage(true);
       await removeAnimalImage(animal.id);
       setImageUrl("");
-      setImageBlobUrl("");
+      setImageBlobUrl((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return "";
+      });
+      setImageRefreshKey((current) => current + 1);
       setRefreshFlag((prev) => !prev);
       toast.success("Image removed successfully.");
     } catch (err) {
@@ -460,12 +489,12 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       </div>
 
       {/* Top Right - Picture */}
-      <div className="bg-gray-800  rounded-2xl border border-gray-700 overflow-hidden h-100 object-cover">
+      <div className="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden shadow-lg">
         <label className="w-full h-full relative group block cursor-pointer">
           <img
             src={imageSrc}
             alt={`${name || "Animal"} profile`}
-            className="w-full h-full object-cover transition duration-300 group-hover:opacity-70"
+            className="aspect-[4/3] w-full object-cover transition duration-300 group-hover:scale-[1.02] group-hover:opacity-80"
             onError={() => setImageBlobUrl("")}
           />
           <input
@@ -475,15 +504,16 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
             onChange={handleImageUpload}
             disabled={isUploadingImage}
           />
-          <div className="absolute bottom-4 left-4 rounded-md bg-black/60 px-3 py-1 text-xs text-white/90">
+          <div className="absolute left-4 top-4 rounded-full border border-white/10 bg-black/55 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur">
             Max 5MB · JPG/PNG only
           </div>
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition duration-300 bg-black/40 text-white text-lg font-semibold">
-            <span>{isUploadingImage ? "Uploading..." : "Change Picture"}</span>
-            {imageUrl && (
+          <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 bg-gradient-to-t from-black/85 via-black/55 to-transparent p-5 text-white transition duration-300 sm:opacity-0 sm:group-hover:opacity-100">
+            <span className="text-lg font-semibold">{isUploadingImage ? "Uploading..." : hasAnimalImage ? "Change photo" : "Upload photo"}</span>
+            <span className="text-sm text-white/75">Use a clear side profile, tag photo, or ID shot.</span>
+            {hasAnimalImage && (
               <button
                 type="button"
-                className="px-3 py-1 text-sm font-medium rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-60"
+                className="w-fit px-3 py-1 text-sm font-medium rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-60"
                 onClick={(e) => {
                   e.preventDefault();
                   handleRemoveImage();
@@ -609,56 +639,81 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div>
-            <label className="block text-gray-400 text-sm mb-1">Status</label>
-            <select
-              value={status}
-              onChange={async (e) => {
-                const nextStatus = e.target.value;
-                const defaultDate = new Date().toISOString().slice(0, 10);
-                setStatus(nextStatus);
-                if (nextStatus === "deceased" && !deceasedDate) {
-                  setDeceasedDate(defaultDate);
-                }
-                await saveAnimal({
-                  status: nextStatus,
-                  deceased_date: nextStatus === "deceased" ? deceasedDate || defaultDate : null,
-                  deceased_notes: nextStatus === "deceased" ? deceasedNotes : null,
-                });
-              }}
-              className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
-            >
-              <option value="active">Active</option>
-              <option value="deceased">Deceased</option>
-            </select>
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(260px,360px)]">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-gray-400 text-sm mb-1">Status</label>
+              <select
+                value={status}
+                onChange={async (e) => {
+                  const nextStatus = e.target.value;
+                  const defaultDate = new Date().toISOString().slice(0, 10);
+                  setStatus(nextStatus);
+                  if (nextStatus === "deceased" && !deceasedDate) {
+                    setDeceasedDate(defaultDate);
+                  }
+                  await saveAnimal({
+                    status: nextStatus,
+                    deceased_date: nextStatus === "deceased" ? deceasedDate || defaultDate : null,
+                    deceased_notes: nextStatus === "deceased" ? deceasedNotes : null,
+                  });
+                }}
+                className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
+              >
+                <option value="active">Active</option>
+                <option value="deceased">Deceased</option>
+              </select>
+            </div>
+
+            {status === "deceased" && (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,220px)_1fr]">
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">Date of Death</label>
+                  <input
+                    type="date"
+                    value={deceasedDate}
+                    onChange={(e) => setDeceasedDate(e.target.value)}
+                    onBlur={() => saveAnimal()}
+                    className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">Death Notes</label>
+                  <textarea
+                    rows="3"
+                    value={deceasedNotes}
+                    onChange={(e) => setDeceasedNotes(e.target.value)}
+                    onBlur={() => saveAnimal()}
+                    placeholder="Cause, treatment history, disposal notes, or other farm records"
+                    className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
-          {status === "deceased" && (
-            <>
-              <div>
-                <label className="block text-gray-400 text-sm mb-1">Date of Death</label>
-                <input
-                  type="date"
-                  value={deceasedDate}
-                  onChange={(e) => setDeceasedDate(e.target.value)}
-                  onBlur={() => saveAnimal()}
-                  className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-400 text-sm mb-1">Death Notes</label>
-                <textarea
-                  rows="3"
-                  value={deceasedNotes}
-                  onChange={(e) => setDeceasedNotes(e.target.value)}
-                  onBlur={() => saveAnimal()}
-                  placeholder="Cause, treatment history, disposal notes, or other farm records"
-                  className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
-                />
-              </div>
-            </>
-          )}
+          <div className={`rounded-xl border p-4 ${
+            status === "deceased"
+              ? "border-gray-600 bg-gray-900/70"
+              : "border-emerald-400/20 bg-emerald-400/10"
+          }`}>
+            <div className="flex items-center gap-3">
+              <span className={`h-3 w-3 rounded-full ${status === "deceased" ? "bg-gray-400" : "bg-emerald-300"}`} />
+              <p className="font-semibold text-white">
+                {status === "deceased" ? "Record kept as deceased" : "Active animal"}
+              </p>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-gray-400">
+              {status === "deceased"
+                ? "This animal stays in your records and exports, but is excluded from active care counts and upcoming quick dates."
+                : "This animal is included in active care counts, dashboard status, and upcoming quick dates."}
+            </p>
+            {status === "deceased" && deceasedDate && (
+              <p className="mt-3 rounded-lg bg-gray-800 px-3 py-2 text-sm text-gray-300">
+                Date recorded: {deceasedDate}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="border-t border-gray-700 pt-4">
