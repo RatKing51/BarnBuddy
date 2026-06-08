@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import AnimalGeneralData from "../components/AnimalGeneralData";
 import DashboardOverview from "../components/DashboardOverview";
 import HealthRecords from "../components/HealthRecords";
+import HerdFeedRecords from "../components/HerdFeedRecords";
+import PremiumRecords from "../components/PremiumRecords";
 import VetVisits from "../components/VetVisits";
 import { useNavigate } from "react-router-dom";
 import {
@@ -10,11 +12,15 @@ import {
   getAnimalsUnassigned,
 } from "../api/animal";
 import { getHerdsForUser } from "../api/herd";
+import * as healthEventsAPI from "../api/healthEvents";
+import * as premiumRecordsAPI from "../api/premiumRecords";
+import * as reproductionsAPI from "../api/reproductions";
 import * as vaccinationsAPI from "../api/vaccinations";
 import * as vetVisitsAPI from "../api/vetVisits";
 import { toast } from "react-toastify";
 import { UserButton, useUser } from "@clerk/clerk-react";
 import { usePreferences } from "../context/PreferencesContext";
+import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("general");
@@ -22,9 +28,8 @@ export default function Dashboard() {
   const [selectedHerd, setSelectedHerd] = useState(null);
   const [herds, setHerds] = useState([]);
   const [animals, setAnimals] = useState([]);
-  const [hasUnassignedAnimals, setHasUnassignedAnimals] = useState(false);
+  const [, setHasUnassignedAnimals] = useState(false);
   const [selectedAnimal, setSelectedAnimal] = useState(null);
-  const [refreshFlag, setRefreshFlag] = useState(false);
   const [vaccinationsDue, setVaccinationsDue] = useState(0);
   const [vaccinationsDueSoon, setVaccinationsDueSoon] = useState(0);
   const [vaccinationRefresh, setVaccinationRefresh] = useState(0);
@@ -33,14 +38,23 @@ export default function Dashboard() {
   const [loadingHerds, setLoadingHerds] = useState(true);
   const [loadingAnimals, setLoadingAnimals] = useState(false);
   const [addingAnimal, setAddingAnimal] = useState(false);
+  const [exportMode, setExportMode] = useState("farm");
+  const [exportLoading, setExportLoading] = useState(false);
+  const [animalExportData, setAnimalExportData] = useState(null);
 
   const handleFarmOverviewClick = () => {
     setActiveTab("general");
     setSelectedAnimal(null);
   };
 
+  const handleHerdFeedClick = () => {
+    setActiveTab("feed");
+    setSelectedAnimal(null);
+  };
+
   const { user } = useUser();
   const { preferences } = usePreferences();
+  const { subscription } = useBarnBuddyAuth();
   const navigate = useNavigate();
   const isCompact = preferences.dashboardDensity === "compact";
   const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
@@ -51,6 +65,15 @@ export default function Dashboard() {
   const getAnimalSecondaryLabel = (animal) => {
     if (primaryAnimalIdentifier === "tag") return animal.name ? `Name ${animal.name}` : "Name not set";
     return animal.tag_id ? `Tag ${animal.tag_id}` : "Tag not set";
+  };
+  const formatReportDate = (value) => (value ? String(value).slice(0, 10) : "");
+  const formatReportMoney = (value) => {
+    const number = Number.parseFloat(value);
+    return Number.isFinite(number) ? `$${number.toFixed(2)}` : "";
+  };
+  const getReportAnimalLabel = (animalId) => {
+    const match = animals.find((animal) => String(animal.id) === String(animalId));
+    return match ? getAnimalPrimaryLabel(match) : "";
   };
 
   // Update clock every second
@@ -110,7 +133,7 @@ export default function Dashboard() {
     loadHerds();
   }, []);
 
-  // Load animals whenever herd changes or refreshFlag toggles
+  // Load animals when the herd changes. Individual edits patch local state below.
   useEffect(() => {
     async function loadAnimals() {
       if (!selectedHerd) return;
@@ -136,11 +159,15 @@ export default function Dashboard() {
     }
 
     loadAnimals();
-  }, [selectedHerd, refreshFlag, herds]);
+  }, [selectedHerd]);
 
   useEffect(() => {
     setSelectedAnimal(null);
   }, [selectedHerd]);
+
+  const animalCareSignature = animals
+    .map((animal) => `${animal.id}:${animal.status || "active"}:${animal.deceased_date || ""}`)
+    .join("|");
 
   // Fetch and calculate herd-wide vaccination dues and urgency per animal
   useEffect(() => {
@@ -239,7 +266,7 @@ export default function Dashboard() {
     };
 
     computeHerdStatus();
-  }, [animals, refreshFlag, vaccinationRefresh, preferences.careWindow]);
+  }, [animalCareSignature, vaccinationRefresh, preferences.careWindow]);
 
   const totalAnimals = animals.length;
   const activeAnimals = animals.filter((animal) => animal.status !== "deceased");
@@ -297,8 +324,114 @@ export default function Dashboard() {
     return animalUrgencies[animal.id] || "green";
   };
 
-  const handleExportDashboardPdf = () => {
-    window.print();
+  const collectAnimalExportData = async (animal) => {
+    const arrayData = (response) => (Array.isArray(response?.data) ? response.data : []);
+    const feedRequest = selectedHerd?.id === "unassigned"
+      ? premiumRecordsAPI.getUnassignedFeedRecords()
+      : selectedHerd?.id
+      ? premiumRecordsAPI.getHerdFeedRecords(selectedHerd.id)
+      : Promise.resolve({ data: [] });
+
+    const [
+      healthEventsRes,
+      vaccinationsRes,
+      vetVisitsRes,
+      reproductionsRes,
+      financeRes,
+      animalFeedRes,
+      herdFeedRes,
+    ] = await Promise.all([
+      healthEventsAPI.getHealthEvents(animal.id),
+      vaccinationsAPI.getVaccinations(animal.id),
+      vetVisitsAPI.getVetVisitsForAnimal(animal.id),
+      reproductionsAPI.getAnimalReproductions(animal.id),
+      premiumRecordsAPI.getFinanceRecords(animal.id),
+      premiumRecordsAPI.getFeedRecords(animal.id),
+      feedRequest,
+    ]);
+
+    return {
+      healthEvents: arrayData(healthEventsRes),
+      vaccinations: arrayData(vaccinationsRes),
+      vetVisits: arrayData(vetVisitsRes),
+      reproductions: arrayData(reproductionsRes),
+      financeRecords: arrayData(financeRes),
+      animalFeed: arrayData(animalFeedRes),
+      herdFeed: arrayData(herdFeedRes),
+    };
+  };
+
+  const handleExportDashboardPdf = async () => {
+    if (!subscription.isPremium) {
+      toast.info("Premium exports are almost ready. Review plans to unlock advanced exports.");
+      navigate("/pricing");
+      return;
+    }
+
+    if (selectedAnimal) {
+      await handleExportAnimalPdf();
+      return;
+    }
+
+    setAnimalExportData(null);
+    setExportMode("farm");
+    window.setTimeout(() => window.print(), 50);
+  };
+
+  const handleExportAnimalPdf = async () => {
+    if (!subscription.isPremium) {
+      toast.info("Animal-level exports are Premium.");
+      navigate("/pricing");
+      return;
+    }
+
+    if (!selectedAnimal) {
+      toast.info("Select an animal to export.");
+      return;
+    }
+
+    try {
+      setExportLoading(true);
+      const fullHistory = await collectAnimalExportData(selectedAnimal);
+      setAnimalExportData(fullHistory);
+      setExportMode("animal");
+      window.setTimeout(() => window.print(), 150);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to prepare the full animal export.");
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const animalBelongsToCurrentHerd = (animal) => {
+    if (!selectedHerd) return false;
+    if (selectedHerd.id === "unassigned") return animal.herd_id === null || animal.herd_id === undefined;
+    return String(animal.herd_id) === String(selectedHerd.id);
+  };
+
+  const handleAnimalSaved = (updatedAnimal) => {
+    if (!updatedAnimal?.id) return;
+
+    setAnimals((current) => {
+      if (!animalBelongsToCurrentHerd(updatedAnimal)) {
+        return current.filter((animal) => animal.id !== updatedAnimal.id);
+      }
+
+      const exists = current.some((animal) => animal.id === updatedAnimal.id);
+      if (!exists) return [updatedAnimal, ...current];
+      return current.map((animal) => (animal.id === updatedAnimal.id ? updatedAnimal : animal));
+    });
+
+    setSelectedAnimal((current) => {
+      if (current?.id !== updatedAnimal.id) return current;
+      return animalBelongsToCurrentHerd(updatedAnimal) ? updatedAnimal : null;
+    });
+  };
+
+  const handleAnimalDeleted = (animalId) => {
+    setAnimals((current) => current.filter((animal) => animal.id !== animalId));
+    setSelectedAnimal((current) => (current?.id === animalId ? null : current));
   };
 
   // Add new animal
@@ -323,9 +456,13 @@ export default function Dashboard() {
         deceased_notes: null,
       };
 
-      await createAnimal(filler);
+      const res = await createAnimal(filler);
+      if (res.data) {
+        setAnimals((current) => [res.data, ...current]);
+        setSelectedAnimal(res.data);
+        setActiveTab("general");
+      }
       toast.success("Created new animal!");
-      setRefreshFlag((prev) => !prev);
     } catch (err) {
       console.error(err);
       toast.error("Failed to create new animal!");
@@ -335,6 +472,7 @@ export default function Dashboard() {
   };
 
   const handleSelectAnimal = (animal) => {
+    if (activeTab === "feed") setActiveTab("general");
     setSelectedAnimal((current) =>
       current?.id === animal.id ? null : animal
     );
@@ -353,6 +491,27 @@ export default function Dashboard() {
       window.removeEventListener("keydown", handleEsc);
     };
   }, []);
+
+  const exportHealthEvents = animalExportData?.healthEvents || [];
+  const exportVaccinations = animalExportData?.vaccinations || [];
+  const exportVetVisits = animalExportData?.vetVisits || [];
+  const exportReproductions = animalExportData?.reproductions || [];
+  const exportFinanceRecords = animalExportData?.financeRecords || [];
+  const exportAnimalFeed = animalExportData?.animalFeed || [];
+  const exportHerdFeed = animalExportData?.herdFeed || [];
+  const exportVetCostTotal = exportVetVisits.reduce((sum, visit) => {
+    const cost = Number.parseFloat(visit.cost);
+    return Number.isFinite(cost) ? sum + cost : sum;
+  }, 0);
+  const exportFinanceTotal = exportFinanceRecords.reduce((sum, record) => {
+    const amount = Number.parseFloat(record.amount);
+    if (!Number.isFinite(amount)) return sum;
+    return record.category === "Income" ? sum + amount : sum - amount;
+  }, 0);
+  const exportFeedCostTotal = [...exportAnimalFeed, ...exportHerdFeed].reduce((sum, record) => {
+    const cost = Number.parseFloat(record.cost);
+    return Number.isFinite(cost) ? sum + cost : sum;
+  }, 0);
 
 
   return (
@@ -404,12 +563,24 @@ export default function Dashboard() {
             type="button"
             onClick={handleFarmOverviewClick}
             className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition border cursor-pointer ${
-              !selectedAnimal
+              !selectedAnimal && activeTab !== "feed"
                 ? "bg-blue-600 border-blue-500 text-white shadow"
                 : "border-gray-600 hover:bg-gray-700 text-gray-200"
             }`}
           >
             Farm Overview
+          </button>
+
+          <button
+            type="button"
+            onClick={handleHerdFeedClick}
+            className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition border cursor-pointer ${
+              !selectedAnimal && activeTab === "feed"
+                ? "bg-blue-600 border-blue-500 text-white shadow"
+                : "border-gray-600 hover:bg-gray-700 text-gray-200"
+            }`}
+          >
+            Herd Feed
           </button>
 
           <div className="mt-4 px-4 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
@@ -477,7 +648,16 @@ export default function Dashboard() {
         {/* HEADER */}
         <header className={`flex flex-col sm:flex-row items-start sm:items-center justify-between ${isCompact ? "mb-4" : "mb-6"}`}>
           <div className="mb-4 sm:mb-0">
-            <h2 className="text-2xl font-semibold">Welcome back</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-2xl font-semibold">Welcome back</h2>
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                subscription.isPremium
+                  ? "bg-blue-500/20 text-blue-100 ring-1 ring-blue-300/30"
+                  : "bg-gray-800 text-gray-300 ring-1 ring-gray-700"
+              }`}>
+                {subscription.planName}
+              </span>
+            </div>
             <p className="text-gray-400">{dateTime}</p>
           </div>
           <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:justify-end">
@@ -493,9 +673,10 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={handleExportDashboardPdf}
+              disabled={exportLoading}
               className="rounded-xl border border-gray-700 bg-gray-800 px-4 py-2 text-white shadow transition hover:bg-gray-700"
             >
-              Export PDF
+              {exportLoading ? "Preparing..." : subscription.isPremium && selectedAnimal ? "Export Animal" : subscription.isPremium ? "Export Farm" : "Export PDF - Premium"}
             </button>
             <button
               className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition"
@@ -535,7 +716,15 @@ export default function Dashboard() {
 
         {/* ANIMAL DATA */}
         <div className="rounded-2xl border border-gray-800 bg-gray-900 shadow-md">
-          {!selectedAnimal ? (
+          {!selectedAnimal && activeTab === "feed" ? (
+            <div className="p-4 sm:p-6">
+              <HerdFeedRecords
+                selectedHerd={selectedHerd}
+                isPremium={subscription.isPremium}
+                automaticReminders={Boolean(preferences.automaticReminders)}
+              />
+            </div>
+          ) : !selectedAnimal ? (
             <DashboardOverview
               loading={loadingHerds || loadingAnimals}
               animals={animals}
@@ -551,13 +740,14 @@ export default function Dashboard() {
               animalsStable={animalsStable}
               animalUrgencies={animalUrgencies}
               primaryAnimalIdentifier={primaryAnimalIdentifier}
+              isPremium={subscription.isPremium}
               handleSelectAnimal={handleSelectAnimal}
             />
           ) : (
             <>
               {/* TABS */}
               <div className="border-b border-gray-700 flex flex-wrap">
-                {["general", "health", "vet"].map((tab) => (
+                {["general", "health", "vet", "reproduction", "finance"].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -570,6 +760,8 @@ export default function Dashboard() {
                     {tab === "general" && "General Data"}
                     {tab === "health" && "Health Records"}
                     {tab === "vet" && "Vet Visits"}
+                    {tab === "reproduction" && "Reproduction"}
+                    {tab === "finance" && "Finance"}
                   </button>
                 ))}
               </div>
@@ -579,15 +771,35 @@ export default function Dashboard() {
                 {activeTab === "general" && (
                   <AnimalGeneralData
                     animal={selectedAnimal}
-                    setRefreshFlag={setRefreshFlag}
                     setSelectedAnimal={setSelectedAnimal}
                     setActiveTab={setActiveTab}
+                    onAnimalSaved={handleAnimalSaved}
+                    onAnimalDeleted={handleAnimalDeleted}
                     herds={herds}
                     selectedHerd={selectedHerd}
                   />
                 )}
                 {activeTab === "health" && <HealthRecords animal={selectedAnimal} onVaccinationUpdate={() => setVaccinationRefresh(prev => prev + 1)} />}
                 {activeTab === "vet" && <VetVisits animal={selectedAnimal} onVetVisitUpdate={() => setVaccinationRefresh(prev => prev + 1)} />}
+                {activeTab === "reproduction" && (
+                  <PremiumRecords
+                    animal={selectedAnimal}
+                    animals={animals}
+                    isPremium={subscription.isPremium}
+                    onExportAnimal={handleExportAnimalPdf}
+                    onAnimalSaved={handleAnimalSaved}
+                    view="reproduction"
+                  />
+                )}
+                {activeTab === "finance" && (
+                  <PremiumRecords
+                    animal={selectedAnimal}
+                    animals={animals}
+                    isPremium={subscription.isPremium}
+                    onExportAnimal={handleExportAnimalPdf}
+                    view="finance"
+                  />
+                )}
               </div>
             </>
           )}
@@ -596,8 +808,8 @@ export default function Dashboard() {
 
       <section id="dashboard-pdf" className="hidden">
         <header>
-          <p className="report-eyebrow">BarnBuddy Farm Report</p>
-          <h1>{selectedHerd?.name || "Farm"} Dashboard Summary</h1>
+          <p className="report-eyebrow">{exportMode === "animal" ? "BarnBuddy Animal Report" : "BarnBuddy Farm Report"}</p>
+          <h1>{exportMode === "animal" ? `${getAnimalPrimaryLabel(selectedAnimal || {})} Record Summary` : `${selectedHerd?.name || "Farm"} Dashboard Summary`}</h1>
           <p>
             Generated {generatedDate}
             {user?.primaryEmailAddress?.emailAddress
@@ -606,6 +818,227 @@ export default function Dashboard() {
           </p>
         </header>
 
+        {exportMode === "animal" && selectedAnimal ? (
+          <>
+            <section>
+              <h2>Animal Details</h2>
+              <dl className="report-metrics">
+                <div>
+                  <dt>{primaryAnimalIdentifier === "tag" ? "Tag ID" : "Name"}</dt>
+                  <dd>{getAnimalPrimaryLabel(selectedAnimal)}</dd>
+                </div>
+                <div>
+                  <dt>Species</dt>
+                  <dd>{selectedAnimal.species || "Unknown"}</dd>
+                </div>
+                <div>
+                  <dt>Status</dt>
+                  <dd>{getStatusLabel(getAnimalStatus(selectedAnimal))}</dd>
+                </div>
+              </dl>
+            </section>
+            <section>
+              <h2>Core Record</h2>
+              <table>
+                <tbody>
+                  <tr><th>{primaryAnimalIdentifier === "tag" ? "Name" : "Tag ID"}</th><td>{primaryAnimalIdentifier === "tag" ? selectedAnimal.name || "" : selectedAnimal.tag_id || ""}</td></tr>
+                  <tr><th>Sex</th><td>{selectedAnimal.sex || ""}</td></tr>
+                  <tr><th>Birth Date</th><td>{selectedAnimal.birthdate ? selectedAnimal.birthdate.slice(0, 10) : ""}</td></tr>
+                  <tr><th>Birth Weight</th><td>{selectedAnimal.birth_weight || ""}</td></tr>
+                  <tr><th>Birth Notes</th><td>{selectedAnimal.birth_notes || ""}</td></tr>
+                  <tr><th>Age</th><td>{selectedAnimal.age || ""}</td></tr>
+                  <tr><th>Weight</th><td>{selectedAnimal.weight || ""}</td></tr>
+                  <tr><th>Temperament</th><td>{selectedAnimal.behavior || ""}</td></tr>
+                  <tr><th>Deceased Date</th><td>{formatReportDate(selectedAnimal.deceased_date)}</td></tr>
+                  <tr><th>Deceased Notes</th><td>{selectedAnimal.deceased_notes || ""}</td></tr>
+                  <tr><th>Notes</th><td>{selectedAnimal.comments || ""}</td></tr>
+                </tbody>
+              </table>
+            </section>
+
+            <section>
+              <h2>Animal History Summary</h2>
+              <dl className="report-metrics">
+                <div><dt>Health events</dt><dd>{exportHealthEvents.length}</dd></div>
+                <div><dt>Vaccinations</dt><dd>{exportVaccinations.length}</dd></div>
+                <div><dt>Vet visits</dt><dd>{exportVetVisits.length}</dd></div>
+                <div><dt>Breeding records</dt><dd>{exportReproductions.length}</dd></div>
+                <div><dt>Finance net</dt><dd>{formatReportMoney(exportFinanceTotal) || "$0.00"}</dd></div>
+                <div><dt>Vet costs</dt><dd>{formatReportMoney(exportVetCostTotal) || "$0.00"}</dd></div>
+                <div><dt>Feed costs</dt><dd>{formatReportMoney(exportFeedCostTotal) || "$0.00"}</dd></div>
+              </dl>
+            </section>
+
+            <section>
+              <h2>Health Events</h2>
+              {exportHealthEvents.length === 0 ? (
+                <p>No health events recorded.</p>
+              ) : (
+                <table>
+                  <thead>
+                    <tr><th>Date</th><th>Type</th><th>Severity</th><th>Resolved</th><th>Description</th><th>Notes</th></tr>
+                  </thead>
+                  <tbody>
+                    {exportHealthEvents.map((event) => (
+                      <tr key={event.id}>
+                        <td>{formatReportDate(event.event_date)}</td>
+                        <td>{event.type || ""}</td>
+                        <td>{event.severity || ""}</td>
+                        <td>{event.resolved ? "Yes" : "No"}</td>
+                        <td>{event.description || ""}</td>
+                        <td>{event.notes || ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+
+            <section>
+              <h2>Vaccinations</h2>
+              {exportVaccinations.length === 0 ? (
+                <p>No vaccinations recorded.</p>
+              ) : (
+                <table>
+                  <thead>
+                    <tr><th>Date Given</th><th>Vaccine</th><th>Dosage</th><th>Next Due</th><th>Notes</th></tr>
+                  </thead>
+                  <tbody>
+                    {exportVaccinations.map((vaccination) => (
+                      <tr key={vaccination.id}>
+                        <td>{formatReportDate(vaccination.date_given)}</td>
+                        <td>{vaccination.vaccine_name || ""}</td>
+                        <td>{vaccination.dosage || ""}</td>
+                        <td>{formatReportDate(vaccination.next_due_date)}</td>
+                        <td>{vaccination.notes || ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+
+            <section>
+              <h2>Vet Visits</h2>
+              {exportVetVisits.length === 0 ? (
+                <p>No vet visits recorded.</p>
+              ) : (
+                <table>
+                  <thead>
+                    <tr><th>Visit Date</th><th>Vet</th><th>Reason</th><th>Treatment</th><th>Medications</th><th>Follow-up</th><th>Cost</th><th>Notes</th></tr>
+                  </thead>
+                  <tbody>
+                    {exportVetVisits.map((visit) => (
+                      <tr key={visit.id}>
+                        <td>{formatReportDate(visit.visit_date)}</td>
+                        <td>{visit.vet_name || ""}</td>
+                        <td>{visit.reason || ""}</td>
+                        <td>{visit.treatment || ""}</td>
+                        <td>{visit.medications || ""}</td>
+                        <td>{formatReportDate(visit.follow_up_date)}</td>
+                        <td>{formatReportMoney(visit.cost)}</td>
+                        <td>{visit.notes || ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+
+            <section>
+              <h2>Reproduction</h2>
+              {exportReproductions.length === 0 ? (
+                <p>No reproduction records recorded.</p>
+              ) : (
+                <table>
+                  <thead>
+                    <tr><th>Dam / Mother</th><th>Sire / Father</th><th>Method</th><th>Breeding Date</th><th>Due Date</th><th>Status</th><th>Pregnancy Check</th><th>Pregnancy Status</th><th>Birth Date</th><th>Offspring</th><th>Birth Outcome</th><th>Notes</th></tr>
+                  </thead>
+                  <tbody>
+                    {exportReproductions.map((record) => (
+                      <tr key={record.id}>
+                        <td>{getReportAnimalLabel(record.dam_id)}</td>
+                        <td>{getReportAnimalLabel(record.sire_id)}</td>
+                        <td>{record.breeding_method || ""}</td>
+                        <td>{formatReportDate(record.breeding_date)}</td>
+                        <td>{formatReportDate(record.due_date)}</td>
+                        <td>{record.outcome || ""}</td>
+                        <td>{formatReportDate(record.pregnancy_check_date)}</td>
+                        <td>{record.pregnancy_status || ""}</td>
+                        <td>{formatReportDate(record.birth_date)}</td>
+                        <td>{record.offspring_count || ""}</td>
+                        <td>{record.birth_outcome || ""}</td>
+                        <td>{record.notes || ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+
+            <section>
+              <h2>Finance</h2>
+              {exportFinanceRecords.length === 0 ? (
+                <p>No finance records recorded.</p>
+              ) : (
+                <table>
+                  <thead>
+                    <tr><th>Date</th><th>Category</th><th>Amount</th><th>Vendor / Buyer</th><th>Notes</th></tr>
+                  </thead>
+                  <tbody>
+                    {exportFinanceRecords.map((record) => (
+                      <tr key={record.id}>
+                        <td>{formatReportDate(record.record_date)}</td>
+                        <td>{record.category || ""}</td>
+                        <td>{formatReportMoney(record.amount)}</td>
+                        <td>{record.vendor || ""}</td>
+                        <td>{record.notes || ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+
+            <section>
+              <h2>Feed Records</h2>
+              {[...exportAnimalFeed, ...exportHerdFeed].length === 0 ? (
+                <p>No feed records recorded.</p>
+              ) : (
+                <table>
+                  <thead>
+                    <tr><th>Scope</th><th>Date</th><th>Feed Type</th><th>Amount</th><th>Cost</th><th>Next Purchase</th><th>Notes</th></tr>
+                  </thead>
+                  <tbody>
+                    {exportAnimalFeed.map((record) => (
+                      <tr key={`animal-feed-${record.id}`}>
+                        <td>Animal</td>
+                        <td>{formatReportDate(record.record_date)}</td>
+                        <td>{record.feed_type || ""}</td>
+                        <td>{record.amount || ""} {record.unit || ""}</td>
+                        <td>{formatReportMoney(record.cost)}</td>
+                        <td>{formatReportDate(record.next_purchase_date)}</td>
+                        <td>{record.notes || ""}</td>
+                      </tr>
+                    ))}
+                    {exportHerdFeed.map((record) => (
+                      <tr key={`herd-feed-${record.id}`}>
+                        <td>Herd</td>
+                        <td>{formatReportDate(record.record_date)}</td>
+                        <td>{record.feed_type || ""}</td>
+                        <td>{record.amount || ""} {record.unit || ""}</td>
+                        <td>{formatReportMoney(record.cost)}</td>
+                        <td>{formatReportDate(record.next_purchase_date)}</td>
+                        <td>{record.notes || ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+          </>
+        ) : (
+          <>
         <section>
           <h2>Animal Count</h2>
           <dl className="report-metrics">
@@ -699,6 +1132,8 @@ export default function Dashboard() {
             </table>
           )}
         </section>
+          </>
+        )}
       </section>
     </div>
   );

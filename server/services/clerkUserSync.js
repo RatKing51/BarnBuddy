@@ -23,10 +23,14 @@ function ensureSchema() {
 
       ALTER TABLE users
         ADD COLUMN IF NOT EXISTS clerk_user_id TEXT UNIQUE,
+        ADD COLUMN IF NOT EXISTS subscription_plan TEXT DEFAULT 'free',
+        ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'free',
+        ADD COLUMN IF NOT EXISTS subscription_is_premium BOOLEAN DEFAULT false,
         ADD COLUMN IF NOT EXISTS care_window_days INTEGER DEFAULT 7,
         ADD COLUMN IF NOT EXISTS dashboard_density TEXT DEFAULT 'comfortable',
         ADD COLUMN IF NOT EXISTS app_theme TEXT DEFAULT 'dark',
-        ADD COLUMN IF NOT EXISTS email_updates BOOLEAN DEFAULT true;
+        ADD COLUMN IF NOT EXISTS email_updates BOOLEAN DEFAULT true,
+        ADD COLUMN IF NOT EXISTS automatic_reminders BOOLEAN DEFAULT false;
 
       ALTER TABLE herds
         ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '',
@@ -203,6 +207,7 @@ async function syncClerkWebhookUser(clerkUser) {
 }
 
 module.exports = {
+  ensureSchema,
   findOrCreateLocalUserFromAuth,
   syncClerkWebhookUser,
 };

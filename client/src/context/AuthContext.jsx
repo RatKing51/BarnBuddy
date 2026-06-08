@@ -1,12 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth as useClerkAuth, useUser } from "@clerk/clerk-react";
 import { setAuthTokenGetter } from "../api/axios";
-import { API_URL } from "../config/env";
+import { API_URL, CLERK_PREMIUM_FEATURE_SLUG, CLERK_PREMIUM_PLAN_SLUG } from "../config/env";
+import { getSubscriptionFromClerk } from "../config/subscription";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-    const { isLoaded, isSignedIn, getToken, signOut } = useClerkAuth();
+    const { isLoaded, isSignedIn, getToken, signOut, sessionClaims, has } = useClerkAuth();
     const { user: clerkUser } = useUser();
     const [backendUser, setBackendUser] = useState(null);
     const [backendAuthLoading, setBackendAuthLoading] = useState(true);
@@ -100,12 +101,32 @@ export function AuthProvider({ children }) {
 
     const user = isSignedIn ? clerkUser : null;
     const loading = !isLoaded;
+    const hasPremiumAccess = useMemo(() => {
+        if (!isLoaded || !isSignedIn || typeof has !== "function") return false;
+
+        return (
+            has({ plan: CLERK_PREMIUM_PLAN_SLUG }) ||
+            has({ feature: CLERK_PREMIUM_FEATURE_SLUG })
+        );
+    }, [has, isLoaded, isSignedIn]);
+
+    const subscription = useMemo(
+        () => getSubscriptionFromClerk({
+            user: clerkUser,
+            sessionClaims,
+            backendUser,
+            hasPremiumAccess,
+        }),
+        [backendUser, clerkUser, hasPremiumAccess, sessionClaims]
+    );
+
     const value = useMemo(
         () => ({
             user,
             backendUser,
             backendAuthLoading,
             backendAuthError,
+            subscription,
             logout,
             deleteAccount,
             loading,
@@ -116,6 +137,7 @@ export function AuthProvider({ children }) {
             backendUser,
             backendAuthLoading,
             backendAuthError,
+            subscription,
             logout,
             deleteAccount,
             loading,

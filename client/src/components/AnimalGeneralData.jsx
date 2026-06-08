@@ -7,7 +7,15 @@ import { useAuth } from "../context/AuthContext";
 import { usePreferences } from "../context/PreferencesContext";
 import { API_URL } from "../config/env";
 
-export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedAnimal, setActiveTab, herds, selectedHerd }) {
+export default function AnimalGeneralData({
+  animal,
+  setSelectedAnimal,
+  setActiveTab,
+  onAnimalSaved,
+  onAnimalDeleted,
+  herds,
+  selectedHerd,
+}) {
   const [name, setName] = useState("");
   const [dob, setDob] = useState("");
   const [age, setAge] = useState("");
@@ -260,9 +268,9 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
         ...updatedData, // merge in changes like herdId
       };
 
-      await updateAnimal(payload, animalId);
+      const res = await updateAnimal(payload, animalId);
+      onAnimalSaved?.(res.data || { ...animal, ...payload, id: animalId });
       toast.success("Animal Data Saved!");
-      setRefreshFlag((prev) => !prev);
     } catch (err) {
       console.error("Failed to update animal:", err.response?.data || err.message);
       toast.error("Failed to save animal data!");
@@ -351,7 +359,6 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       await uploadAnimalImage(animal.id, file);
       setImageUrl("stored"); // Set flag to indicate image is stored
       setImageRefreshKey((current) => current + 1);
-      setRefreshFlag((prev) => !prev);
       toast.success("Image uploaded successfully!");
     } catch (err) {
       console.error("Image upload failed:", err.response?.data || err.message);
@@ -380,7 +387,6 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
         return "";
       });
       setImageRefreshKey((current) => current + 1);
-      setRefreshFlag((prev) => !prev);
       toast.success("Image removed successfully.");
     } catch (err) {
       console.error("Image removal failed:", err.response?.data || err.message);
@@ -418,7 +424,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       setDeceasedDate("");
       setDeceasedNotes("");
 
-      setRefreshFlag((prev) => !prev);
+      onAnimalDeleted?.(animal.id);
     } catch (err) {
       console.error("Failed to delete animal:", err.response?.data || err.message);
       toast.error("Failed to delete animal!");
@@ -489,12 +495,12 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       </div>
 
       {/* Top Right - Picture */}
-      <div className="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden shadow-lg">
-        <label className="w-full h-full relative group block cursor-pointer">
+      <div className="min-h-80 bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden shadow-lg">
+        <label className="w-full h-full min-h-80 relative group block cursor-pointer">
           <img
             src={imageSrc}
             alt={`${name || "Animal"} profile`}
-            className="aspect-[4/3] w-full object-cover transition duration-300 group-hover:scale-[1.02] group-hover:opacity-80"
+            className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.02] group-hover:opacity-80"
             onError={() => setImageBlobUrl("")}
           />
           <input

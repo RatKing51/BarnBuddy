@@ -8,6 +8,7 @@ const preferenceDefaults = {
   appTheme: "dark",
   animalPrimaryIdentifier: "name",
   emailUpdates: true,
+  automaticReminders: false,
 };
 
 const PreferencesContext = createContext(null);

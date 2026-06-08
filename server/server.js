@@ -16,12 +16,14 @@ const vetVisitRoutes = require("./routes/vetVisits");
 const healthEventRoutes = require("./routes/healthEvents");
 const authRoutes = require("./routes/auth");
 const reproductionRoutes = require("./routes/reproductions");
+const premiumRecordRoutes = require("./routes/premiumRecords");
 const birthRoutes = require("./routes/births");
 const clerkWebhookRoutes = require("./routes/clerkWebhooks");
 const contactRoutes = require("./routes/contact");
 const emailRoutes = require("./routes/email");
 const newsletterRoutes = require("./routes/newsletter");
-const ensureAnimalSchema = require("./services/ensureAnimalSchema");
+const notificationRoutes = require("./routes/notifications");
+const { ensureAppSchema } = require("./services/ensureAppSchema");
 
 const app = express();
 app.use(cors({
@@ -46,9 +48,11 @@ app.use("/api/vetVisits", vetVisitRoutes);
 app.use("/api/healthEvents", healthEventRoutes);
 app.use("/api/email", emailRoutes);
 app.use("/api/newsletter", newsletterRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use("/auth", authRoutes);
 app.use("/contact", contactRoutes);
 app.use("/api/reproductions", reproductionRoutes);
+app.use("/api/premium-records", premiumRecordRoutes);
 app.use("/api/births", birthRoutes);
 
 app.use((err, req, res, next) => {
@@ -79,7 +83,7 @@ app.get("/health", (req, res) => {
 
 async function startServer() {
   try {
-    await ensureAnimalSchema();
+    await ensureAppSchema();
     app.listen(env.port, () => console.log(`Server running on port ${env.port}`));
   } catch (err) {
     console.error("Failed to start server:", err);

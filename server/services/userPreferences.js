@@ -6,6 +6,7 @@ const defaults = {
   appTheme: "dark",
   animalPrimaryIdentifier: "name",
   emailUpdates: true,
+  automaticReminders: false,
 };
 
 let schemaReadyPromise;
@@ -18,7 +19,8 @@ function ensurePreferenceSchema() {
         ADD COLUMN IF NOT EXISTS dashboard_density TEXT DEFAULT 'comfortable',
         ADD COLUMN IF NOT EXISTS app_theme TEXT DEFAULT 'dark',
         ADD COLUMN IF NOT EXISTS animal_primary_identifier TEXT DEFAULT 'name',
-        ADD COLUMN IF NOT EXISTS email_updates BOOLEAN DEFAULT true
+        ADD COLUMN IF NOT EXISTS email_updates BOOLEAN DEFAULT true,
+        ADD COLUMN IF NOT EXISTS automatic_reminders BOOLEAN DEFAULT false
     `);
   }
 
@@ -39,6 +41,7 @@ function normalizePreferences(row = {}) {
     appTheme,
     animalPrimaryIdentifier,
     emailUpdates: typeof row.email_updates === "boolean" ? row.email_updates : defaults.emailUpdates,
+    automaticReminders: typeof row.automatic_reminders === "boolean" ? row.automatic_reminders : defaults.automaticReminders,
   };
 }
 
@@ -65,6 +68,10 @@ function normalizePatch(payload = {}) {
     patch.email_updates = payload.emailUpdates;
   }
 
+  if (typeof payload.automaticReminders === "boolean") {
+    patch.automatic_reminders = payload.automaticReminders;
+  }
+
   return patch;
 }
 
@@ -72,7 +79,7 @@ async function getUserPreferences(userId) {
   await ensurePreferenceSchema();
 
   const result = await pool.query(
-    "SELECT care_window_days, dashboard_density, app_theme, animal_primary_identifier, email_updates FROM users WHERE id = $1",
+    "SELECT care_window_days, dashboard_density, app_theme, animal_primary_identifier, email_updates, automatic_reminders FROM users WHERE id = $1",
     [userId]
   );
 
@@ -96,7 +103,7 @@ async function updateUserPreferences(userId, payload) {
     `UPDATE users
      SET ${assignments}
      WHERE id = $1
-     RETURNING care_window_days, dashboard_density, app_theme, animal_primary_identifier, email_updates`,
+     RETURNING care_window_days, dashboard_density, app_theme, animal_primary_identifier, email_updates, automatic_reminders`,
     [userId, ...values]
   );
 
@@ -105,6 +112,7 @@ async function updateUserPreferences(userId, payload) {
 
 module.exports = {
   defaults,
+  ensurePreferenceSchema,
   getUserPreferences,
   updateUserPreferences,
 };
