@@ -30,11 +30,12 @@ function getSubscriptionFromClaims(claims = {}, hasPremiumAccess = false) {
         "billingStatus",
     ]));
     const hasPremiumFlag = claims.premium === true || claims.isPremium === true || claims.hasPremium === true;
-    const isPremium =
-        hasPremiumAccess ||
+    const isPremium = Boolean(
+        Boolean(hasPremiumAccess) ||
         hasPremiumFlag ||
         premiumPlanValues.has(plan) ||
-        (plan && plan !== "free" && activeStatusValues.has(status));
+        Boolean(plan && plan !== "free" && activeStatusValues.has(status))
+    );
 
     return {
         plan: isPremium ? "premium" : "free",
@@ -58,7 +59,7 @@ module.exports = async function authMiddleware(req, res, next) {
         const premiumPlanSlug = process.env.CLERK_PREMIUM_PLAN_SLUG || "premium";
         const premiumFeatureSlug = process.env.CLERK_PREMIUM_FEATURE_SLUG || "premium_access";
         const hasPremiumAccess = typeof auth.has === "function"
-            ? auth.has({ plan: premiumPlanSlug }) || auth.has({ feature: premiumFeatureSlug })
+            ? Boolean(auth.has({ plan: premiumPlanSlug }) || auth.has({ feature: premiumFeatureSlug }))
             : false;
         const user = await findOrCreateLocalUserFromAuth(auth);
         const subscription = getSubscriptionFromClaims(auth.sessionClaims, hasPremiumAccess);
@@ -68,7 +69,12 @@ module.exports = async function authMiddleware(req, res, next) {
                  subscription_status = $2,
                  subscription_is_premium = $3
              WHERE id = $4`,
-            [subscription.plan, subscription.status, subscription.isPremium, user.id]
+            [
+                subscription.plan || "free",
+                subscription.status || (subscription.isPremium ? "active" : "free"),
+                subscription.isPremium === true,
+                user.id,
+            ]
         );
 
         req.user = {
