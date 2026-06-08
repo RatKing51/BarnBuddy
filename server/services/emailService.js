@@ -3,7 +3,7 @@ const env = require("../config/env");
 
 const resend = env.email.resendApiKey ? new Resend(env.email.resendApiKey) : null;
 
-async function sendEmail({ to, subject, html, text }) {
+async function sendEmail({ to, subject, html, text, from }) {
   if (!env.email.enabled) {
     console.log(`[email disabled] Would send "${subject}" to ${to}`);
     return { skipped: true, reason: "EMAIL_ENABLED is not true" };
@@ -14,7 +14,7 @@ async function sendEmail({ to, subject, html, text }) {
   }
 
   return resend.emails.send({
-    from: env.email.from,
+    from: from || env.email.from,
     to,
     subject,
     html,
@@ -111,4 +111,5 @@ module.exports = {
   sendContactEmail,
   sendTestEmail,
   sendWelcomeEmail,
+  escapeHtml,
 };

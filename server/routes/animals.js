@@ -211,6 +211,10 @@ router.post("/", authMiddleware, async (req, res) => {
         status,
         deceased_date,
         deceased_notes,
+        dam_id,
+        sire_id,
+        birth_weight,
+        birth_notes,
     } = req.body;
 
     // Handle "unassigned" herd
@@ -224,10 +228,10 @@ router.post("/", authMiddleware, async (req, res) => {
     try {
         const result = await pool.query(
             `INSERT INTO animals
-            (user_id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url, birth_weight, birth_notes, status, deceased_date, deceased_notes)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NULL, NULL, $13, $14, $15) 
+            (user_id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url, birth_weight, birth_notes, status, deceased_date, deceased_notes, dam_id, sire_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) 
             RETURNING *`,
-            [req.user.id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url, status, deceased_date || null, deceased_notes || null]
+            [req.user.id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url, birth_weight || null, birth_notes || null, status, deceased_date || null, deceased_notes || null, dam_id || null, sire_id || null]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -254,6 +258,8 @@ router.put("/:id", authMiddleware, async (req, res) => {
         status,
         deceased_date,
         deceased_notes,
+        dam_id,
+        sire_id,
     } = req.body;
 
     // Handle "unassigned" herd
@@ -280,10 +286,12 @@ router.put("/:id", authMiddleware, async (req, res) => {
                  image_url=$13,
                  status=$14,
                  deceased_date=$15,
-                 deceased_notes=$16
+                 deceased_notes=$16,
+                 dam_id=$17,
+                 sire_id=$18
              WHERE id=$11 AND user_id=$12
              RETURNING *`,
-            [herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, id, req.user.id, image_url, status, deceased_date || null, deceased_notes || null]
+            [herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, id, req.user.id, image_url, status, deceased_date || null, deceased_notes || null, dam_id || null, sire_id || null]
         );
 
         if (result.rows.length === 0) return res.status(404).json({ error: "Animal not found" });
@@ -320,12 +328,33 @@ router.delete("/:id", authMiddleware, async (req, res) => {
     const { id } = req.params;
 
     try {
+        const linkedBirths = await pool.query(
+            "SELECT reproduction_id FROM births WHERE offspring_id=$1 AND user_id=$2",
+            [id, req.user.id]
+        );
+
+        await pool.query(
+            "DELETE FROM births WHERE offspring_id=$1 AND user_id=$2",
+            [id, req.user.id]
+        );
+
         const result = await pool.query(
             "DELETE FROM animals WHERE id=$1 AND user_id=$2 RETURNING *",
             [id, req.user.id]
         );
 
         if (result.rows.length === 0) return res.status(404).json({ error: "Animal not found" });
+        await Promise.all(
+            linkedBirths.rows
+                .filter((birth) => birth.reproduction_id)
+                .map((birth) => pool.query(
+                    `UPDATE reproductions
+                     SET offspring_count = GREATEST(COALESCE(offspring_count, 0) - 1, 0),
+                         updated_at = CURRENT_TIMESTAMP
+                     WHERE id=$1 AND user_id=$2`,
+                    [birth.reproduction_id, req.user.id]
+                ))
+        );
         res.json({ message: "Animal deleted successfully" });
     } catch (err) {
         console.error(err);

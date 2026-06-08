@@ -1,12 +1,25 @@
 const express = require("express");
 const pool = require("../data-source");
 const authMiddleware = require("../middleware/authMiddleware");
+const { ensureBirthSchema } = require("../services/ensureAppSchema");
 
 const router = express.Router();
 
+function requirePremium(req, res) {
+    if (!req.user.subscription?.isPremium) {
+        res.status(403).json({ error: "Premium is required for reproduction birth records." });
+        return false;
+    }
+
+    return true;
+}
+
 // Get all births for logged in user
 router.get("/", authMiddleware, async (req, res) => {
+    if (!requirePremium(req, res)) return;
+
     try {
+        await ensureBirthSchema();
         const result = await pool.query(
             `SELECT b.*, a.name as offspring_name, a.sex as offspring_sex,
                     r.breeding_date, r.outcome,
@@ -29,8 +42,11 @@ router.get("/", authMiddleware, async (req, res) => {
 
 // Get births for a specific animal (as offspring, dam, or sire)
 router.get("/animal/:animalId", authMiddleware, async (req, res) => {
+    if (!requirePremium(req, res)) return;
+
     const { animalId } = req.params;
     try {
+        await ensureBirthSchema();
         // Get births where animal is offspring
         const offspringResult = await pool.query(
             `SELECT b.*, a.name as offspring_name, a.sex as offspring_sex,
@@ -86,9 +102,12 @@ router.get("/animal/:animalId", authMiddleware, async (req, res) => {
 
 // Create a new birth record
 router.post("/", authMiddleware, async (req, res) => {
+    if (!requirePremium(req, res)) return;
+
     const { reproduction_id, offspring_id, birth_date, birth_weight, birth_notes } = req.body;
 
     try {
+        await ensureBirthSchema();
         const result = await pool.query(
             `INSERT INTO births
             (user_id, reproduction_id, offspring_id, birth_date, birth_weight, birth_notes)
@@ -105,10 +124,13 @@ router.post("/", authMiddleware, async (req, res) => {
 
 // Update a birth record
 router.put("/:id", authMiddleware, async (req, res) => {
+    if (!requirePremium(req, res)) return;
+
     const { id } = req.params;
     const { reproduction_id, offspring_id, birth_date, birth_weight, birth_notes } = req.body;
 
     try {
+        await ensureBirthSchema();
         const result = await pool.query(
             `UPDATE births SET
             reproduction_id = $1, offspring_id = $2, birth_date = $3,
@@ -128,9 +150,12 @@ router.put("/:id", authMiddleware, async (req, res) => {
 
 // Delete a birth record
 router.delete("/:id", authMiddleware, async (req, res) => {
+    if (!requirePremium(req, res)) return;
+
     const { id } = req.params;
 
     try {
+        await ensureBirthSchema();
         const result = await pool.query(
             "DELETE FROM births WHERE id = $1 AND user_id = $2 RETURNING *",
             [id, req.user.id]

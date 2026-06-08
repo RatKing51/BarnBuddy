@@ -2,14 +2,16 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserButton, useUser } from "@clerk/clerk-react";
 import { toast, ToastContainer } from "react-toastify";
+import BillingAction from "../components/BillingAction";
 import { useAuth } from "../context/AuthContext";
 import { usePreferences } from "../context/PreferencesContext";
 import { API_BASE_URL } from "../config/env";
+import { PREMIUM_FEATURES, PLANS, PLAN_IDS } from "../config/subscription";
 
 export default function AccountSettings() {
   const navigate = useNavigate();
   const { user } = useUser();
-  const { logout, deleteAccount, authFetch } = useAuth();
+  const { logout, deleteAccount, authFetch, subscription } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -18,6 +20,11 @@ export default function AccountSettings() {
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
   const [loadingNewsletter, setLoadingNewsletter] = useState(true);
   const [savingNewsletter, setSavingNewsletter] = useState(false);
+  const [reminderItems, setReminderItems] = useState([]);
+  const [reminderWindow, setReminderWindow] = useState(null);
+  const [reminderEmailEnabled, setReminderEmailEnabled] = useState(true);
+  const [loadingReminders, setLoadingReminders] = useState(false);
+  const [sendingReminderEmail, setSendingReminderEmail] = useState(false);
   const { preferences, loadingPreferences, savingPreferences, updatePreference } = usePreferences();
 
   useEffect(() => {
@@ -63,6 +70,40 @@ export default function AccountSettings() {
     };
   }, [authFetch, user]);
 
+  const loadReminderPreview = async () => {
+    if (!user || !subscription.isPremium) return;
+
+    try {
+      setLoadingReminders(true);
+      const res = await authFetch(`${API_BASE_URL}/notifications/reminders/preview`);
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.detail || data.error || "Failed to load reminders.");
+      }
+
+      setReminderItems(Array.isArray(data.items) ? data.items : []);
+      setReminderWindow(data.windowDays || null);
+      setReminderEmailEnabled(data.emailEnabled !== false);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Failed to load reminders.");
+    } finally {
+      setLoadingReminders(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!subscription.isPremium) {
+      setReminderItems([]);
+      setReminderWindow(null);
+      return;
+    }
+
+    loadReminderPreview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscription.isPremium, user?.id, preferences.careWindow]);
+
   const handlePreferenceChange = async (field, value) => {
     const result = await updatePreference(field, value);
     if (result.ok) {
@@ -92,6 +133,36 @@ export default function AccountSettings() {
       toast.error(err.message || "Failed to update newsletter setting.");
     } finally {
       setSavingNewsletter(false);
+    }
+  };
+
+  const sendReminderEmail = async () => {
+    try {
+      setSendingReminderEmail(true);
+      const res = await authFetch(`${API_BASE_URL}/notifications/reminders/send`, {
+        method: "POST",
+        body: JSON.stringify({ force: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.detail || data.error || "Failed to send reminder email.");
+      }
+
+      setReminderItems(Array.isArray(data.items) ? data.items : []);
+      setReminderWindow(data.windowDays || reminderWindow);
+      setReminderEmailEnabled(data.emailEnabled !== false);
+
+      if (data.sent) {
+        toast.success("Reminder email sent.");
+      } else {
+        toast.info(data.reason || "No reminders to send right now.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Failed to send reminder email.");
+    } finally {
+      setSendingReminderEmail(false);
     }
   };
 
@@ -188,6 +259,16 @@ export default function AccountSettings() {
             </button>
 
             <button
+              onClick={() => navigate("/pricing")}
+              className="w-full rounded-2xl border border-blue-400/30 bg-blue-500/10 p-5 text-left transition hover:border-blue-300 hover:bg-blue-500/15"
+            >
+              <p className="font-semibold text-white">Subscription</p>
+              <p className="mt-2 text-sm text-blue-100/80">
+                {subscription.isPremium ? "Premium tools are active." : "Review Premium tools and pricing."}
+              </p>
+            </button>
+
+            <button
               onClick={handleLogout}
               disabled={loggingOut || deletingAccount}
               className="w-full rounded-2xl border border-gray-700 bg-gray-800 p-5 text-left transition hover:border-blue-400 hover:bg-gray-700 disabled:cursor-wait disabled:opacity-70"
@@ -198,6 +279,46 @@ export default function AccountSettings() {
           </aside>
 
           <div className="space-y-6">
+            <section className="rounded-2xl border border-blue-400/30 bg-blue-500/10 p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">Billing</p>
+                  <h2 className="mt-2 text-xl font-semibold text-white">Subscription</h2>
+                  <p className="mt-2 text-sm text-blue-100/80">
+                    BarnBuddy uses Clerk Billing for upgrades and subscription management.
+                  </p>
+                </div>
+                <span className="w-fit rounded-full bg-blue-500 px-3 py-1 text-xs font-semibold text-white">
+                  {subscription.planName} - {subscription.statusLabel}
+                </span>
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                <div className="rounded-xl border border-gray-700 bg-gray-900 p-4">
+                  <p className="font-semibold text-white">{PLANS[subscription.planId].name} plan</p>
+                  <p className="mt-1 text-sm text-gray-400">
+                    {subscription.isPremium
+                      ? "Your account can access Premium dashboard and export tools."
+                      : `${PLANS[PLAN_IDS.premium].price}/${PLANS[PLAN_IDS.premium].interval.replace("per ", "")} unlocks the Premium toolset.`}
+                  </p>
+                </div>
+                <BillingAction
+                  isPremium={subscription.isPremium}
+                  className="bg-blue-600 text-white hover:bg-blue-500"
+                  signedOutClassName="bg-blue-600 text-white hover:bg-blue-500"
+                />
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {PREMIUM_FEATURES.map((feature) => (
+                  <div key={feature} className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-sm text-gray-200">
+                    <span className="mr-2 text-blue-300">Premium</span>
+                    {feature}
+                  </div>
+                ))}
+              </div>
+            </section>
+
             <section className="rounded-2xl border border-gray-700 bg-gray-800 p-6">
               <h2 className="text-xl font-semibold text-white">Profile</h2>
               <p className="mt-2 text-sm text-gray-400">These basics come from your Clerk account.</p>
@@ -294,6 +415,85 @@ export default function AccountSettings() {
               </div>
 
               <label className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3">
+                <div>
+                  <p className="font-semibold text-white">Automatic reminders</p>
+                  <p className="text-sm text-gray-400">
+                    {subscription.isPremium
+                      ? "Email due and overdue care reminders from vaccines, vet visits, reproduction, and feed records."
+                      : "Premium accounts can enable email reminders."}
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={Boolean(preferences.automaticReminders)}
+                  disabled={!subscription.isPremium || savingPreferences}
+                  onChange={(e) => handlePreferenceChange("automaticReminders", e.target.checked)}
+                  className="h-5 w-5 accent-blue-600 disabled:opacity-50"
+                />
+              </label>
+
+              {subscription.isPremium && (
+                <div className="mt-4 rounded-xl border border-gray-700 bg-gray-900 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-semibold text-white">Reminder email preview</p>
+                      <p className="text-sm text-gray-400">
+                        {!reminderEmailEnabled
+                          ? "Email sending is disabled on the server. Turn on EMAIL_ENABLED and set RESEND_API_KEY."
+                          : loadingReminders
+                          ? "Checking upcoming reminders..."
+                          : reminderItems.length > 0
+                          ? `${reminderItems.length} reminder${reminderItems.length === 1 ? "" : "s"} inside your ${reminderWindow || preferences.careWindow}-day window.`
+                          : `No reminders due inside your ${reminderWindow || preferences.careWindow}-day window.`}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={loadReminderPreview}
+                        disabled={loadingReminders || sendingReminderEmail}
+                        className="rounded-lg border border-gray-600 px-3 py-2 text-sm font-semibold text-gray-100 hover:border-blue-400 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {loadingReminders ? "Refreshing..." : "Refresh"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={sendReminderEmail}
+                        disabled={loadingReminders || sendingReminderEmail}
+                        className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {sendingReminderEmail ? "Sending..." : "Send email"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {reminderItems.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      {reminderItems.slice(0, 5).map((item) => (
+                        <div
+                          key={item.key}
+                          className="flex flex-col gap-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div>
+                            <p className="font-semibold text-white">
+                              {item.type}: {item.subject}
+                            </p>
+                            <p className="text-gray-400">{item.title}</p>
+                          </div>
+                          <span className="w-fit rounded-full bg-blue-500/15 px-2 py-1 text-xs font-semibold text-blue-200">
+                            {item.status}
+                          </span>
+                        </div>
+                      ))}
+                      {reminderItems.length > 5 && (
+                        <p className="text-xs text-gray-500">And {reminderItems.length - 5} more in the email.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <label className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3">
                 <div>
                   <p className="font-semibold text-white">Product updates</p>
                   <p className="text-sm text-gray-400">

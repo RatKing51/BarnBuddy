@@ -36,6 +36,10 @@ const env = {
     enabled: process.env.EMAIL_ENABLED === "true",
     resendApiKey: process.env.RESEND_API_KEY || "",
     from: process.env.RESEND_FROM_EMAIL || "BarnBuddy <onboarding@resend.dev>",
+    notificationsFrom:
+      process.env.RESEND_NOTIFICATIONS_FROM_EMAIL ||
+      process.env.RESEND_FROM_EMAIL ||
+      "BarnBuddy Notifications <notifications@barnbuddy.pro>",
     contactTo: process.env.CONTACT_TO_EMAIL || process.env.RESEND_TO_EMAIL || "barnbuddyapp@gmail.com",
     testAllowedEmails: (process.env.EMAIL_TEST_ALLOWED_EMAILS || "")
       .split(",")
@@ -45,6 +49,9 @@ const env = {
       .split(",")
       .map((id) => id.trim())
       .filter(Boolean),
+  },
+  notifications: {
+    cronSecret: process.env.NOTIFICATION_CRON_SECRET || "",
   },
 };
 
