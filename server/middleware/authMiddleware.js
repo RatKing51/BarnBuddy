@@ -17,6 +17,37 @@ function readClaim(claims, keys) {
     return "";
 }
 
+function readEnvList(name, fallback = []) {
+    const values = (process.env[name] || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+    return [...new Set([...values, ...fallback].filter(Boolean))];
+}
+
+function hasAnyClerkAccess(auth, planCandidates, featureCandidates) {
+    if (typeof auth.has !== "function") return false;
+
+    for (const plan of planCandidates) {
+        try {
+            if (auth.has({ plan })) return true;
+        } catch (err) {
+            console.warn("Clerk plan check failed:", { plan, error: err.message });
+        }
+    }
+
+    for (const feature of featureCandidates) {
+        try {
+            if (auth.has({ feature })) return true;
+        } catch (err) {
+            console.warn("Clerk feature check failed:", { feature, error: err.message });
+        }
+    }
+
+    return false;
+}
+
 function getSubscriptionFromClaims(claims = {}, hasPremiumAccess = false) {
     const plan = normalizeValue(readClaim(claims, [
         "plan",
@@ -56,11 +87,14 @@ module.exports = async function authMiddleware(req, res, next) {
             return res.status(401).json({ message: "Not authenticated" });
         }
 
-        const premiumPlanSlug = process.env.CLERK_PREMIUM_PLAN_SLUG || "premium";
-        const premiumFeatureSlug = process.env.CLERK_PREMIUM_FEATURE_SLUG || "premium_access";
-        const hasPremiumAccess = typeof auth.has === "function"
-            ? Boolean(auth.has({ plan: premiumPlanSlug }) || auth.has({ feature: premiumFeatureSlug }))
-            : false;
+        const premiumPlanCandidates = readEnvList("CLERK_PREMIUM_PLAN_SLUG", ["premium", "pro"]);
+        const premiumPlanIdCandidates = readEnvList("CLERK_PREMIUM_PLAN_ID");
+        const premiumFeatureCandidates = readEnvList("CLERK_PREMIUM_FEATURE_SLUG", ["premium_access"]);
+        const hasPremiumAccess = hasAnyClerkAccess(
+            auth,
+            [...premiumPlanCandidates, ...premiumPlanIdCandidates],
+            premiumFeatureCandidates
+        );
         const user = await findOrCreateLocalUserFromAuth(auth);
         const subscription = getSubscriptionFromClaims(auth.sessionClaims, hasPremiumAccess);
         await pool.query(

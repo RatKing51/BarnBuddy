@@ -102,11 +102,12 @@ export function getSubscriptionFromClerk({ user, sessionClaims, backendUser, has
     readFirstBoolean(unsafeMetadata, ["premium", "isPremium", "hasPremium"]) ||
     readFirstBoolean(backendSubscription, ["premium", "isPremium", "hasPremium"]);
 
-  const isPremium =
-    hasPremiumAccess ||
+  const isPremium = Boolean(
+    Boolean(hasPremiumAccess) ||
     hasPremiumFlag ||
     premiumPlanValues.has(plan) ||
-    (plan && plan !== PLAN_IDS.free && activeStatusValues.has(status));
+    Boolean(plan && plan !== PLAN_IDS.free && activeStatusValues.has(status))
+  );
 
   const planId = isPremium ? PLAN_IDS.premium : PLAN_IDS.free;
 

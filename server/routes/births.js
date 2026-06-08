@@ -7,7 +7,10 @@ const router = express.Router();
 
 function requirePremium(req, res) {
     if (!req.user.subscription?.isPremium) {
-        res.status(403).json({ error: "Premium is required for reproduction birth records." });
+        res.status(403).json({
+            error: "Premium is required for reproduction birth records.",
+            subscription: req.user.subscription || null,
+        });
         return false;
     }
 

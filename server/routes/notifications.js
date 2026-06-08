@@ -11,7 +11,10 @@ const router = express.Router();
 
 function requirePremium(req, res) {
   if (!req.user.subscription?.isPremium) {
-    res.status(403).json({ error: "Premium is required for automatic reminders." });
+    res.status(403).json({
+      error: "Premium is required for automatic reminders.",
+      subscription: req.user.subscription || null,
+    });
     return false;
   }
 

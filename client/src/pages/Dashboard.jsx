@@ -326,6 +326,16 @@ export default function Dashboard() {
 
   const collectAnimalExportData = async (animal) => {
     const arrayData = (response) => (Array.isArray(response?.data) ? response.data : []);
+    const safeExportRequest = async (request, label) => {
+      try {
+        return await request;
+      } catch (err) {
+        const status = err?.response?.status;
+        const message = err?.response?.data?.error || err?.message || "Request failed";
+        console.warn(`Skipping ${label} during animal export:`, { status, message });
+        return { data: [], skipped: true, status, message, label };
+      }
+    };
     const feedRequest = selectedHerd?.id === "unassigned"
       ? premiumRecordsAPI.getUnassignedFeedRecords()
       : selectedHerd?.id
@@ -341,14 +351,29 @@ export default function Dashboard() {
       animalFeedRes,
       herdFeedRes,
     ] = await Promise.all([
-      healthEventsAPI.getHealthEvents(animal.id),
-      vaccinationsAPI.getVaccinations(animal.id),
-      vetVisitsAPI.getVetVisitsForAnimal(animal.id),
-      reproductionsAPI.getAnimalReproductions(animal.id),
-      premiumRecordsAPI.getFinanceRecords(animal.id),
-      premiumRecordsAPI.getFeedRecords(animal.id),
-      feedRequest,
+      safeExportRequest(healthEventsAPI.getHealthEvents(animal.id), "health events"),
+      safeExportRequest(vaccinationsAPI.getVaccinations(animal.id), "vaccinations"),
+      safeExportRequest(vetVisitsAPI.getVetVisitsForAnimal(animal.id), "vet visits"),
+      safeExportRequest(reproductionsAPI.getAnimalReproductions(animal.id), "reproduction records"),
+      safeExportRequest(premiumRecordsAPI.getFinanceRecords(animal.id), "finance records"),
+      safeExportRequest(premiumRecordsAPI.getFeedRecords(animal.id), "animal feed records"),
+      safeExportRequest(feedRequest, "herd feed records"),
     ]);
+    const skipped = [
+      healthEventsRes,
+      vaccinationsRes,
+      vetVisitsRes,
+      reproductionsRes,
+      financeRes,
+      animalFeedRes,
+      herdFeedRes,
+    ]
+      .filter((response) => response?.skipped)
+      .map((response) => ({
+        label: response.label,
+        status: response.status,
+        message: response.message,
+      }));
 
     return {
       healthEvents: arrayData(healthEventsRes),
@@ -358,6 +383,7 @@ export default function Dashboard() {
       financeRecords: arrayData(financeRes),
       animalFeed: arrayData(animalFeedRes),
       herdFeed: arrayData(herdFeedRes),
+      skipped,
     };
   };
 
@@ -395,6 +421,9 @@ export default function Dashboard() {
       const fullHistory = await collectAnimalExportData(selectedAnimal);
       setAnimalExportData(fullHistory);
       setExportMode("animal");
+      if (fullHistory.skipped?.length) {
+        toast.info(`Export prepared, but skipped ${fullHistory.skipped.length} blocked section${fullHistory.skipped.length === 1 ? "" : "s"}.`);
+      }
       window.setTimeout(() => window.print(), 150);
     } catch (err) {
       console.error(err);
@@ -499,6 +528,7 @@ export default function Dashboard() {
   const exportFinanceRecords = animalExportData?.financeRecords || [];
   const exportAnimalFeed = animalExportData?.animalFeed || [];
   const exportHerdFeed = animalExportData?.herdFeed || [];
+  const exportSkippedSections = animalExportData?.skipped || [];
   const exportVetCostTotal = exportVetVisits.reduce((sum, visit) => {
     const cost = Number.parseFloat(visit.cost);
     return Number.isFinite(cost) ? sum + cost : sum;
@@ -867,6 +897,12 @@ export default function Dashboard() {
                 <div><dt>Vet costs</dt><dd>{formatReportMoney(exportVetCostTotal) || "$0.00"}</dd></div>
                 <div><dt>Feed costs</dt><dd>{formatReportMoney(exportFeedCostTotal) || "$0.00"}</dd></div>
               </dl>
+              {exportSkippedSections.length > 0 && (
+                <p>
+                  Some sections could not be loaded:{" "}
+                  {exportSkippedSections.map((section) => section.label).join(", ")}.
+                </p>
+              )}
             </section>
 
             <section>

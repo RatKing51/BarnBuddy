@@ -15,7 +15,10 @@ function nullableId(value) {
 
 function requirePremium(req, res) {
     if (!req.user.subscription?.isPremium) {
-        res.status(403).json({ error: "Premium is required for reproduction records." });
+        res.status(403).json({
+            error: "Premium is required for reproduction records.",
+            subscription: req.user.subscription || null,
+        });
         return false;
     }
 

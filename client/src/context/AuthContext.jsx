@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth as useClerkAuth, useUser } from "@clerk/clerk-react";
 import { setAuthTokenGetter } from "../api/axios";
-import { API_URL, CLERK_PREMIUM_FEATURE_SLUG, CLERK_PREMIUM_PLAN_SLUG } from "../config/env";
+import { API_URL, CLERK_PREMIUM_FEATURE_SLUG, CLERK_PREMIUM_PLAN_ID, CLERK_PREMIUM_PLAN_SLUG } from "../config/env";
 import { getSubscriptionFromClerk } from "../config/subscription";
 
 const AuthContext = createContext(null);
@@ -104,9 +104,20 @@ export function AuthProvider({ children }) {
     const hasPremiumAccess = useMemo(() => {
         if (!isLoaded || !isSignedIn || typeof has !== "function") return false;
 
-        return (
-            has({ plan: CLERK_PREMIUM_PLAN_SLUG }) ||
-            has({ feature: CLERK_PREMIUM_FEATURE_SLUG })
+        const planCandidates = [CLERK_PREMIUM_PLAN_SLUG, CLERK_PREMIUM_PLAN_ID, "premium", "pro"].filter(Boolean);
+        const featureCandidates = [CLERK_PREMIUM_FEATURE_SLUG, "premium_access"].filter(Boolean);
+        const hasAccess = (kind, value) => {
+            try {
+                return has({ [kind]: value });
+            } catch (err) {
+                console.warn("Clerk access check failed:", { kind, value, error: err.message });
+                return false;
+            }
+        };
+
+        return Boolean(
+            planCandidates.some((plan) => hasAccess("plan", plan)) ||
+            featureCandidates.some((feature) => hasAccess("feature", feature))
         );
     }, [has, isLoaded, isSignedIn]);
 
