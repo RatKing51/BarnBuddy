@@ -1,4 +1,18 @@
+
+
+<div align="center">
+
 # 🐄 BarnBuddy
+
+### Modern Livestock Management for Small Farms, FFA Students, and Hobby Producers
+
+![Status](https://img.shields.io/badge/status-in%20development-blue)
+![Built With](https://img.shields.io/badge/built%20with-React-61DAFB)
+![Backend](https://img.shields.io/badge/backend-Express-green)
+![Database](https://img.shields.io/badge/database-PostgreSQL-336791)
+![Hosted On](https://img.shields.io/badge/hosted%20on-Railway-purple)
+
+</div>
 
 **BarnBuddy** is a modern livestock management web app built for small farms, FFA students, and hobby producers who need a simple way to track animals, health records, vet visits, and herd information.
 
