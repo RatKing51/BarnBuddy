@@ -279,6 +279,18 @@ export default function AccountSettings() {
                     <option value="light">Light</option>
                   </select>
                 </label>
+
+                <label className="block">
+                  <span className="text-sm text-gray-400">Primary animal label</span>
+                  <select
+                    value={preferences.animalPrimaryIdentifier}
+                    onChange={(e) => handlePreferenceChange("animalPrimaryIdentifier", e.target.value)}
+                    className="mt-2 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-3 text-white outline-none focus:border-blue-400"
+                  >
+                    <option value="name">Animal name</option>
+                    <option value="tag">Tag ID</option>
+                  </select>
+                </label>
               </div>
 
               <label className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3">

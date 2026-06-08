@@ -6,20 +6,20 @@ const previewSlides = [
   {
     eyebrow: 'Dashboard',
     title: 'See herd priorities at a glance',
-    image: '/Screenshot%202026-05-25%20200458.png',
+    image: '/dashboard.png',
     alt: 'BarnBuddy dashboard overview showing animals, vaccinations due, vet visits, and herd risk',
   },
   {
     eyebrow: 'Animal Profiles',
     title: 'Edit core animal details in one place',
-    image: '/Screenshot%202026-05-25%20200523.png',
+    image: '/generaldata.png',
     alt: 'BarnBuddy animal profile screen with general data fields',
   },
   {
-    eyebrow: 'Health Records',
-    title: 'Track health events and vaccinations',
-    image: '/Screenshot%202026-05-25%20200556.png',
-    alt: 'BarnBuddy health records screen showing health events, vaccinations, and birth information',
+    eyebrow: 'Vet Visits',
+    title: 'Track vet visits',
+    image: '/vetvisits.png',
+    alt: 'BarnBuddy health records screen showing vet visits',
   },
 ]
 

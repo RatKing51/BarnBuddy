@@ -6,6 +6,7 @@ const preferenceDefaults = {
   careWindow: "7",
   dashboardDensity: "comfortable",
   appTheme: "dark",
+  animalPrimaryIdentifier: "name",
   emailUpdates: true,
 };
 

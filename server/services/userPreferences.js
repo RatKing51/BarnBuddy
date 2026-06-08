@@ -4,6 +4,7 @@ const defaults = {
   careWindow: "7",
   dashboardDensity: "comfortable",
   appTheme: "dark",
+  animalPrimaryIdentifier: "name",
   emailUpdates: true,
 };
 
@@ -16,6 +17,7 @@ function ensurePreferenceSchema() {
         ADD COLUMN IF NOT EXISTS care_window_days INTEGER DEFAULT 7,
         ADD COLUMN IF NOT EXISTS dashboard_density TEXT DEFAULT 'comfortable',
         ADD COLUMN IF NOT EXISTS app_theme TEXT DEFAULT 'dark',
+        ADD COLUMN IF NOT EXISTS animal_primary_identifier TEXT DEFAULT 'name',
         ADD COLUMN IF NOT EXISTS email_updates BOOLEAN DEFAULT true
     `);
   }
@@ -29,11 +31,13 @@ function normalizePreferences(row = {}) {
     : defaults.careWindow;
   const dashboardDensity = row.dashboard_density === "compact" ? "compact" : "comfortable";
   const appTheme = row.app_theme === "light" ? "light" : "dark";
+  const animalPrimaryIdentifier = row.animal_primary_identifier === "tag" ? "tag" : "name";
 
   return {
     careWindow,
     dashboardDensity,
     appTheme,
+    animalPrimaryIdentifier,
     emailUpdates: typeof row.email_updates === "boolean" ? row.email_updates : defaults.emailUpdates,
   };
 }
@@ -53,6 +57,10 @@ function normalizePatch(payload = {}) {
     patch.app_theme = payload.appTheme;
   }
 
+  if (["name", "tag"].includes(payload.animalPrimaryIdentifier)) {
+    patch.animal_primary_identifier = payload.animalPrimaryIdentifier;
+  }
+
   if (typeof payload.emailUpdates === "boolean") {
     patch.email_updates = payload.emailUpdates;
   }
@@ -64,7 +72,7 @@ async function getUserPreferences(userId) {
   await ensurePreferenceSchema();
 
   const result = await pool.query(
-    "SELECT care_window_days, dashboard_density, app_theme, email_updates FROM users WHERE id = $1",
+    "SELECT care_window_days, dashboard_density, app_theme, animal_primary_identifier, email_updates FROM users WHERE id = $1",
     [userId]
   );
 
@@ -88,7 +96,7 @@ async function updateUserPreferences(userId, payload) {
     `UPDATE users
      SET ${assignments}
      WHERE id = $1
-     RETURNING care_window_days, dashboard_density, app_theme, email_updates`,
+     RETURNING care_window_days, dashboard_density, app_theme, animal_primary_identifier, email_updates`,
     [userId, ...values]
   );
 

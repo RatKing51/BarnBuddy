@@ -4,6 +4,7 @@ import * as vetVisitsAPI from "../api/vetVisits";
 import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
+import { usePreferences } from "../context/PreferencesContext";
 import { API_URL } from "../config/env";
 
 export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedAnimal, setActiveTab, herds, selectedHerd }) {
@@ -28,6 +29,8 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
   const [upcomingVaccinations, setUpcomingVaccinations] = useState([]);
   const [upcomingVetVisitDates, setUpcomingVetVisitDates] = useState([]);
   const { authFetch } = useAuth();
+  const { preferences } = usePreferences();
+  const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
   const sexOptionsBySpecies = {
     Cow: ["Cow", "Heifer", "Steer", "Bull", "Calf"],
     Sheep: ["Ewe", "Ram", "Lamb", "Wether"],
@@ -274,6 +277,30 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       );
 
   const imageSrc = imageBlobUrl || "https://via.placeholder.com/600";
+  const nameField = (
+    <div>
+      <label className="block text-gray-400 text-sm mb-1">
+        Name <span className="text-gray-500">(required)</span>
+      </label>
+      <input
+        value={name}
+        onBlur={() => saveAnimal()}
+        onChange={(e) => setName(e.target.value)}
+        className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
+      />
+    </div>
+  );
+  const tagField = (
+    <div>
+      <label className="block text-gray-400 text-sm mb-1">Tag #</label>
+      <input
+        value={tag}
+        onBlur={() => saveAnimal()}
+        onChange={(e) => setTag(e.target.value)}
+        className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
+      />
+    </div>
+  );
 
   async function handleImageUpload(e) {
     const file = e.target.files?.[0];
@@ -374,15 +401,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
       {/* Top Left - Basic Info */}
       <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-4">
         <h3 className="text-gray-400 font-semibold mb-2">Basic Info</h3>
-        <div>
-          <label className="block text-gray-400 text-sm mb-1">Name</label>
-          <input
-            value={name}
-            onBlur={() => saveAnimal()}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
-          />
-        </div>
+        {primaryAnimalIdentifier === "tag" ? tagField : nameField}
 
         <div>
           <label className="block text-gray-400 text-sm mb-1">Date of Birth</label>
@@ -437,15 +456,7 @@ export default function AnimalGeneralData({ animal, setRefreshFlag, setSelectedA
           </div>
         </div>
 
-        <div>
-          <label className="block text-gray-400 text-sm mb-1">Tag #</label>
-          <input
-            value={tag}
-            onBlur={() => saveAnimal()}
-            onChange={(e) => setTag(e.target.value)}
-            className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
-          />
-        </div>
+        {primaryAnimalIdentifier === "tag" ? nameField : tagField}
       </div>
 
       {/* Top Right - Picture */}

@@ -20,6 +20,11 @@ async function runMigration() {
              SET status = 'active'
              WHERE status IS NULL OR status = '';`
         );
+
+        await pool.query(
+            `ALTER TABLE users
+              ADD COLUMN IF NOT EXISTS animal_primary_identifier TEXT DEFAULT 'name';`
+        );
         
         console.log("Migration successful!");
         process.exit(0);

@@ -143,6 +143,7 @@ export default function DashboardOverview({
   careDueCount,
   attentionAnimals,
   animalUrgencies,
+  primaryAnimalIdentifier = "name",
   handleSelectAnimal,
   selectedHerd,
   loading = false,
@@ -225,6 +226,14 @@ export default function DashboardOverview({
   const visibleAttentionAnimals = attentionAnimals.length
     ? attentionAnimals
     : analytics.tableRows.filter((animal) => animal.status !== "green" && animal.status !== "deceased").slice(0, 4);
+  const getAnimalPrimaryLabel = (animal) => {
+    if (primaryAnimalIdentifier === "tag") return animal.tag_id || animal.name || "Unnamed animal";
+    return animal.name || animal.tag_id || "Unnamed animal";
+  };
+  const getAnimalSecondaryLabel = (animal) => {
+    if (primaryAnimalIdentifier === "tag") return animal.name ? `Name ${animal.name}` : "Name not set";
+    return animal.tag_id ? `Tag ${animal.tag_id}` : "Tag not set";
+  };
 
   const kpis = [
     { label: "Total animals", value: totalAnimals, helper: selectedHerd?.name || "Current herd" },
@@ -295,9 +304,9 @@ export default function DashboardOverview({
                   >
                     <div className="flex items-center justify-between gap-4">
                       <div className="min-w-0">
-                        <p className="truncate font-semibold text-white">{animal.name || "Unnamed animal"}</p>
+                        <p className="truncate font-semibold text-white">{getAnimalPrimaryLabel(animal)}</p>
                         <p className="mt-1 text-sm text-gray-400">
-                          {animal.species || "Unknown species"} {animal.tag_id ? `- Tag ${animal.tag_id}` : ""}
+                          {animal.species || "Unknown species"} - {getAnimalSecondaryLabel(animal)}
                         </p>
                       </div>
                       <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${statusMeta[status].badge}`}>
@@ -401,10 +410,10 @@ export default function DashboardOverview({
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="border-b border-gray-800 bg-gray-950 text-xs uppercase tracking-[0.12em] text-gray-500">
               <tr>
-                <th className="px-5 py-3 font-semibold">Animal</th>
+                <th className="px-5 py-3 font-semibold">{primaryAnimalIdentifier === "tag" ? "Tag ID" : "Animal"}</th>
+                <th className="px-5 py-3 font-semibold">{primaryAnimalIdentifier === "tag" ? "Name" : "Tag"}</th>
                 <th className="px-5 py-3 font-semibold">Status</th>
                 <th className="px-5 py-3 font-semibold">Species</th>
-                <th className="px-5 py-3 font-semibold">Tag</th>
                 <th className="px-5 py-3 font-semibold">Age</th>
                 <th className="px-5 py-3 font-semibold">Weight</th>
                 <th className="px-5 py-3 font-semibold">Temperament</th>
@@ -419,7 +428,10 @@ export default function DashboardOverview({
                     className="cursor-pointer transition hover:bg-gray-800/80"
                   >
                     <td className="px-5 py-4">
-                      <p className="font-semibold text-white">{animal.name || "Unnamed animal"}</p>
+                      <p className="font-semibold text-white">{getAnimalPrimaryLabel(animal)}</p>
+                    </td>
+                    <td className="px-5 py-4 text-gray-300">
+                      {primaryAnimalIdentifier === "tag" ? animal.name || "Not set" : animal.tag_id || "Not set"}
                     </td>
                     <td className="px-5 py-4">
                       <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${statusMeta[animal.status].badge}`}>
@@ -428,7 +440,6 @@ export default function DashboardOverview({
                       </span>
                     </td>
                     <td className="px-5 py-4 text-gray-300">{animal.species || "Unknown"}</td>
-                    <td className="px-5 py-4 text-gray-300">{animal.tag_id || "Not set"}</td>
                     <td className="px-5 py-4 text-gray-300">{animal.age === null ? "Not set" : animal.age}</td>
                     <td className="px-5 py-4 text-gray-300">{animal.weightLabel}</td>
                     <td className="px-5 py-4 text-gray-300">{animal.behavior || "Not logged"}</td>

@@ -43,6 +43,15 @@ export default function Dashboard() {
   const { preferences } = usePreferences();
   const navigate = useNavigate();
   const isCompact = preferences.dashboardDensity === "compact";
+  const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
+  const getAnimalPrimaryLabel = (animal) => {
+    if (primaryAnimalIdentifier === "tag") return animal.tag_id || animal.name || "Unnamed animal";
+    return animal.name || animal.tag_id || "Unnamed animal";
+  };
+  const getAnimalSecondaryLabel = (animal) => {
+    if (primaryAnimalIdentifier === "tag") return animal.name ? `Name ${animal.name}` : "Name not set";
+    return animal.tag_id ? `Tag ${animal.tag_id}` : "Tag not set";
+  };
 
   // Update clock every second
   useEffect(() => {
@@ -441,7 +450,10 @@ export default function Dashboard() {
                           : "bg-emerald-400"
                       }`}
                     ></span>
-                    {animal.name}
+                    <span className="min-w-0">
+                      <span className="block truncate">{getAnimalPrimaryLabel(animal)}</span>
+                      <span className="block truncate text-xs text-gray-400">{getAnimalSecondaryLabel(animal)}</span>
+                    </span>
                   </span>
                 </button>
               );
@@ -538,6 +550,7 @@ export default function Dashboard() {
               issueCount={issueCount}
               animalsStable={animalsStable}
               animalUrgencies={animalUrgencies}
+              primaryAnimalIdentifier={primaryAnimalIdentifier}
               handleSelectAnimal={handleSelectAnimal}
             />
           ) : (
@@ -661,8 +674,8 @@ export default function Dashboard() {
             <table>
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Tag</th>
+                  <th>{primaryAnimalIdentifier === "tag" ? "Tag ID" : "Name"}</th>
+                  <th>{primaryAnimalIdentifier === "tag" ? "Name" : "Tag ID"}</th>
                   <th>Species</th>
                   <th>Sex</th>
                   <th>Birth Date</th>
@@ -673,8 +686,8 @@ export default function Dashboard() {
               <tbody>
                 {animals.map((animal) => (
                   <tr key={animal.id}>
-                    <td>{animal.name || "Unnamed"}</td>
-                    <td>{animal.tag_id || ""}</td>
+                    <td>{getAnimalPrimaryLabel(animal)}</td>
+                    <td>{primaryAnimalIdentifier === "tag" ? animal.name || "" : animal.tag_id || ""}</td>
                     <td>{animal.species || ""}</td>
                     <td>{animal.sex || ""}</td>
                     <td>{animal.birthdate ? animal.birthdate.slice(0, 10) : ""}</td>
