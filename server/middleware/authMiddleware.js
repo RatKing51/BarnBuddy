@@ -1,4 +1,4 @@
-const { getAuth } = require("@clerk/express");
+const { clerkClient, getAuth } = require("@clerk/express");
 const pool = require("../data-source");
 const { findOrCreateLocalUserFromAuth } = require("../services/clerkUserSync");
 
@@ -15,6 +15,35 @@ function readClaim(claims, keys) {
     }
 
     return "";
+}
+
+function metadataSources(metadata = {}) {
+    return [
+        metadata,
+        metadata.publicMetadata,
+        metadata.privateMetadata,
+        metadata.unsafeMetadata,
+        metadata.publicMetadata?.subscription,
+        metadata.privateMetadata?.subscription,
+        metadata.unsafeMetadata?.subscription,
+        metadata.subscription,
+    ].filter((source) => source && typeof source === "object");
+}
+
+function readStringFromSources(sources, keys) {
+    for (const source of sources) {
+        for (const key of keys) {
+            if (typeof source[key] === "string" && source[key].trim()) {
+                return source[key];
+            }
+        }
+    }
+
+    return "";
+}
+
+function readBooleanFromSources(sources, keys) {
+    return sources.some((source) => keys.some((key) => source[key] === true));
 }
 
 function readEnvList(name, fallback = []) {
@@ -48,19 +77,24 @@ function hasAnyClerkAccess(auth, planCandidates, featureCandidates) {
     return false;
 }
 
-function getSubscriptionFromClaims(claims = {}, hasPremiumAccess = false) {
-    const plan = normalizeValue(readClaim(claims, [
+function getSubscriptionFromClaims(claims = {}, hasPremiumAccess = false, clerkMetadata = {}) {
+    const sources = [claims, claims.subscription, ...metadataSources(clerkMetadata)].filter(
+        (source) => source && typeof source === "object"
+    );
+    const plan = normalizeValue(readStringFromSources(sources, [
         "plan",
         "subscriptionPlan",
         "subscription_plan",
         "billingPlan",
+        "tier",
     ]));
-    const status = normalizeValue(readClaim(claims, [
+    const status = normalizeValue(readStringFromSources(sources, [
         "subscriptionStatus",
         "subscription_status",
         "billingStatus",
+        "status",
     ]));
-    const hasPremiumFlag = claims.premium === true || claims.isPremium === true || claims.hasPremium === true;
+    const hasPremiumFlag = readBooleanFromSources(sources, ["premium", "isPremium", "hasPremium"]);
     const isPremium = Boolean(
         Boolean(hasPremiumAccess) ||
         hasPremiumFlag ||
@@ -95,8 +129,22 @@ module.exports = async function authMiddleware(req, res, next) {
             [...premiumPlanCandidates, ...premiumPlanIdCandidates],
             premiumFeatureCandidates
         );
+        let clerkMetadata = {};
+        if (!hasPremiumAccess) {
+            try {
+                const clerkUser = await clerkClient.users.getUser(auth.userId);
+                clerkMetadata = {
+                    publicMetadata: clerkUser.publicMetadata || clerkUser.public_metadata || {},
+                    privateMetadata: clerkUser.privateMetadata || clerkUser.private_metadata || {},
+                    unsafeMetadata: clerkUser.unsafeMetadata || clerkUser.unsafe_metadata || {},
+                };
+            } catch (err) {
+                console.warn("Could not fetch Clerk metadata for subscription fallback:", err.message);
+            }
+        }
+
         const user = await findOrCreateLocalUserFromAuth(auth);
-        const subscription = getSubscriptionFromClaims(auth.sessionClaims, hasPremiumAccess);
+        const subscription = getSubscriptionFromClaims(auth.sessionClaims, hasPremiumAccess, clerkMetadata);
         await pool.query(
             `UPDATE users
              SET subscription_plan = $1,
