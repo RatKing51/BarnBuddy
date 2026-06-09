@@ -206,7 +206,6 @@ export default function HerdFeedRecords({ selectedHerd, isPremium = false, autom
       setSaveStatus("saving");
       const res = await premiumRecordsAPI.updateFeedRecord(selectedFeed.id, payload);
       lastFeedSignatures.current.set(res.data.id, JSON.stringify(getFeedPayload(res.data, selectedHerd)));
-      setSelectedFeed(res.data);
       setFeedRecords((current) => current.map((record) => (record.id === res.data.id ? res.data : record)));
       markSaved();
     } catch (err) {

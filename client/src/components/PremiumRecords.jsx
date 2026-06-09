@@ -380,7 +380,6 @@ export default function PremiumRecords({
       setSaveStatus("saving");
       const res = await reproductionsAPI.updateReproduction(selectedReproduction.id, payload);
       lastReproductionSignatures.current.set(res.data.id, JSON.stringify(getReproductionPayload(res.data)));
-      setSelectedReproduction(res.data);
       setReproductions((current) => current.map((record) => (record.id === res.data.id ? res.data : record)));
       markSaved();
     } catch (err) {
@@ -441,7 +440,6 @@ export default function PremiumRecords({
       setSaveStatus("saving");
       const res = await premiumRecordsAPI.updateFinanceRecord(selectedFinance.id, payload);
       lastFinanceSignatures.current.set(res.data.id, JSON.stringify(getFinancePayload(res.data)));
-      setSelectedFinance(res.data);
       setFinanceRecords((current) => current.map((record) => (record.id === res.data.id ? res.data : record)));
       markSaved();
     } catch (err) {

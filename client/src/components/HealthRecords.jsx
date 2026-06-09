@@ -357,8 +357,11 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           resolved: res.data.resolved || false,
           notes: res.data.notes || ""
         };
-        updated[idx] = savedEvent;
-        setHealthEvents(updated);
+        setHealthEvents((current) =>
+          current.map((item) =>
+            item.id === event.id && JSON.stringify(getHealthEventPayload(item)) === signature ? savedEvent : item
+          )
+        );
       } else {
         if (!event.date || !event.type) {
           toast.error("Date and type are required");
@@ -371,9 +374,10 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           event_date: event.date,
         });
         
-        updated[idx] = { ...event, id: res.data.id };
-        lastEventSignatures.current.set(res.data.id, JSON.stringify(getHealthEventPayload(updated[idx])));
-        setHealthEvents(updated);
+        lastEventSignatures.current.set(res.data.id, signature);
+        setHealthEvents((current) =>
+          current.map((item, itemIndex) => (itemIndex === idx && !item.id ? { ...item, id: res.data.id } : item))
+        );
         toast.success("Health event created");
       }
       markSaved("event", setEventSaveStatus);
@@ -433,9 +437,12 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           dosage: res.data.dosage || "",
           completed: !res.data.next_due_date
         };
-        updated[idx] = savedVaccine;
         lastVaccineSignatures.current.set(res.data.id, JSON.stringify(getVaccinationPayload(savedVaccine)));
-        setVaccinations(updated);
+        setVaccinations((current) =>
+          current.map((item) =>
+            item.id === vaccine.id && JSON.stringify(getVaccinationPayload(item)) === signature ? savedVaccine : item
+          )
+        );
         onVaccinationUpdate?.();
       } else {
         if (!vaccine.date || !vaccine.type) {
@@ -450,9 +457,10 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           date_given: vaccine.date,
         });
         
-        updated[idx] = { ...vaccine, id: res.data.id };
-        lastVaccineSignatures.current.set(res.data.id, JSON.stringify(getVaccinationPayload(updated[idx])));
-        setVaccinations(updated);
+        lastVaccineSignatures.current.set(res.data.id, signature);
+        setVaccinations((current) =>
+          current.map((item, itemIndex) => (itemIndex === idx && !item.id ? { ...item, id: res.data.id } : item))
+        );
         toast.success("Vaccination created");
         onVaccinationUpdate?.();
       }

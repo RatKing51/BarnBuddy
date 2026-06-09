@@ -80,9 +80,12 @@ export default function AnimalGeneralData({
   const [saveStatus, setSaveStatus] = useState("idle");
   const lastSavedAnimalSignature = useRef("");
   const saveStatusTimer = useRef(null);
+  const hydratedAnimalIdRef = useRef(null);
+  const currentAnimalIdRef = useRef(null);
   const { authFetch } = useAuth();
   const { preferences } = usePreferences();
   const selectedAnimalRecordId = animal?.id;
+  currentAnimalIdRef.current = selectedAnimalRecordId;
   const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
   const sexOptionsBySpecies = {
     Cow: ["Cow", "Heifer", "Steer", "Bull", "Calf"],
@@ -116,6 +119,9 @@ export default function AnimalGeneralData({
   // Setting values when animal changes
   useEffect(() => {
     if (!animal) return;
+    if (hydratedAnimalIdRef.current === animal.id) return;
+
+    hydratedAnimalIdRef.current = animal.id;
 
     setName(animal.name || "");
     setDob(animal.birthdate ? animal.birthdate.slice(0, 10) : "");
@@ -344,12 +350,14 @@ export default function AnimalGeneralData({
     const signature = JSON.stringify(payload);
 
     if (signature === lastSavedAnimalSignature.current) return;
+    const savingAnimalId = animalId;
 
     try {
       setSaveStatus("saving");
       const res = await updateAnimal(payload, animalId);
       lastSavedAnimalSignature.current = signature;
       onAnimalSaved?.(res.data || { ...animal, ...payload, id: animalId });
+      if (String(currentAnimalIdRef.current) !== String(savingAnimalId)) return;
       markSaved();
     } catch (err) {
       setSaveStatus("idle");

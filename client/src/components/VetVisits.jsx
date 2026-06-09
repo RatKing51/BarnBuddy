@@ -279,7 +279,6 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
         const normalizedVisit = normalizeVisit(response.data);
         lastVisitSignatures.current.set(normalizedVisit.id, JSON.stringify(getVisitPayload(normalizedVisit)));
         setVisits((current) => current.map((visit) => (visit.id === visitToSave.id ? normalizedVisit : visit)));
-        setSelectedVisit(normalizedVisit);
       } else {
         const response = await createVetVisit(payload);
         const normalizedVisit = normalizeVisit(response.data);
