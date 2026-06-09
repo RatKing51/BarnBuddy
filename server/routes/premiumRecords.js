@@ -39,6 +39,14 @@ async function userOwnsAnimal(userId, animalId) {
   return result.rowCount > 0;
 }
 
+function getHerdAnimalFilter(herdId, alias = "a") {
+  return herdId === "unassigned" ? `${alias}.herd_id IS NULL` : `${alias}.herd_id = $2`;
+}
+
+function getHerdParams(userId, herdId) {
+  return herdId === "unassigned" ? [userId] : [userId, herdId];
+}
+
 router.get("/finance/animal/:animalId", authMiddleware, async (req, res) => {
   if (!requirePremium(req, res)) return;
 
@@ -60,21 +68,96 @@ router.get("/finance/animal/:animalId", authMiddleware, async (req, res) => {
   }
 });
 
+router.get("/finance/herd/:herdId/summary", authMiddleware, async (req, res) => {
+  if (!requirePremium(req, res)) return;
+
+  try {
+    await ensurePremiumSchema();
+    const { herdId } = req.params;
+    if (herdId !== "unassigned" && !(await userOwnsHerd(req.user.id, herdId))) {
+      return res.status(404).json({ error: "Herd not found" });
+    }
+
+    const params = getHerdParams(req.user.id, herdId);
+    const animalFilter = getHerdAnimalFilter(herdId);
+    const financeHerdFilter =
+      herdId === "unassigned"
+        ? "f.herd_id IS NULL AND f.animal_id IS NULL"
+        : "f.herd_id = $2";
+
+    const [financeResult, feedResult, vetResult] = await Promise.all([
+      pool.query(
+        `SELECT f.*, a.name AS animal_name, a.tag_id AS animal_tag, a.species AS animal_species
+         FROM finance_records f
+         LEFT JOIN animals a ON f.animal_id = a.id
+         WHERE f.user_id = $1
+           AND (
+             (${financeHerdFilter})
+             OR (f.animal_id IS NOT NULL AND ${animalFilter})
+           )
+         ORDER BY f.record_date DESC NULLS LAST, f.id DESC`,
+        params
+      ),
+      pool.query(
+        `SELECT fr.*
+         FROM feed_records fr
+         LEFT JOIN animals a ON fr.animal_id = a.id
+         WHERE fr.user_id = $1
+           AND (
+             ${herdId === "unassigned" ? "fr.herd_id IS NULL AND fr.animal_id IS NULL" : "fr.herd_id = $2"}
+             OR (fr.animal_id IS NOT NULL AND ${animalFilter})
+           )
+         ORDER BY fr.record_date DESC NULLS LAST, fr.id DESC`,
+        params
+      ),
+      pool.query(
+        `SELECT vv.*, a.name AS animal_name, a.tag_id AS animal_tag, a.species AS animal_species
+         FROM vet_visits vv
+         JOIN animals a ON vv.animal_id = a.id
+         WHERE a.user_id = $1
+           AND ${animalFilter}
+         ORDER BY vv.visit_date DESC NULLS LAST, vv.id DESC`,
+        params
+      ),
+    ]);
+
+    res.json({
+      financeRecords: financeResult.rows,
+      feedRecords: feedResult.rows,
+      vetVisits: vetResult.rows,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch herd finance summary" });
+  }
+});
+
 router.post("/finance", authMiddleware, async (req, res) => {
   if (!requirePremium(req, res)) return;
 
   try {
     await ensurePremiumSchema();
-    const { animal_id, record_date, category, amount, vendor, notes } = req.body;
-    if (!(await userOwnsAnimal(req.user.id, animal_id))) {
+    const { animal_id, herd_id, record_date, category, amount, vendor, notes } = req.body;
+    const normalizedAnimalId = animal_id || null;
+    const normalizedHerdId = herd_id || null;
+
+    if (normalizedAnimalId && !(await userOwnsAnimal(req.user.id, normalizedAnimalId))) {
       return res.status(404).json({ error: "Animal not found" });
     }
 
+    if (normalizedHerdId && !(await userOwnsHerd(req.user.id, normalizedHerdId))) {
+      return res.status(404).json({ error: "Herd not found" });
+    }
+
+    if (!normalizedAnimalId && !Object.prototype.hasOwnProperty.call(req.body, "herd_id")) {
+      return res.status(400).json({ error: "Animal or herd is required" });
+    }
+
     const result = await pool.query(
-      `INSERT INTO finance_records (user_id, animal_id, record_date, category, amount, vendor, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO finance_records (user_id, animal_id, herd_id, record_date, category, amount, vendor, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [req.user.id, animal_id, record_date || null, category || "Expense", amount || 0, vendor || "", notes || ""]
+      [req.user.id, normalizedAnimalId, normalizedHerdId, record_date || null, category || "Expense", amount || 0, vendor || "", notes || ""]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -89,13 +172,33 @@ router.put("/finance/:id", authMiddleware, async (req, res) => {
   try {
     await ensurePremiumSchema();
     const { id } = req.params;
-    const { record_date, category, amount, vendor, notes } = req.body;
+    const { animal_id, herd_id, record_date, category, amount, vendor, notes } = req.body;
+    const shouldUpdateAnimal = Object.prototype.hasOwnProperty.call(req.body, "animal_id");
+    const shouldUpdateHerd = Object.prototype.hasOwnProperty.call(req.body, "herd_id");
+    const normalizedAnimalId = animal_id || null;
+    const normalizedHerdId = herd_id || null;
+
+    if (normalizedAnimalId && !(await userOwnsAnimal(req.user.id, normalizedAnimalId))) {
+      return res.status(404).json({ error: "Animal not found" });
+    }
+
+    if (normalizedHerdId && !(await userOwnsHerd(req.user.id, normalizedHerdId))) {
+      return res.status(404).json({ error: "Herd not found" });
+    }
+
     const result = await pool.query(
       `UPDATE finance_records
-       SET record_date = $1, category = $2, amount = $3, vendor = $4, notes = $5, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6 AND user_id = $7
+       SET animal_id = CASE WHEN $1 THEN $2 ELSE animal_id END,
+           herd_id = CASE WHEN $3 THEN $4 ELSE herd_id END,
+           record_date = $5,
+           category = $6,
+           amount = $7,
+           vendor = $8,
+           notes = $9,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $10 AND user_id = $11
        RETURNING *`,
-      [record_date || null, category || "Expense", amount || 0, vendor || "", notes || "", id, req.user.id]
+      [shouldUpdateAnimal, normalizedAnimalId, shouldUpdateHerd, normalizedHerdId, record_date || null, category || "Expense", amount || 0, vendor || "", notes || "", id, req.user.id]
     );
 
     if (result.rowCount === 0) return res.status(404).json({ error: "Finance record not found" });

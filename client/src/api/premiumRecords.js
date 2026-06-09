@@ -1,6 +1,7 @@
 import api from "./axios";
 
 export const getFinanceRecords = (animalId) => api.get(`/premium-records/finance/animal/${animalId}`);
+export const getHerdFinanceSummary = (herdId) => api.get(`/premium-records/finance/herd/${herdId}/summary`);
 export const createFinanceRecord = (data) => api.post("/premium-records/finance", data);
 export const updateFinanceRecord = (id, data) => api.put(`/premium-records/finance/${id}`, data);
 export const deleteFinanceRecord = (id) => api.delete(`/premium-records/finance/${id}`);

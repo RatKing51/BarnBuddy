@@ -3,6 +3,7 @@ import AnimalGeneralData from "../components/AnimalGeneralData";
 import DashboardOverview from "../components/DashboardOverview";
 import HealthRecords from "../components/HealthRecords";
 import HerdFeedRecords from "../components/HerdFeedRecords";
+import HerdFinanceRecords from "../components/HerdFinanceRecords";
 import PremiumRecords from "../components/PremiumRecords";
 import VetVisits from "../components/VetVisits";
 import { useNavigate } from "react-router-dom";
@@ -50,6 +51,7 @@ export default function Dashboard() {
   const [exportMode, setExportMode] = useState("farm");
   const [exportLoading, setExportLoading] = useState(false);
   const [animalExportData, setAnimalExportData] = useState(null);
+  const [herdFinanceExportData, setHerdFinanceExportData] = useState(null);
 
   const handleFarmOverviewClick = () => {
     setActiveTab("general");
@@ -58,6 +60,11 @@ export default function Dashboard() {
 
   const handleHerdFeedClick = () => {
     setActiveTab("feed");
+    setSelectedAnimal(null);
+  };
+
+  const handleHerdFinanceClick = () => {
+    setActiveTab("herd-finance");
     setSelectedAnimal(null);
   };
 
@@ -81,6 +88,16 @@ export default function Dashboard() {
   const formatReportMoney = (value) => {
     const number = Number.parseFloat(value);
     return Number.isFinite(number) ? `$${number.toFixed(2)}` : "";
+  };
+  const formatSignedReportMoney = (value) => {
+    const number = Number.parseFloat(value);
+    return Number.isFinite(number) ? `$${number.toFixed(2)}` : "$0.00";
+  };
+  const formatReportMonth = (key) => {
+    if (!key || key === "No date") return key || "No date";
+    const date = new Date(`${key}-01T00:00:00`);
+    if (Number.isNaN(date.getTime())) return key;
+    return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
   };
   const getReportAnimalLabel = (animalId) => {
     const match = animals.find((animal) => String(animal.id) === String(animalId));
@@ -360,7 +377,21 @@ export default function Dashboard() {
     }
 
     setAnimalExportData(null);
+    setHerdFinanceExportData(null);
     setExportMode("farm");
+    window.setTimeout(() => window.print(), 50);
+  };
+
+  const handleExportHerdFinancePdf = (financeReportData) => {
+    if (!subscription.isPremium) {
+      toast.info("Herd finance exports are Premium.");
+      navigate("/pricing");
+      return;
+    }
+
+    setAnimalExportData(null);
+    setHerdFinanceExportData(financeReportData);
+    setExportMode("herd-finance");
     window.setTimeout(() => window.print(), 50);
   };
 
@@ -380,6 +411,7 @@ export default function Dashboard() {
       setExportLoading(true);
       const fullHistory = await collectAnimalExportData(selectedAnimal);
       setAnimalExportData(fullHistory);
+      setHerdFinanceExportData(null);
       setExportMode("animal");
       if (fullHistory.skipped?.length) {
         toast.info(`Export prepared, but skipped ${fullHistory.skipped.length} blocked section${fullHistory.skipped.length === 1 ? "" : "s"}.`);
@@ -461,7 +493,7 @@ export default function Dashboard() {
   };
 
   const handleSelectAnimal = (animal) => {
-    if (activeTab === "feed") setActiveTab("general");
+    if (activeTab === "feed" || activeTab === "herd-finance") setActiveTab("general");
     setSelectedAnimal((current) =>
       current?.id === animal.id ? null : animal
     );
@@ -502,6 +534,22 @@ export default function Dashboard() {
     const cost = Number.parseFloat(record.cost);
     return Number.isFinite(cost) ? sum + cost : sum;
   }, 0);
+  const herdFinanceLedger = herdFinanceExportData?.ledger || [];
+  const herdFinanceIncomeLedger = herdFinanceExportData?.incomeLedger || [];
+  const herdFinanceExpenseLedger = herdFinanceExportData?.expenseLedger || [];
+  const herdFinanceExpenseSegments = herdFinanceExportData?.expenseSegments || [];
+  const herdFinanceMonthlyCashflow = herdFinanceExportData?.monthlyCashflow || [];
+  const herdFinanceTotals = herdFinanceExportData?.totals || {};
+  const renderHerdFinanceRows = (items) => items.map((item) => (
+    <tr key={item.id}>
+      <td>{formatReportDate(item.date) || "No date"}</td>
+      <td>{item.source}</td>
+      <td>{item.category}</td>
+      <td>{item.vendor || item.animal || item.notes || "-"}</td>
+      <td>{item.notes || ""}</td>
+      <td className="report-amount">{formatSignedReportMoney(item.signedAmount)}</td>
+    </tr>
+  ));
 
 
   return (
@@ -554,6 +602,7 @@ export default function Dashboard() {
             onClick={handleFarmOverviewClick}
             className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition border cursor-pointer ${
               !selectedAnimal && activeTab !== "feed"
+                && activeTab !== "herd-finance"
                 ? "bg-blue-600 border-blue-500 text-white shadow"
                 : "border-gray-600 hover:bg-gray-700 text-gray-200"
             }`}
@@ -571,6 +620,18 @@ export default function Dashboard() {
             }`}
           >
             Herd Feed
+          </button>
+
+          <button
+            type="button"
+            onClick={handleHerdFinanceClick}
+            className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition border cursor-pointer ${
+              !selectedAnimal && activeTab === "herd-finance"
+                ? "bg-blue-600 border-blue-500 text-white shadow"
+                : "border-gray-600 hover:bg-gray-700 text-gray-200"
+            }`}
+          >
+            Herd Finances
           </button>
 
           <div className="mt-4 px-4 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
@@ -714,6 +775,15 @@ export default function Dashboard() {
                 automaticReminders={Boolean(preferences.automaticReminders)}
               />
             </div>
+          ) : !selectedAnimal && activeTab === "herd-finance" ? (
+            <div className="p-4 sm:p-6">
+              <HerdFinanceRecords
+                selectedHerd={selectedHerd}
+                animals={animals}
+                isPremium={subscription.isPremium}
+                onExportFinanceReport={handleExportHerdFinancePdf}
+              />
+            </div>
           ) : !selectedAnimal ? (
             <DashboardOverview
               loading={loadingHerds || loadingAnimals}
@@ -801,8 +871,16 @@ export default function Dashboard() {
 
       <section id="dashboard-pdf" className="hidden">
         <header>
-          <p className="report-eyebrow">{exportMode === "animal" ? "BarnBuddy Animal Report" : "BarnBuddy Farm Report"}</p>
-          <h1>{exportMode === "animal" ? `${getAnimalPrimaryLabel(selectedAnimal || {})} Record Summary` : `${selectedHerd?.name || "Farm"} Dashboard Summary`}</h1>
+          <p className="report-eyebrow">
+            {exportMode === "animal" ? "BarnBuddy Animal Report" : exportMode === "herd-finance" ? "BarnBuddy Premium Finance Report" : "BarnBuddy Farm Report"}
+          </p>
+          <h1>
+            {exportMode === "animal"
+              ? `${getAnimalPrimaryLabel(selectedAnimal || {})} Record Summary`
+              : exportMode === "herd-finance"
+              ? `${herdFinanceExportData?.selectedHerd?.name || selectedHerd?.name || "Herd"} Finances`
+              : `${selectedHerd?.name || "Farm"} Dashboard Summary`}
+          </h1>
           <p>
             Generated {generatedDate}
             {user?.primaryEmailAddress?.emailAddress
@@ -811,7 +889,85 @@ export default function Dashboard() {
           </p>
         </header>
 
-        {exportMode === "animal" && selectedAnimal ? (
+        {exportMode === "herd-finance" && herdFinanceExportData ? (
+          <>
+            <section>
+              <h2>Farm Finance Summary</h2>
+              <dl className="report-metrics">
+                <div><dt>Net</dt><dd>{formatSignedReportMoney(herdFinanceTotals.net)}</dd></div>
+                <div><dt>Income</dt><dd>{formatSignedReportMoney(herdFinanceTotals.income)}</dd></div>
+                <div><dt>Expenses</dt><dd>{formatSignedReportMoney(herdFinanceTotals.expenses)}</dd></div>
+                <div><dt>Ledger entries</dt><dd>{herdFinanceLedger.length}</dd></div>
+                <div><dt>Feed costs</dt><dd>{formatSignedReportMoney(herdFinanceTotals.feed)}</dd></div>
+                <div><dt>Vet costs</dt><dd>{formatSignedReportMoney(herdFinanceTotals.vet)}</dd></div>
+                <div><dt>Income rows</dt><dd>{herdFinanceIncomeLedger.length}</dd></div>
+                <div><dt>Expense rows</dt><dd>{herdFinanceExpenseLedger.length}</dd></div>
+              </dl>
+            </section>
+
+            <section className="report-two-col">
+              <div>
+                <h2>Expense Categories</h2>
+                <table>
+                  <thead><tr><th>Category</th><th className="report-amount">Total</th></tr></thead>
+                  <tbody>
+                    {herdFinanceExpenseSegments.length === 0 ? (
+                      <tr><td colSpan="2">No expenses recorded.</td></tr>
+                    ) : herdFinanceExpenseSegments.map((segment) => (
+                      <tr key={segment.label}><td>{segment.label}</td><td className="report-amount">{formatSignedReportMoney(segment.value)}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <h2>Monthly Cashflow</h2>
+                <table>
+                  <thead><tr><th>Month</th><th className="report-amount">Income</th><th className="report-amount">Expenses</th><th className="report-amount">Net</th></tr></thead>
+                  <tbody>
+                    {herdFinanceMonthlyCashflow.length === 0 ? (
+                      <tr><td colSpan="4">No cashflow recorded.</td></tr>
+                    ) : herdFinanceMonthlyCashflow.map((item) => (
+                      <tr key={item.key}>
+                        <td>{formatReportMonth(item.key)}</td>
+                        <td className="report-amount report-income">{formatSignedReportMoney(item.income)}</td>
+                        <td className="report-amount report-expense">{formatSignedReportMoney(item.expense)}</td>
+                        <td className={`report-amount ${item.net < 0 ? "report-expense" : "report-income"}`}>{formatSignedReportMoney(item.net)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section>
+              <h2>Income Detail</h2>
+              <table>
+                <thead><tr><th>Date</th><th>Source</th><th>Category</th><th>Detail</th><th>Notes</th><th className="report-amount">Amount</th></tr></thead>
+                <tbody>
+                  {herdFinanceIncomeLedger.length === 0 ? <tr><td colSpan="6">No income recorded.</td></tr> : renderHerdFinanceRows(herdFinanceIncomeLedger)}
+                </tbody>
+              </table>
+            </section>
+
+            <section>
+              <h2>Expense Detail</h2>
+              <table>
+                <thead><tr><th>Date</th><th>Source</th><th>Category</th><th>Detail</th><th>Notes</th><th className="report-amount">Amount</th></tr></thead>
+                <tbody>
+                  {herdFinanceExpenseLedger.length === 0 ? <tr><td colSpan="6">No expenses recorded.</td></tr> : renderHerdFinanceRows(herdFinanceExpenseLedger)}
+                </tbody>
+              </table>
+            </section>
+
+            <section>
+              <h2>Full Ledger</h2>
+              <table>
+                <thead><tr><th>Date</th><th>Source</th><th>Category</th><th>Detail</th><th>Notes</th><th className="report-amount">Amount</th></tr></thead>
+                <tbody>{renderHerdFinanceRows(herdFinanceLedger)}</tbody>
+              </table>
+            </section>
+          </>
+        ) : exportMode === "animal" && selectedAnimal ? (
           <>
             <section>
               <h2>Animal Details</h2>

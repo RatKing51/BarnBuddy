@@ -10,7 +10,8 @@ function ensurePremiumRecordSchema() {
     CREATE TABLE IF NOT EXISTS finance_records (
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      animal_id INTEGER NOT NULL REFERENCES animals(id) ON DELETE CASCADE,
+      animal_id INTEGER REFERENCES animals(id) ON DELETE CASCADE,
+      herd_id INTEGER REFERENCES herds(id) ON DELETE CASCADE,
       record_date DATE,
       category TEXT DEFAULT 'Expense',
       amount DECIMAL(10,2) DEFAULT 0,
@@ -19,6 +20,10 @@ function ensurePremiumRecordSchema() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    ALTER TABLE finance_records
+      ADD COLUMN IF NOT EXISTS herd_id INTEGER REFERENCES herds(id) ON DELETE CASCADE,
+      ALTER COLUMN animal_id DROP NOT NULL;
 
     CREATE TABLE IF NOT EXISTS feed_records (
       id SERIAL PRIMARY KEY,
