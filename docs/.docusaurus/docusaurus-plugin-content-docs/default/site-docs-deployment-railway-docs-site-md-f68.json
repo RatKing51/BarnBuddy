@@ -1,0 +1,21 @@
+{
+  "id": "deployment/railway-docs-site",
+  "title": "Railway Docs Site",
+  "description": "This Docusaurus app is separate from the main BarnBuddy client and server.",
+  "source": "@site/docs/deployment/railway-docs-site.md",
+  "sourceDirName": "deployment",
+  "slug": "/deployment/railway-docs-site",
+  "permalink": "/deployment/railway-docs-site",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Railway Docs Site"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Contact Support",
+    "permalink": "/support/contact"
+  }
+}

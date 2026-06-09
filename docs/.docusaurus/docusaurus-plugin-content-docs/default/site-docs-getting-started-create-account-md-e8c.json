@@ -1,0 +1,25 @@
+{
+  "id": "getting-started/create-account",
+  "title": "Create an Account",
+  "description": "BarnBuddy accounts are used to keep each farm's records private and tied to the correct user.",
+  "source": "@site/docs/getting-started/create-account.md",
+  "sourceDirName": "getting-started",
+  "slug": "/getting-started/create-account",
+  "permalink": "/getting-started/create-account",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Create an Account"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "BarnBuddy Documentation",
+    "permalink": "/"
+  },
+  "next": {
+    "title": "Dashboard Tour",
+    "permalink": "/getting-started/dashboard-tour"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "support/contact",
+  "title": "Contact Support",
+  "description": "For now, use the Contact page on the main BarnBuddy website.",
+  "source": "@site/docs/support/contact.md",
+  "sourceDirName": "support",
+  "slug": "/support/contact",
+  "permalink": "/support/contact",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Contact Support"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Troubleshooting",
+    "permalink": "/support/troubleshooting"
+  },
+  "next": {
+    "title": "Railway Docs Site",
+    "permalink": "/deployment/railway-docs-site"
+  }
+}

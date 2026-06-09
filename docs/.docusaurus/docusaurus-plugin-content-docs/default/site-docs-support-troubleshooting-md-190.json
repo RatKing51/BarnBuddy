@@ -1,0 +1,25 @@
+{
+  "id": "support/troubleshooting",
+  "title": "Troubleshooting",
+  "description": "I cannot see my dashboard",
+  "source": "@site/docs/support/troubleshooting.md",
+  "sourceDirName": "support",
+  "slug": "/support/troubleshooting",
+  "permalink": "/support/troubleshooting",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Troubleshooting"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "FAQ",
+    "permalink": "/support/faq"
+  },
+  "next": {
+    "title": "Contact Support",
+    "permalink": "/support/contact"
+  }
+}

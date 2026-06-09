@@ -1,0 +1,25 @@
+{
+  "id": "premium/reproduction",
+  "title": "Reproduction",
+  "description": "Reproduction records help track breeding pairs, pregnancy checks, due dates, birth outcomes, and offspring.",
+  "source": "@site/docs/premium/reproduction.md",
+  "sourceDirName": "premium",
+  "slug": "/premium/reproduction",
+  "permalink": "/premium/reproduction",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Reproduction"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Premium Overview",
+    "permalink": "/premium/overview"
+  },
+  "next": {
+    "title": "Finance",
+    "permalink": "/premium/finance"
+  }
+}

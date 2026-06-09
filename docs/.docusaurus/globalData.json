@@ -1,0 +1,143 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "path": "/",
+      "versions": [
+        {
+          "name": "current",
+          "label": "Next",
+          "isLast": true,
+          "path": "/",
+          "mainDocId": "intro",
+          "docs": [
+            {
+              "id": "account/billing",
+              "path": "/account/billing",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "account/delete-account",
+              "path": "/account/delete-account",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "account/preferences",
+              "path": "/account/preferences",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "deployment/railway-docs-site",
+              "path": "/deployment/railway-docs-site",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "getting-started/add-first-animal",
+              "path": "/getting-started/add-first-animal",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "getting-started/create-account",
+              "path": "/getting-started/create-account",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "getting-started/dashboard-tour",
+              "path": "/getting-started/dashboard-tour",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "getting-started/setup-first-herd",
+              "path": "/getting-started/setup-first-herd",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "intro",
+              "path": "/",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "premium/exports",
+              "path": "/premium/exports",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "premium/feed",
+              "path": "/premium/feed",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "premium/finance",
+              "path": "/premium/finance",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "premium/overview",
+              "path": "/premium/overview",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "premium/reminders",
+              "path": "/premium/reminders",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "premium/reproduction",
+              "path": "/premium/reproduction",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "records/animals",
+              "path": "/records/animals",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "records/farm-overview",
+              "path": "/records/farm-overview",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "records/health-records",
+              "path": "/records/health-records",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "records/herds",
+              "path": "/records/herds",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "records/vet-visits",
+              "path": "/records/vet-visits",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "support/contact",
+              "path": "/support/contact",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "support/faq",
+              "path": "/support/faq",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "support/troubleshooting",
+              "path": "/support/troubleshooting",
+              "sidebar": "tutorialSidebar"
+            }
+          ],
+          "draftIds": [],
+          "sidebars": {
+            "tutorialSidebar": {
+              "link": {
+                "path": "/",
+                "label": "intro"
+              }
+            }
+          }
+        }
+      ],
+      "breadcrumbs": true
+    }
+  }
+}

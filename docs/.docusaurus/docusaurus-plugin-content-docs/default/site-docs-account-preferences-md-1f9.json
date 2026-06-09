@@ -1,0 +1,25 @@
+{
+  "id": "account/preferences",
+  "title": "Preferences",
+  "description": "Account preferences change how BarnBuddy feels and what information is emphasized.",
+  "source": "@site/docs/account/preferences.md",
+  "sourceDirName": "account",
+  "slug": "/account/preferences",
+  "permalink": "/account/preferences",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Preferences"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Automatic Reminders",
+    "permalink": "/premium/reminders"
+  },
+  "next": {
+    "title": "Billing",
+    "permalink": "/account/billing"
+  }
+}

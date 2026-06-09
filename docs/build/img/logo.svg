@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="BarnBuddy">
+  <rect width="64" height="64" rx="14" fill="#2563eb"/>
+  <path d="M14 34 32 18l18 16v18H14V34Z" fill="#fff"/>
+  <path d="M23 52V36h18v16" fill="#bfdbfe"/>
+  <path d="M24 29h16" stroke="#1e3a8a" stroke-width="4" stroke-linecap="round"/>
+</svg>

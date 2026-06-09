@@ -1,0 +1,35 @@
+{
+  "name": "barnbuddy-docs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Docusaurus documentation site for BarnBuddy.",
+  "scripts": {
+    "start": "docusaurus start --host 0.0.0.0",
+    "build": "docusaurus build",
+    "serve": "docusaurus serve --host 0.0.0.0 --port 3000",
+    "railway:start": "docusaurus serve --host 0.0.0.0 --port $PORT",
+    "clear": "docusaurus clear"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.8.1",
+    "@docusaurus/preset-classic": "^3.8.1",
+    "@mdx-js/react": "^3.0.0",
+    "clsx": "^2.1.1",
+    "prism-react-renderer": "^2.4.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {},
+  "browserslist": {
+    "production": [
+      ">0.5%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 3 chrome version",
+      "last 3 firefox version",
+      "last 5 safari version"
+    ]
+  }
+}

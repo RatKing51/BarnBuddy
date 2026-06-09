@@ -1,0 +1,25 @@
+{
+  "id": "records/animals",
+  "title": "Animal Records",
+  "description": "Each animal has a profile that collects basic identity, health, vet, and Premium records.",
+  "source": "@site/docs/records/animals.md",
+  "sourceDirName": "records",
+  "slug": "/records/animals",
+  "permalink": "/records/animals",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Animal Records"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Herds",
+    "permalink": "/records/herds"
+  },
+  "next": {
+    "title": "Health Records",
+    "permalink": "/records/health-records"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "premium/overview",
+  "title": "Premium Overview",
+  "description": "Premium expands BarnBuddy beyond basic records.",
+  "source": "@site/docs/premium/overview.md",
+  "sourceDirName": "premium",
+  "slug": "/premium/overview",
+  "permalink": "/premium/overview",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Premium Overview"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Farm Overview",
+    "permalink": "/records/farm-overview"
+  },
+  "next": {
+    "title": "Reproduction",
+    "permalink": "/premium/reproduction"
+  }
+}

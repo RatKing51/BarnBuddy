@@ -1,0 +1,25 @@
+{
+  "id": "premium/reminders",
+  "title": "Automatic Reminders",
+  "description": "Automatic reminders help surface upcoming care work.",
+  "source": "@site/docs/premium/reminders.md",
+  "sourceDirName": "premium",
+  "slug": "/premium/reminders",
+  "permalink": "/premium/reminders",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Automatic Reminders"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Exports",
+    "permalink": "/premium/exports"
+  },
+  "next": {
+    "title": "Preferences",
+    "permalink": "/account/preferences"
+  }
+}

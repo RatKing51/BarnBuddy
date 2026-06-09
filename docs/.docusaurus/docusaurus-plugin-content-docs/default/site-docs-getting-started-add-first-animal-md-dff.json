@@ -1,0 +1,25 @@
+{
+  "id": "getting-started/add-first-animal",
+  "title": "Add Your First Animal",
+  "description": "Animals are the center of BarnBuddy records.",
+  "source": "@site/docs/getting-started/add-first-animal.md",
+  "sourceDirName": "getting-started",
+  "slug": "/getting-started/add-first-animal",
+  "permalink": "/getting-started/add-first-animal",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Add Your First Animal"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Set Up Your First Herd",
+    "permalink": "/getting-started/setup-first-herd"
+  },
+  "next": {
+    "title": "Herds",
+    "permalink": "/records/herds"
+  }
+}

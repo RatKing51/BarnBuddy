@@ -1,0 +1,25 @@
+{
+  "id": "premium/finance",
+  "title": "Finance",
+  "description": "Finance records track animal-level income and expenses.",
+  "source": "@site/docs/premium/finance.md",
+  "sourceDirName": "premium",
+  "slug": "/premium/finance",
+  "permalink": "/premium/finance",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Finance"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Reproduction",
+    "permalink": "/premium/reproduction"
+  },
+  "next": {
+    "title": "Feed Records",
+    "permalink": "/premium/feed"
+  }
+}

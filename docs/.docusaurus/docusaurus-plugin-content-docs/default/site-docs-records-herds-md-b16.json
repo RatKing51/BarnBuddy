@@ -1,0 +1,25 @@
+{
+  "id": "records/herds",
+  "title": "Herds",
+  "description": "Herds organize animals and make reporting easier.",
+  "source": "@site/docs/records/herds.md",
+  "sourceDirName": "records",
+  "slug": "/records/herds",
+  "permalink": "/records/herds",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Herds"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Add Your First Animal",
+    "permalink": "/getting-started/add-first-animal"
+  },
+  "next": {
+    "title": "Animal Records",
+    "permalink": "/records/animals"
+  }
+}

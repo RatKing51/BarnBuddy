@@ -1,0 +1,25 @@
+{
+  "id": "premium/exports",
+  "title": "Exports",
+  "description": "Exports help turn BarnBuddy records into PDFs for review, sharing, and offline use.",
+  "source": "@site/docs/premium/exports.md",
+  "sourceDirName": "premium",
+  "slug": "/premium/exports",
+  "permalink": "/premium/exports",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Exports"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Feed Records",
+    "permalink": "/premium/feed"
+  },
+  "next": {
+    "title": "Automatic Reminders",
+    "permalink": "/premium/reminders"
+  }
+}

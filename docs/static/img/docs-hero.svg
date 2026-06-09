@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 700" preserveAspectRatio="xMidYMid slice">
+  <rect width="1600" height="700" fill="#0f172a"/>
+  <path d="M0 530c210-90 380-96 555-18 178 80 332 78 507-6 178-86 350-91 538-16v210H0Z" fill="#1e3a8a" opacity=".52"/>
+  <path d="M0 602c205-58 374-56 520 6 164 69 343 65 520-15 194-88 367-83 560 5v102H0Z" fill="#2563eb" opacity=".42"/>
+  <g opacity=".92">
+    <rect x="1020" y="176" width="300" height="250" rx="10" fill="#111827" stroke="#60a5fa" stroke-width="4"/>
+    <rect x="1052" y="212" width="132" height="18" rx="9" fill="#93c5fd"/>
+    <rect x="1052" y="258" width="220" height="14" rx="7" fill="#334155"/>
+    <rect x="1052" y="292" width="180" height="14" rx="7" fill="#334155"/>
+    <rect x="1052" y="326" width="236" height="14" rx="7" fill="#334155"/>
+    <rect x="1052" y="366" width="88" height="30" rx="8" fill="#2563eb"/>
+  </g>
+  <g opacity=".85">
+    <path d="M280 380h270v132H280z" fill="#7f1d1d"/>
+    <path d="m250 380 165-140 165 140z" fill="#b91c1c"/>
+    <path d="M360 512V405h110v107" fill="#f8fafc"/>
+    <path d="M415 405v107" stroke="#1e293b" stroke-width="8"/>
+  </g>
+</svg>

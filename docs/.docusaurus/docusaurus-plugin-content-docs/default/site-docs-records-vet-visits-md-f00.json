@@ -1,0 +1,25 @@
+{
+  "id": "records/vet-visits",
+  "title": "Vet Visits",
+  "description": "Vet visits record professional care, treatments, medications, and follow-up needs.",
+  "source": "@site/docs/records/vet-visits.md",
+  "sourceDirName": "records",
+  "slug": "/records/vet-visits",
+  "permalink": "/records/vet-visits",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Vet Visits"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Health Records",
+    "permalink": "/records/health-records"
+  },
+  "next": {
+    "title": "Farm Overview",
+    "permalink": "/records/farm-overview"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "support/faq",
+  "title": "FAQ",
+  "description": "Can I use BarnBuddy for one animal?",
+  "source": "@site/docs/support/faq.md",
+  "sourceDirName": "support",
+  "slug": "/support/faq",
+  "permalink": "/support/faq",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "FAQ"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Delete Account",
+    "permalink": "/account/delete-account"
+  },
+  "next": {
+    "title": "Troubleshooting",
+    "permalink": "/support/troubleshooting"
+  }
+}

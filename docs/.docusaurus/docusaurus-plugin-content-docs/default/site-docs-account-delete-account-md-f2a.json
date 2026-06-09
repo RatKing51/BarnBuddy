@@ -1,0 +1,25 @@
+{
+  "id": "account/delete-account",
+  "title": "Delete Account",
+  "description": "Account deletion is permanent.",
+  "source": "@site/docs/account/delete-account.md",
+  "sourceDirName": "account",
+  "slug": "/account/delete-account",
+  "permalink": "/account/delete-account",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Delete Account"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Billing",
+    "permalink": "/account/billing"
+  },
+  "next": {
+    "title": "FAQ",
+    "permalink": "/support/faq"
+  }
+}

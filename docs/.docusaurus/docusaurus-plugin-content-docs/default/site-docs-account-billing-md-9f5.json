@@ -1,0 +1,25 @@
+{
+  "id": "account/billing",
+  "title": "Billing",
+  "description": "BarnBuddy supports Free and Premium plans.",
+  "source": "@site/docs/account/billing.md",
+  "sourceDirName": "account",
+  "slug": "/account/billing",
+  "permalink": "/account/billing",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Billing"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Preferences",
+    "permalink": "/account/preferences"
+  },
+  "next": {
+    "title": "Delete Account",
+    "permalink": "/account/delete-account"
+  }
+}

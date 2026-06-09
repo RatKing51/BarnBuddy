@@ -1,0 +1,25 @@
+{
+  "id": "premium/feed",
+  "title": "Feed Records",
+  "description": "Feed records help track herd-level feed purchases and planning.",
+  "source": "@site/docs/premium/feed.md",
+  "sourceDirName": "premium",
+  "slug": "/premium/feed",
+  "permalink": "/premium/feed",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Feed Records"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Finance",
+    "permalink": "/premium/finance"
+  },
+  "next": {
+    "title": "Exports",
+    "permalink": "/premium/exports"
+  }
+}

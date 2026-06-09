@@ -1,0 +1,25 @@
+{
+  "id": "getting-started/dashboard-tour",
+  "title": "Dashboard Tour",
+  "description": "The dashboard is the main workspace for BarnBuddy.",
+  "source": "@site/docs/getting-started/dashboard-tour.md",
+  "sourceDirName": "getting-started",
+  "slug": "/getting-started/dashboard-tour",
+  "permalink": "/getting-started/dashboard-tour",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Dashboard Tour"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Create an Account",
+    "permalink": "/getting-started/create-account"
+  },
+  "next": {
+    "title": "Set Up Your First Herd",
+    "permalink": "/getting-started/setup-first-herd"
+  }
+}

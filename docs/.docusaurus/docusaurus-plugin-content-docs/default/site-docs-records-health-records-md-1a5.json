@@ -1,0 +1,25 @@
+{
+  "id": "records/health-records",
+  "title": "Health Records",
+  "description": "Health records keep care history attached to the animal that received care.",
+  "source": "@site/docs/records/health-records.md",
+  "sourceDirName": "records",
+  "slug": "/records/health-records",
+  "permalink": "/records/health-records",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Health Records"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Animal Records",
+    "permalink": "/records/animals"
+  },
+  "next": {
+    "title": "Vet Visits",
+    "permalink": "/records/vet-visits"
+  }
+}
