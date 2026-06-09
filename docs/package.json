@@ -2,6 +2,9 @@
   "name": "barnbuddy-docs",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "description": "Docusaurus documentation site for BarnBuddy.",
   "scripts": {
     "start": "docusaurus start --host 0.0.0.0",
