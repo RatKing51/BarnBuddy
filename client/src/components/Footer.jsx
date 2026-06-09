@@ -65,7 +65,7 @@ export default function Footer() {
               <h4 className="text-sm font-semibold mb-3">Product</h4>
               <ul className="space-y-2 text-sm text-white/80">
                 <li><a href="/pricing" className="hover:text-white">Pricing</a></li>
-                <li><a href="https://docs.barnbuddy.pro" className="hover:text-white">Docs</a></li>
+                <li><a href="https://doc.barnbuddy.pro" className="hover:text-white">Docs</a></li>
               </ul>
             </div>
 

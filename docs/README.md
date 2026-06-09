@@ -1,6 +1,6 @@
 # BarnBuddy Docs
 
-This folder is a standalone Docusaurus site for `docs.barnbuddy.pro`.
+This folder is a standalone Docusaurus site for `doc.barnbuddy.pro`.
 
 ## Local development
 
@@ -16,4 +16,4 @@ npm run build
 npm run railway:start
 ```
 
-On Railway, create a new service from this repository and set the root directory to `docs`. Point the custom domain `docs.barnbuddy.pro` at that service.
+On Railway, create a new service from this repository and set the root directory to `docs`. Point the custom domain `doc.barnbuddy.pro` at that service.

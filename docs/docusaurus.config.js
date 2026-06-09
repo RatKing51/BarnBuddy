@@ -5,7 +5,7 @@ const config = {
   tagline: 'Guides for livestock records, care tracking, herds, exports, and Premium tools.',
   favicon: 'img/logo.svg',
 
-  url: 'https://docs.barnbuddy.pro',
+  url: 'https://doc.barnbuddy.pro',
   baseUrl: '/',
 
   organizationName: 'BarnBuddy',

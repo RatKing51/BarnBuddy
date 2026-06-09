@@ -18,7 +18,7 @@ import Status from "./pages/Status";
 import { ToastContainer } from "react-toastify";
 import { PageLoadingBar } from "./components/LoadingSpinner";
 
-const DOCS_URL = "https://docs.barnbuddy.pro";
+const DOCS_URL = "https://doc.barnbuddy.pro";
 
 function DocsRedirect() {
   useEffect(() => {

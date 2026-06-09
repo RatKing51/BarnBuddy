@@ -33,7 +33,7 @@ Use these docs to learn the main workflows:
 
 The main BarnBuddy app is available at [barnbuddy.pro](https://barnbuddy.pro).
 
-The docs site is intended to run separately at [docs.barnbuddy.pro](https://docs.barnbuddy.pro).
+The docs site is intended to run separately at [doc.barnbuddy.pro](https://doc.barnbuddy.pro).
 
 ## Good Record-Keeping Habits
 

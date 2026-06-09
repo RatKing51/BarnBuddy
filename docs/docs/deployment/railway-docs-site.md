@@ -35,7 +35,7 @@ npm run railway:start
 5. Add the custom domain:
 
 ```text
-docs.barnbuddy.pro
+doc.barnbuddy.pro
 ```
 
 6. Follow Railway's DNS instructions for the domain record.
