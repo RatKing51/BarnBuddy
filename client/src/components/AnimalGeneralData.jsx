@@ -82,6 +82,7 @@ export default function AnimalGeneralData({
   const saveStatusTimer = useRef(null);
   const { authFetch } = useAuth();
   const { preferences } = usePreferences();
+  const selectedAnimalRecordId = animal?.id;
   const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
   const sexOptionsBySpecies = {
     Cow: ["Cow", "Heifer", "Steer", "Bull", "Calf"],
@@ -197,14 +198,14 @@ export default function AnimalGeneralData({
 
   useEffect(() => {
     const loadUpcomingVaccinations = async () => {
-      if (!animal || !animal.id) {
+      if (!selectedAnimalRecordId) {
         setUpcomingVaccinations([]);
         return;
       }
 
       try {
         setLoadingVaccinationSummary(true);
-        const res = await vaccinationsAPI.getVaccinations(animal.id);
+        const res = await vaccinationsAPI.getVaccinations(selectedAnimalRecordId);
         const now = new Date();
 
         const upcoming = (res.data || [])
@@ -247,18 +248,18 @@ export default function AnimalGeneralData({
     };
 
     loadUpcomingVaccinations();
-  }, [animal]);
+  }, [selectedAnimalRecordId]);
 
   useEffect(() => {
     const loadUpcomingVetVisits = async () => {
-      if (!animal || !animal.id) {
+      if (!selectedAnimalRecordId) {
         setUpcomingVetVisitDates([]);
         return;
       }
 
       try {
         setLoadingVetSummary(true);
-        const res = await vetVisitsAPI.getVetVisitsForAnimal(animal.id);
+        const res = await vetVisitsAPI.getVetVisitsForAnimal(selectedAnimalRecordId);
         const now = new Date();
         const today = new Date(now);
         today.setHours(0, 0, 0, 0);
@@ -318,7 +319,7 @@ export default function AnimalGeneralData({
     };
 
     loadUpcomingVetVisits();
-  }, [animal]);
+  }, [selectedAnimalRecordId]);
 
   // Save Animal to DB
   async function saveAnimal(updatedData = {}) {
@@ -514,7 +515,7 @@ export default function AnimalGeneralData({
     }
   }
 
-  if (!animal || (animal?.id && (loadingVaccinationSummary || loadingVetSummary))) {
+  if (!animal || (animal?.id && String(animalId) !== String(animal.id))) {
     return <AnimalGeneralDataSkeleton />;
   }
 
@@ -630,7 +631,13 @@ export default function AnimalGeneralData({
       {/* Bottom Left - Quick Dates */}
       <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-4">
         <h4 className="text-gray-400 font-semibold mb-2">Upcoming Quick Dates</h4>
-        {upcomingQuickDates.length === 0 ? (
+        {loadingVaccinationSummary || loadingVetSummary ? (
+          <div className="space-y-2" aria-busy="true">
+            {[0, 1, 2].map((item) => (
+              <SkeletonBlock key={item} className="h-14 w-full rounded-lg bg-gray-700" />
+            ))}
+          </div>
+        ) : upcomingQuickDates.length === 0 ? (
           <p className="bg-gray-700 p-3 rounded-lg text-gray-300">No upcoming dates</p>
         ) : (
           upcomingQuickDates.slice(0, 5).map((item) => (
