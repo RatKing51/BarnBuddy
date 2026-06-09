@@ -307,6 +307,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
 
     if (!selectedVisit.id) {
       setSelectedVisit(visits[0] || emptyVisit(animal.id));
+      toast.success("Vet visit deleted.");
       return;
     }
 

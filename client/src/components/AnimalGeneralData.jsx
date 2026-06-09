@@ -487,9 +487,10 @@ export default function AnimalGeneralData({
 
   async function handleDelete() {
     if (!animal || isDeletingAnimal) return;
+    const deletedAnimalName = animal.name || animal.tag_id || "Animal";
 
     const confirmDelete = window.confirm(
-      `Are you sure you want to delete ${animal.name}? This action cannot be undone!`
+      `Are you sure you want to delete ${deletedAnimalName}? This action cannot be undone!`
     );
 
     if (!confirmDelete) return;
@@ -497,6 +498,7 @@ export default function AnimalGeneralData({
     try {
       setIsDeletingAnimal(true);
       await deleteAnimal(animal.id);
+      toast.success(`${deletedAnimalName} deleted.`);
 
       setSelectedAnimal(null);
       setName("");

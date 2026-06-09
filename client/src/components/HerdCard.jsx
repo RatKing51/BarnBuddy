@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { updateHerd, deleteHerd } from "../api/herd";
+import { toast } from "react-toastify";
 
 export default function HerdCard({ herd, onRefresh }) {
   const [name, setName] = useState(herd.name);
@@ -25,7 +26,11 @@ export default function HerdCard({ herd, onRefresh }) {
     setDeleting(true);
     try {
       await deleteHerd(herd.id);
+      toast.success(`${herd.name || "Herd"} deleted.`);
       onRefresh();
+    } catch (err) {
+      console.error("Failed to delete herd:", err.response?.data || err.message);
+      toast.error("Failed to delete herd.");
     } finally {
       setDeleting(false);
     }

@@ -396,6 +396,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
     const event = healthEvents[idx];
     if (!event.id) {
       handleDeleteEvent(idx);
+      toast.success("Health event deleted");
       return;
     }
     
@@ -481,6 +482,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
     const vaccine = vaccinations[idx];
     if (!vaccine.id) {
       handleDeleteVaccine(idx);
+      toast.success("Vaccination deleted");
       if (onVaccinationUpdate) onVaccinationUpdate();
       return;
     }
