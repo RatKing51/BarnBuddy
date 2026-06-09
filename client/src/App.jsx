@@ -15,9 +15,28 @@ import News from "./pages/News";
 import Contact from "./pages/Contact";
 import HelpCenter from "./pages/HelpCenter";
 import Status from "./pages/Status";
-import Docs from "./pages/Docs";
 import { ToastContainer } from "react-toastify";
 import { PageLoadingBar } from "./components/LoadingSpinner";
+
+const DOCS_URL = "https://docs.barnbuddy.pro";
+
+function DocsRedirect() {
+  useEffect(() => {
+    window.location.replace(DOCS_URL);
+  }, []);
+
+  return (
+    <main className="grid min-h-screen place-items-center bg-[#0b1730] px-4 text-center text-white">
+      <div>
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-300">BarnBuddy Docs</p>
+        <h1 className="mt-3 text-3xl font-semibold">Opening documentation...</h1>
+        <p className="mt-3 text-white/70">
+          If you are not redirected, <a className="text-blue-300 underline" href={DOCS_URL}>open the docs</a>.
+        </p>
+      </div>
+    </main>
+  );
+}
 
 function AppContent() {
   const location = useLocation();
@@ -52,7 +71,7 @@ function AppContent() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/help" element={<HelpCenter />} />
         <Route path="/status" element={<Status />} />
-        <Route path="/docs" element={<Docs />} />
+        <Route path="/docs" element={<DocsRedirect />} />
 
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
