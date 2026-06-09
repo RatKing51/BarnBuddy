@@ -10,6 +10,7 @@ export function AuthProvider({ children }) {
     const { isLoaded, isSignedIn, getToken, signOut, sessionClaims, has } = useClerkAuth();
     const { user: clerkUser } = useUser();
     const [backendUser, setBackendUser] = useState(null);
+    const [backendPreferences, setBackendPreferences] = useState(null);
     const [backendAuthLoading, setBackendAuthLoading] = useState(true);
     const [backendAuthError, setBackendAuthError] = useState(null);
 
@@ -47,6 +48,7 @@ export function AuthProvider({ children }) {
 
             if (!isSignedIn) {
                 setBackendUser(null);
+                setBackendPreferences(null);
                 setBackendAuthError(null);
                 setBackendAuthLoading(false);
                 return;
@@ -65,11 +67,13 @@ export function AuthProvider({ children }) {
 
                 if (!cancelled) {
                     setBackendUser(data.user || null);
+                    setBackendPreferences(data.preferences || null);
                 }
             } catch (err) {
                 console.error("Backend account sync failed:", err);
                 if (!cancelled) {
                     setBackendUser(null);
+                    setBackendPreferences(null);
                     setBackendAuthError(err);
                 }
             } finally {
@@ -135,6 +139,7 @@ export function AuthProvider({ children }) {
         () => ({
             user,
             backendUser,
+            backendPreferences,
             backendAuthLoading,
             backendAuthError,
             subscription,
@@ -146,6 +151,7 @@ export function AuthProvider({ children }) {
         [
             user,
             backendUser,
+            backendPreferences,
             backendAuthLoading,
             backendAuthError,
             subscription,

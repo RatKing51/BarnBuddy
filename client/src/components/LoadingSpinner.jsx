@@ -27,11 +27,11 @@ export function LoadingPanel({ label = "Loading..." }) {
   );
 }
 
-function SkeletonBlock({ className = "" }) {
+export function SkeletonBlock({ className = "" }) {
   return <div className={`animate-pulse rounded-lg bg-gray-800 ${className}`} />;
 }
 
-function SkeletonCard({ children, className = "" }) {
+export function SkeletonCard({ children, className = "" }) {
   return (
     <div className={`rounded-2xl border border-gray-800 bg-gray-900 p-5 ${className}`}>
       {children}

@@ -8,6 +8,9 @@ export default function HerdSettings() {
   const [selectedHerd, setSelectedHerd] = useState(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [creatingHerd, setCreatingHerd] = useState(false);
+  const [savingHerd, setSavingHerd] = useState(false);
+  const [deletingHerd, setDeletingHerd] = useState(false);
 
   const navigate = useNavigate();
 
@@ -33,22 +36,31 @@ export default function HerdSettings() {
   };
 
   const saveHerd = async () => {
-    if (!selectedHerd) return;
+    if (!selectedHerd || savingHerd) return;
 
-    await axios.put(`/herds/${selectedHerd.id}`, {
-      name,
-      description,
-    });
-    toast.success("Saved Herd!");
-    fetchHerds();
+    try {
+      setSavingHerd(true);
+      await axios.put(`/herds/${selectedHerd.id}`, {
+        name,
+        description,
+      });
+      toast.success("Saved Herd!");
+      fetchHerds();
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.error || "Failed to save herd.");
+    } finally {
+      setSavingHerd(false);
+    }
   };
 
   const deleteHerd = async () => {
-    if (!selectedHerd) return;
+    if (!selectedHerd || deletingHerd) return;
 
     if (!window.confirm("Delete this herd? Animals in this herd will be moved to Unassigned.")) return;
 
     try {
+      setDeletingHerd(true);
       const res = await axios.delete(`/herds/${selectedHerd.id}`);
 
       setSelectedHerd(null);
@@ -59,18 +71,30 @@ export default function HerdSettings() {
     } catch (err) {
       console.error(err);
       toast.error(err.response?.data?.error || "Failed to delete herd.");
+    } finally {
+      setDeletingHerd(false);
     }
   };
 
   const createHerd = async () => {
-    const res = await axios.post("/herds", {
-      name: "New Herd",
-      description: "",
-    });
+    if (creatingHerd) return;
 
-    fetchHerds();
-    toast.success("Created Herd!");
-    selectHerd(res.data);
+    try {
+      setCreatingHerd(true);
+      const res = await axios.post("/herds", {
+        name: "New Herd",
+        description: "",
+      });
+
+      fetchHerds();
+      toast.success("Created Herd!");
+      selectHerd(res.data);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.error || "Failed to create herd.");
+    } finally {
+      setCreatingHerd(false);
+    }
   };
 
   return (
@@ -103,9 +127,10 @@ export default function HerdSettings() {
 
         <button
           onClick={createHerd}
-          className="mt-4 w-full bg-green-600 hover:bg-green-700 py-2 rounded-xl"
+          disabled={creatingHerd}
+          className="mt-4 w-full bg-green-600 hover:bg-green-700 py-2 rounded-xl disabled:cursor-wait disabled:opacity-60"
         >
-          + New Herd
+          {creatingHerd ? "Creating..." : "+ New Herd"}
         </button>
       </div>
 
@@ -148,16 +173,18 @@ export default function HerdSettings() {
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={saveHerd}
-                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+                  disabled={savingHerd}
+                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded disabled:cursor-wait disabled:opacity-60"
                 >
-                  Save Changes
+                  {savingHerd ? "Saving..." : "Save Changes"}
                 </button>
 
                 <button
                   onClick={deleteHerd}
-                  className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded"
+                  disabled={deletingHerd}
+                  className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded disabled:cursor-wait disabled:opacity-60"
                 >
-                  Delete Herd
+                  {deletingHerd ? "Deleting..." : "Delete Herd"}
                 </button>
               </div>
             </div>

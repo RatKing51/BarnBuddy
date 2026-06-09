@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
-import { createAnimal, updateAnimal } from "../api/animal";
+import { createAnimal, deleteAnimal, updateAnimal } from "../api/animal";
 import * as birthsAPI from "../api/births";
 import * as reproductionsAPI from "../api/reproductions";
 import * as premiumRecordsAPI from "../api/premiumRecords";
 import * as vetVisitsAPI from "../api/vetVisits";
+import { SkeletonBlock } from "./LoadingSpinner";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -76,6 +77,79 @@ function PremiumLocked({ label }) {
   );
 }
 
+function PremiumRecordsSkeleton({ view }) {
+  const isReproduction = view === "reproduction";
+
+  return (
+    <div className="space-y-6" aria-busy="true">
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-5">
+          <SkeletonBlock className="h-4 w-24" />
+          <SkeletonBlock className="mt-3 h-6 w-72 max-w-full" />
+          <SkeletonBlock className="mt-3 h-4 w-full max-w-xl" />
+        </div>
+        <div className="flex flex-col gap-2 rounded-2xl border border-gray-700 bg-gray-900 p-5 sm:min-w-56">
+          <SkeletonBlock className="h-10 w-full" />
+          <SkeletonBlock className="h-10 w-full" />
+        </div>
+      </section>
+
+      {isReproduction ? (
+        <>
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {[0, 1, 2].map((item) => (
+              <div key={item} className="rounded-2xl border border-gray-700 bg-gray-900 p-5">
+                <SkeletonBlock className="h-3 w-28" />
+                <SkeletonBlock className="mt-3 h-6 w-36" />
+                <SkeletonBlock className="mt-2 h-4 w-full" />
+              </div>
+            ))}
+          </section>
+          <section className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_1fr]">
+            <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
+              <SkeletonBlock className="mb-4 h-5 w-36" />
+              {[0, 1, 2, 3].map((item) => (
+                <SkeletonBlock key={item} className="mb-2 h-20 w-full rounded-xl" />
+              ))}
+            </div>
+            <div className="space-y-4 rounded-2xl border border-gray-700 bg-gray-800 p-5">
+              {[0, 1, 2].map((section) => (
+                <div key={section} className="rounded-xl border border-gray-700 bg-gray-900 p-4">
+                  <SkeletonBlock className="h-5 w-40" />
+                  <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                    {[0, 1, 2].map((item) => (
+                      <SkeletonBlock key={item} className="h-10 w-full" />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
+      ) : (
+        <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_420px]">
+          <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <SkeletonBlock className="h-5 w-28" />
+              <SkeletonBlock className="h-9 w-16" />
+            </div>
+            {[0, 1, 2, 3].map((item) => (
+              <SkeletonBlock key={item} className="mb-2 h-20 w-full rounded-xl" />
+            ))}
+          </div>
+          <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
+            <SkeletonBlock className="h-5 w-32" />
+            <SkeletonBlock className="mt-2 h-4 w-64" />
+            {[0, 1, 2].map((item) => (
+              <SkeletonBlock key={item} className="mt-4 h-20 w-full rounded-xl" />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
 function RecordList({ title, items, empty, selectedId, onSelect, renderMeta }) {
   return (
     <div className="space-y-2">
@@ -105,7 +179,9 @@ export default function PremiumRecords({
   animals = [],
   isPremium = false,
   onExportAnimal,
+  exportLoading = false,
   onAnimalSaved,
+  onAnimalDeleted,
   view = "reproduction",
 }) {
   const [reproductions, setReproductions] = useState([]);
@@ -124,11 +200,42 @@ export default function PremiumRecords({
     birth_notes: "",
   });
   const [loading, setLoading] = useState(false);
+  const [addingReproduction, setAddingReproduction] = useState(false);
+  const [deletingReproduction, setDeletingReproduction] = useState(false);
+  const [addingFinance, setAddingFinance] = useState(false);
+  const [deletingFinance, setDeletingFinance] = useState(false);
+  const [addingOffspring, setAddingOffspring] = useState(false);
+  const [removingOffspringId, setRemovingOffspringId] = useState(null);
+  const [saveStatus, setSaveStatus] = useState("idle");
+  const lastReproductionSignatures = useRef(new Map());
+  const lastFinanceSignatures = useRef(new Map());
+  const lastAnimalParentSignature = useRef("");
+  const saveStatusTimer = useRef(null);
 
   useEffect(() => {
     setAnimalDamId(animal?.dam_id ? String(animal.dam_id) : "");
     setAnimalSireId(animal?.sire_id ? String(animal.sire_id) : "");
-  }, [animal?.dam_id, animal?.sire_id, animal?.id]);
+    if (animal?.id) {
+      lastAnimalParentSignature.current = JSON.stringify({
+        herd_id: animal.herd_id === null || animal.herd_id === undefined ? null : animal.herd_id,
+        name: animal.name || "",
+        species: animal.species || "",
+        sex: animal.sex || "",
+        birthdate: animal.birthdate ? formatDate(animal.birthdate) : null,
+        age: animal.age ?? "",
+        comments: animal.comments || "",
+        weight: animal.weight || "",
+        behavior: animal.behavior || "",
+        tag_id: animal.tag_id || "",
+        image_url: animal.image_url || null,
+        status: animal.status || "active",
+        deceased_date: animal.deceased_date ? formatDate(animal.deceased_date) : null,
+        deceased_notes: animal.deceased_notes || null,
+        dam_id: animal.dam_id || null,
+        sire_id: animal.sire_id || null,
+      });
+    }
+  }, [animal]);
 
   useEffect(() => {
     let cancelled = false;
@@ -153,6 +260,7 @@ export default function PremiumRecords({
           const reproData = Array.isArray(responses[0].data) ? responses[0].data : [];
           const birthsData = responses[1]?.data || {};
           setReproductions(reproData);
+          lastReproductionSignatures.current = new Map(reproData.map((record) => [record.id, JSON.stringify(getReproductionPayload(record))]));
           setBirthRecords({
             asOffspring: Array.isArray(birthsData.asOffspring) ? birthsData.asOffspring : [],
             asDam: Array.isArray(birthsData.asDam) ? birthsData.asDam : [],
@@ -163,6 +271,7 @@ export default function PremiumRecords({
           const financeData = Array.isArray(responses[0].data) ? responses[0].data : [];
           const vetData = Array.isArray(responses[1].data) ? responses[1].data : [];
           setFinanceRecords(financeData);
+          lastFinanceSignatures.current = new Map(financeData.map((record) => [record.id, JSON.stringify(getFinancePayload(record))]));
           setVetVisits(vetData);
           setSelectedFinance(financeData[0] || null);
         }
@@ -181,12 +290,58 @@ export default function PremiumRecords({
     };
   }, [animal?.id, isPremium, view]);
 
+  useEffect(() => () => {
+    if (saveStatusTimer.current) clearTimeout(saveStatusTimer.current);
+  }, []);
+
+  const markSaved = () => {
+    setSaveStatus("saved");
+    if (saveStatusTimer.current) clearTimeout(saveStatusTimer.current);
+    saveStatusTimer.current = setTimeout(() => setSaveStatus("idle"), 1600);
+  };
+
+  const saveBadgeText = saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Auto-saves on blur";
+
   if (!isPremium) {
     return <PremiumLocked label={view === "reproduction" ? "Reproduction records" : "Finance records"} />;
   }
 
+  if (loading) {
+    return <PremiumRecordsSkeleton view={view} />;
+  }
+
+  function getReproductionPayload(record) {
+    return {
+      dam_id: record.dam_id || null,
+      sire_id: record.sire_id || null,
+      breeding_date: record.breeding_date || null,
+      due_date: record.due_date || null,
+      outcome: record.outcome || "Planned",
+      breeding_method: record.breeding_method || "",
+      pregnancy_check_date: record.pregnancy_check_date || null,
+      pregnancy_status: record.pregnancy_status || "",
+      birth_date: record.birth_date || null,
+      offspring_count: record.offspring_count || null,
+      birth_outcome: record.birth_outcome || "",
+      notes: record.notes || "",
+    };
+  }
+
+  function getFinancePayload(record) {
+    return {
+      record_date: record.record_date || null,
+      category: record.category || "Expense",
+      amount: record.amount || 0,
+      vendor: record.vendor || "",
+      notes: record.notes || "",
+    };
+  }
+
   const addReproduction = async () => {
+    if (addingReproduction) return;
+
     try {
+      setAddingReproduction(true);
       const breedingDate = today();
       const animalRole = getSexRole(animal);
       const res = await reproductionsAPI.createReproduction({
@@ -203,45 +358,42 @@ export default function PremiumRecords({
         birth_outcome: "",
         notes: "",
       });
+      lastReproductionSignatures.current.set(res.data.id, JSON.stringify(getReproductionPayload(res.data)));
       setReproductions((current) => [res.data, ...current]);
       setSelectedReproduction(res.data);
       toast.success("Reproduction record created.");
     } catch (err) {
       console.error(err);
       toast.error("Failed to create reproduction record.");
+    } finally {
+      setAddingReproduction(false);
     }
   };
 
   const saveReproduction = async () => {
     if (!selectedReproduction?.id) return;
+    const payload = getReproductionPayload(selectedReproduction);
+    const signature = JSON.stringify(payload);
+    if (signature === lastReproductionSignatures.current.get(selectedReproduction.id)) return;
+
     try {
-      const payload = {
-        dam_id: selectedReproduction.dam_id || null,
-        sire_id: selectedReproduction.sire_id || null,
-        breeding_date: selectedReproduction.breeding_date || null,
-        due_date: selectedReproduction.due_date || null,
-        outcome: selectedReproduction.outcome || "Planned",
-        breeding_method: selectedReproduction.breeding_method || "",
-        pregnancy_check_date: selectedReproduction.pregnancy_check_date || null,
-        pregnancy_status: selectedReproduction.pregnancy_status || "",
-        birth_date: selectedReproduction.birth_date || null,
-        offspring_count: selectedReproduction.offspring_count || null,
-        birth_outcome: selectedReproduction.birth_outcome || "",
-        notes: selectedReproduction.notes || "",
-      };
+      setSaveStatus("saving");
       const res = await reproductionsAPI.updateReproduction(selectedReproduction.id, payload);
+      lastReproductionSignatures.current.set(res.data.id, JSON.stringify(getReproductionPayload(res.data)));
       setSelectedReproduction(res.data);
       setReproductions((current) => current.map((record) => (record.id === res.data.id ? res.data : record)));
-      toast.success("Reproduction saved.");
+      markSaved();
     } catch (err) {
+      setSaveStatus("idle");
       console.error(err);
       toast.error("Failed to save reproduction record.");
     }
   };
 
   const deleteReproduction = async () => {
-    if (!selectedReproduction?.id) return;
+    if (!selectedReproduction?.id || deletingReproduction) return;
     try {
+      setDeletingReproduction(true);
       await reproductionsAPI.deleteReproduction(selectedReproduction.id);
       setReproductions((current) => current.filter((record) => record.id !== selectedReproduction.id));
       setSelectedReproduction(null);
@@ -249,11 +401,16 @@ export default function PremiumRecords({
     } catch (err) {
       console.error(err);
       toast.error("Failed to delete reproduction record.");
+    } finally {
+      setDeletingReproduction(false);
     }
   };
 
   const addFinance = async () => {
+    if (addingFinance) return;
+
     try {
+      setAddingFinance(true);
       const res = await premiumRecordsAPI.createFinanceRecord({
         animal_id: animal.id,
         record_date: today(),
@@ -262,31 +419,42 @@ export default function PremiumRecords({
         vendor: "",
         notes: "",
       });
+      lastFinanceSignatures.current.set(res.data.id, JSON.stringify(getFinancePayload(res.data)));
       setFinanceRecords((current) => [res.data, ...current]);
       setSelectedFinance(res.data);
       toast.success("Finance record created.");
     } catch (err) {
       console.error(err);
       toast.error("Failed to create finance record.");
+    } finally {
+      setAddingFinance(false);
     }
   };
 
   const saveFinance = async () => {
     if (!selectedFinance?.id) return;
+    const payload = getFinancePayload(selectedFinance);
+    const signature = JSON.stringify(payload);
+    if (signature === lastFinanceSignatures.current.get(selectedFinance.id)) return;
+
     try {
-      const res = await premiumRecordsAPI.updateFinanceRecord(selectedFinance.id, selectedFinance);
+      setSaveStatus("saving");
+      const res = await premiumRecordsAPI.updateFinanceRecord(selectedFinance.id, payload);
+      lastFinanceSignatures.current.set(res.data.id, JSON.stringify(getFinancePayload(res.data)));
       setSelectedFinance(res.data);
       setFinanceRecords((current) => current.map((record) => (record.id === res.data.id ? res.data : record)));
-      toast.success("Finance saved.");
+      markSaved();
     } catch (err) {
+      setSaveStatus("idle");
       console.error(err);
       toast.error("Failed to save finance record.");
     }
   };
 
   const deleteFinance = async () => {
-    if (!selectedFinance?.id) return;
+    if (!selectedFinance?.id || deletingFinance) return;
     try {
+      setDeletingFinance(true);
       await premiumRecordsAPI.deleteFinanceRecord(selectedFinance.id);
       setFinanceRecords((current) => current.filter((record) => record.id !== selectedFinance.id));
       setSelectedFinance(null);
@@ -294,6 +462,8 @@ export default function PremiumRecords({
     } catch (err) {
       console.error(err);
       toast.error("Failed to delete finance record.");
+    } finally {
+      setDeletingFinance(false);
     }
   };
 
@@ -369,22 +539,29 @@ export default function PremiumRecords({
         dam_id: animalDamId || null,
         sire_id: animalSireId || null,
       };
+      const signature = JSON.stringify(payload);
+      if (signature === lastAnimalParentSignature.current) return;
+
+      setSaveStatus("saving");
       const res = await updateAnimal(payload, animal.id);
+      lastAnimalParentSignature.current = signature;
       onAnimalSaved?.(res.data);
-      toast.success("Animal parents saved.");
+      markSaved();
     } catch (err) {
+      setSaveStatus("idle");
       console.error(err);
       toast.error("Failed to save animal parents.");
     }
   };
   const addOffspring = async () => {
-    if (!selectedReproduction?.id) return;
+    if (!selectedReproduction?.id || addingOffspring) return;
 
     const birthDate = formatDate(selectedReproduction.birth_date) || formatDate(selectedReproduction.due_date) || today();
     const species = selectedDam?.species || selectedSire?.species || animal.species || "";
     const offspringName = newOffspring.name.trim() || "New offspring";
 
     try {
+      setAddingOffspring(true);
       const animalRes = await createAnimal({
         herd_id: animal.herd_id === null || animal.herd_id === undefined ? null : animal.herd_id,
         name: offspringName,
@@ -449,13 +626,22 @@ export default function PremiumRecords({
     } catch (err) {
       console.error(err);
       toast.error("Failed to add offspring.");
+    } finally {
+      setAddingOffspring(false);
     }
   };
   const removeLinkedOffspring = async (birth) => {
-    if (!birth?.id) return;
+    if (!birth?.id || removingOffspringId) return;
 
     try {
-      await birthsAPI.deleteBirth(birth.id);
+      setRemovingOffspringId(birth.id);
+      if (birth.offspring_id) {
+        await deleteAnimal(birth.offspring_id);
+        onAnimalDeleted?.(birth.offspring_id);
+      } else {
+        await birthsAPI.deleteBirth(birth.id);
+      }
+
       await refreshBirthRecords();
 
       const nextCount = Math.max(0, Number.parseInt(selectedReproduction.offspring_count, 10) || 0) - 1;
@@ -480,10 +666,12 @@ export default function PremiumRecords({
       });
       setSelectedReproduction(res.data);
       setReproductions((current) => current.map((record) => (record.id === res.data.id ? res.data : record)));
-      toast.success("Offspring link removed.");
+      toast.success(birth.offspring_id ? "Offspring animal deleted." : "Stale offspring link removed.");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to remove offspring link.");
+      toast.error("Failed to remove offspring.");
+    } finally {
+      setRemovingOffspringId(null);
     }
   };
   const estimateDueDate = () => {
@@ -510,11 +698,20 @@ export default function PremiumRecords({
             </div>
           </div>
           <div className="flex flex-col gap-2 rounded-2xl border border-gray-700 bg-gray-900 p-5 sm:min-w-56">
-            <button onClick={addReproduction} className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-500">
-              Add breeding
+            <button
+              onClick={addReproduction}
+              disabled={addingReproduction}
+              className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60"
+            >
+              {addingReproduction ? "Adding..." : "Add breeding"}
             </button>
-            <button type="button" onClick={onExportAnimal} className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-500">
-              Export Animal
+            <button
+              type="button"
+              onClick={onExportAnimal}
+              disabled={exportLoading}
+              className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60"
+            >
+              {exportLoading ? "Preparing..." : "Export Animal"}
             </button>
           </div>
         </section>
@@ -569,28 +766,24 @@ export default function PremiumRecords({
                 <p className="text-sm text-gray-400">{reproductions.length} record{reproductions.length === 1 ? "" : "s"}</p>
               </div>
             </div>
-            {loading ? (
-              <div className="rounded-xl border border-gray-700 bg-gray-900 p-4 text-sm text-gray-400">Loading...</div>
-            ) : (
-              <RecordList
-                title="Reproduction timeline"
-                items={reproductions}
-                empty="No reproduction records yet."
-                selectedId={selectedReproduction?.id}
-                onSelect={setSelectedReproduction}
-                renderMeta={(record) => (
-                  <>
-                    <p className="font-semibold text-white">{record.outcome || "Breeding"}</p>
-                    <p className="mt-1 text-xs text-gray-400">
-                      {formatDate(record.breeding_date) || "No breeding date"} - due {formatDate(record.due_date) || "not set"}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Dam {getAnimalLabel(animals.find((item) => String(item.id) === String(record.dam_id)))} / Sire {getAnimalLabel(animals.find((item) => String(item.id) === String(record.sire_id)))}
-                    </p>
-                  </>
-                )}
-              />
-            )}
+            <RecordList
+              title="Reproduction timeline"
+              items={reproductions}
+              empty="No reproduction records yet."
+              selectedId={selectedReproduction?.id}
+              onSelect={setSelectedReproduction}
+              renderMeta={(record) => (
+                <>
+                  <p className="font-semibold text-white">{record.outcome || "Breeding"}</p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    {formatDate(record.breeding_date) || "No breeding date"} - due {formatDate(record.due_date) || "not set"}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Dam {getAnimalLabel(animals.find((item) => String(item.id) === String(record.dam_id)))} / Sire {getAnimalLabel(animals.find((item) => String(item.id) === String(record.sire_id)))}
+                  </p>
+                </>
+              )}
+            />
           </div>
 
           <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
@@ -737,12 +930,13 @@ export default function PremiumRecords({
                               <p className="font-semibold text-white">{birth.offspring_name || "Deleted offspring"}</p>
                               {!birth.offspring_id && <p className="mt-1 text-xs text-amber-200">Animal was deleted. Remove this stale link.</p>}
                             </div>
-                            <button
+                              <button
                               type="button"
                               onClick={() => removeLinkedOffspring(birth)}
-                              className="rounded-lg bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-500"
+                              disabled={removingOffspringId === birth.id}
+                              className="rounded-lg bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-60"
                             >
-                              Remove
+                              {removingOffspringId === birth.id ? (birth.offspring_id ? "Deleting..." : "Removing...") : birth.offspring_id ? "Delete animal" : "Remove link"}
                             </button>
                           </div>
                           <p className="mt-1 text-xs text-gray-400">
@@ -807,10 +1001,10 @@ export default function PremiumRecords({
                   <button
                     type="button"
                     onClick={addOffspring}
-                    disabled={!selectedReproduction.dam_id && !selectedReproduction.sire_id}
+                    disabled={addingOffspring || (!selectedReproduction.dam_id && !selectedReproduction.sire_id)}
                     className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Add linked offspring
+                    {addingOffspring ? "Adding..." : "Add linked offspring"}
                   </button>
                 </section>
 
@@ -820,8 +1014,16 @@ export default function PremiumRecords({
                 </section>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-lg bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-300">Auto-saves on blur</span>
-                  <button onClick={deleteReproduction} className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-500">Delete</button>
+                  <span className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+                    saveStatus === "saved" ? "bg-emerald-500/15 text-emerald-200" : "bg-gray-700 text-gray-300"
+                  }`}>{saveBadgeText}</span>
+                  <button
+                    onClick={deleteReproduction}
+                    disabled={deletingReproduction}
+                    className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {deletingReproduction ? "Deleting..." : "Delete"}
+                  </button>
                 </div>
               </div>
             )}
@@ -854,7 +1056,13 @@ export default function PremiumRecords({
         <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-lg font-semibold text-white">Finances</h3>
-            <button onClick={addFinance} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500">Add</button>
+            <button
+              onClick={addFinance}
+              disabled={addingFinance}
+              className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60"
+            >
+              {addingFinance ? "Adding..." : "Add"}
+            </button>
           </div>
           <RecordList title="Ledger" items={financeRecords} empty="No finance records yet." selectedId={selectedFinance?.id} onSelect={setSelectedFinance} renderMeta={(record) => (
             <>
@@ -873,8 +1081,16 @@ export default function PremiumRecords({
               <input value={selectedFinance.vendor || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, vendor: e.target.value })} onBlur={saveFinance} placeholder="Vendor or buyer" className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
               <textarea rows="3" value={selectedFinance.notes || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, notes: e.target.value })} onBlur={saveFinance} placeholder="Notes" className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
               <div className="flex items-center gap-2">
-                <span className="rounded-lg bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-300">Auto-saves on blur</span>
-                <button onClick={deleteFinance} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">Delete</button>
+                <span className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+                  saveStatus === "saved" ? "bg-emerald-500/15 text-emerald-200" : "bg-gray-700 text-gray-300"
+                }`}>{saveBadgeText}</span>
+                <button
+                  onClick={deleteFinance}
+                  disabled={deletingFinance}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {deletingFinance ? "Deleting..." : "Delete"}
+                </button>
               </div>
             </div>
           )}

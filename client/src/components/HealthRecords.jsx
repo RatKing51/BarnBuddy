@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import * as healthEventsAPI from "../api/healthEvents";
 import * as vaccinationsAPI from "../api/vaccinations";
@@ -133,9 +133,19 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
   const [birthNotes, setBirthNotes] = useState("");
   
   const [loading, setLoading] = useState(false);
-  const [savingBirth, setSavingBirth] = useState(false);
   const [savingEvent, setSavingEvent] = useState(null);
   const [savingVaccine, setSavingVaccine] = useState(null);
+  const [addingEvent, setAddingEvent] = useState(false);
+  const [deletingEvent, setDeletingEvent] = useState(null);
+  const [addingVaccine, setAddingVaccine] = useState(false);
+  const [deletingVaccine, setDeletingVaccine] = useState(null);
+  const [birthSaveStatus, setBirthSaveStatus] = useState("idle");
+  const [eventSaveStatus, setEventSaveStatus] = useState("idle");
+  const [vaccineSaveStatus, setVaccineSaveStatus] = useState("idle");
+  const lastBirthSignature = useRef("");
+  const lastEventSignatures = useRef(new Map());
+  const lastVaccineSignatures = useRef(new Map());
+  const saveStatusTimers = useRef({});
 
   // Helper to get today's date in YYYY-MM-DD format
   const getTodayDate = () => {
@@ -149,7 +159,19 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
     return "bg-emerald-500 text-white";
   };
 
-  const handleAddEvent = () => {
+  useEffect(() => () => {
+    Object.values(saveStatusTimers.current).forEach(clearTimeout);
+  }, []);
+
+  const markSaved = (key, setter) => {
+    setter("saved");
+    if (saveStatusTimers.current[key]) clearTimeout(saveStatusTimers.current[key]);
+    saveStatusTimers.current[key] = setTimeout(() => setter("idle"), 1600);
+  };
+
+  const handleAddEvent = async () => {
+    if (addingEvent) return;
+
     const newEvent = {
       date: getTodayDate(),
       type: "Checkup",
@@ -162,10 +184,17 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
     const updatedEvents = [...healthEvents, newEvent];
     setHealthEvents(updatedEvents);
     setSelectedEventIndex(updatedEvents.length - 1);
-    saveHealthEvent(updatedEvents.length - 1, newEvent);
+    setAddingEvent(true);
+    try {
+      await saveHealthEvent(updatedEvents.length - 1, newEvent);
+    } finally {
+      setAddingEvent(false);
+    }
   };
 
-  const handleAddVaccine = () => {
+  const handleAddVaccine = async () => {
+    if (addingVaccine) return;
+
     const newVaccine = {
       date: getTodayDate(),
       type: "Routine",
@@ -178,7 +207,12 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
     const updatedVaccinations = [...vaccinations, newVaccine];
     setVaccinations(updatedVaccinations);
     setSelectedVaccineIndex(updatedVaccinations.length - 1);
-    saveVaccination(updatedVaccinations.length - 1, newVaccine);
+    setAddingVaccine(true);
+    try {
+      await saveVaccination(updatedVaccinations.length - 1, newVaccine);
+    } finally {
+      setAddingVaccine(false);
+    }
   };
 
   const handleDeleteEvent = (idx) => {
@@ -232,6 +266,16 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
         
         setHealthEvents(transformedEvents);
         setVaccinations(transformedVaccinations);
+        lastBirthSignature.current = JSON.stringify({
+          birth_weight: animal.birth_weight || null,
+          birth_notes: animal.birth_notes || "",
+        });
+        lastEventSignatures.current = new Map(
+          transformedEvents.filter((event) => event.id).map((event) => [event.id, JSON.stringify(getHealthEventPayload(event))])
+        );
+        lastVaccineSignatures.current = new Map(
+          transformedVaccinations.filter((vaccine) => vaccine.id).map((vaccine) => [vaccine.id, JSON.stringify(getVaccinationPayload(vaccine))])
+        );
       } catch (err) {
         console.error("Error fetching health data:", err);
       } finally {
@@ -244,21 +288,46 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
 
   if (loading) return <HealthRecordsSkeleton />;
 
+  function getHealthEventPayload(event) {
+    return {
+      event_date: event.date || null,
+      type: event.type,
+      description: event.description,
+      severity: event.severity,
+      resolved: event.resolved,
+      notes: event.notes
+    };
+  }
+
+  function getVaccinationPayload(vaccine) {
+    return {
+      vaccine_name: vaccine.type || "",
+      date_given: vaccine.date || null,
+      next_due_date: vaccine.completed ? null : vaccine.next_due_date || null,
+      dosage: vaccine.dosage || null,
+      notes: vaccine.notes
+    };
+  }
+
   const saveBirthData = async () => {
     if (!animal) return;
+
+    const payload = {
+      birth_weight: birthWeight || null,
+      birth_notes: birthNotes
+    };
+    const signature = JSON.stringify(payload);
+    if (signature === lastBirthSignature.current) return;
     
-    setSavingBirth(true);
+    setBirthSaveStatus("saving");
     try {
-      await birthDataAPI.updateBirthData(animal.id, {
-        birth_weight: birthWeight || null,
-        birth_notes: birthNotes
-      });
-      toast.success("Birth data saved");
+      await birthDataAPI.updateBirthData(animal.id, payload);
+      lastBirthSignature.current = signature;
+      markSaved("birth", setBirthSaveStatus);
     } catch (err) {
+      setBirthSaveStatus("idle");
       console.error("Error saving birth data:", err);
       toast.error("Failed to save birth data");
-    } finally {
-      setSavingBirth(false);
     }
   };
 
@@ -267,46 +336,49 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
     const updated = [...healthEvents];
     const event = eventData || updated[idx];
     if (!event) return;
-    
-    console.log("Saving health event:", event);
+
+    const payload = getHealthEventPayload(event);
+    const signature = JSON.stringify(payload);
+    if (event.id && signature === lastEventSignatures.current.get(event.id)) return;
     
     setSavingEvent(idx);
+    setEventSaveStatus("saving");
     try {
       if (event.id) {
-        // Update existing
-        console.log("Updating event ID:", event.id);
-        await healthEventsAPI.updateHealthEvent(event.id, {
-          event_date: event.date || null,
-          type: event.type,
-          description: event.description,
-          severity: event.severity,
-          resolved: event.resolved,
-          notes: event.notes
-        });
-        toast.success("Health event saved");
+        const res = await healthEventsAPI.updateHealthEvent(event.id, payload);
+        lastEventSignatures.current.set(event.id, signature);
+        const savedEvent = {
+          ...event,
+          id: res.data.id,
+          date: res.data.event_date ? res.data.event_date.slice(0, 10) : "",
+          type: res.data.type || "",
+          severity: res.data.severity || "",
+          description: res.data.description || "",
+          resolved: res.data.resolved || false,
+          notes: res.data.notes || ""
+        };
+        updated[idx] = savedEvent;
+        setHealthEvents(updated);
       } else {
-        // Create new
         if (!event.date || !event.type) {
           toast.error("Date and type are required");
           setSavingEvent(null);
           return;
         }
-        console.log("Creating new event");
         const res = await healthEventsAPI.createHealthEvent({
           animal_id: animal.id,
+          ...payload,
           event_date: event.date,
-          type: event.type,
-          description: event.description,
-          severity: event.severity,
-          resolved: event.resolved,
-          notes: event.notes
         });
         
         updated[idx] = { ...event, id: res.data.id };
+        lastEventSignatures.current.set(res.data.id, JSON.stringify(getHealthEventPayload(updated[idx])));
         setHealthEvents(updated);
         toast.success("Health event created");
       }
+      markSaved("event", setEventSaveStatus);
     } catch (err) {
+      setEventSaveStatus("idle");
       console.error("Error saving health event:", err);
       toast.error("Failed to save health event: " + (err.response?.data?.error || err.message));
     } finally {
@@ -315,6 +387,8 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
   };
 
   const deleteHealthEventAPI = async (idx) => {
+    if (deletingEvent !== null) return;
+
     const event = healthEvents[idx];
     if (!event.id) {
       handleDeleteEvent(idx);
@@ -322,12 +396,15 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
     }
     
     try {
+      setDeletingEvent(idx);
       await healthEventsAPI.deleteHealthEvent(event.id);
       handleDeleteEvent(idx);
       toast.success("Health event deleted");
     } catch (err) {
       console.error("Error deleting health event:", err);
       toast.error("Failed to delete health event");
+    } finally {
+      setDeletingEvent(null);
     }
   };
 
@@ -336,55 +413,63 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
     const updated = [...vaccinations];
     const vaccine = vaccineData || updated[idx];
     if (!vaccine) return;
-    
-    console.log("Saving vaccination:", vaccine);
+
+    const payload = getVaccinationPayload(vaccine);
+    const signature = JSON.stringify(payload);
+    if (vaccine.id && signature === lastVaccineSignatures.current.get(vaccine.id)) return;
     
     setSavingVaccine(idx);
+    setVaccineSaveStatus("saving");
     try {
       if (vaccine.id) {
-        // Update existing
-        console.log("Updating vaccine ID:", vaccine.id);
-        await vaccinationsAPI.updateVaccination(vaccine.id, {
-          vaccine_name: vaccine.type || "",
-          date_given: vaccine.date || null,
-          next_due_date: vaccine.completed ? null : vaccine.next_due_date || null,
-          dosage: vaccine.dosage || null,
-          notes: vaccine.notes
-        });
-        toast.success("Vaccination saved");
-        if (onVaccinationUpdate) onVaccinationUpdate();
+        const res = await vaccinationsAPI.updateVaccination(vaccine.id, payload);
+        const savedVaccine = {
+          ...vaccine,
+          id: res.data.id,
+          date: res.data.date_given ? res.data.date_given.slice(0, 10) : "",
+          type: res.data.vaccine_name || "",
+          notes: res.data.notes || "",
+          next_due_date: res.data.next_due_date ? res.data.next_due_date.slice(0, 10) : "",
+          dosage: res.data.dosage || "",
+          completed: !res.data.next_due_date
+        };
+        updated[idx] = savedVaccine;
+        lastVaccineSignatures.current.set(res.data.id, JSON.stringify(getVaccinationPayload(savedVaccine)));
+        setVaccinations(updated);
+        onVaccinationUpdate?.();
       } else {
-        // Create new
         if (!vaccine.date || !vaccine.type) {
           toast.error("Date and vaccine type are required");
           setSavingVaccine(null);
           return;
         }
-        console.log("Creating new vaccination");
         const res = await vaccinationsAPI.createVaccination({
           animal_id: animal.id,
+          ...payload,
           vaccine_name: vaccine.type,
           date_given: vaccine.date,
-          next_due_date: vaccine.completed ? null : vaccine.next_due_date || null,
-          dosage: vaccine.dosage || null,
-          notes: vaccine.notes
         });
         
         updated[idx] = { ...vaccine, id: res.data.id };
+        lastVaccineSignatures.current.set(res.data.id, JSON.stringify(getVaccinationPayload(updated[idx])));
         setVaccinations(updated);
         toast.success("Vaccination created");
+        onVaccinationUpdate?.();
       }
+      markSaved("vaccine", setVaccineSaveStatus);
     } catch (err) {
+      setVaccineSaveStatus("idle");
       console.error("Error saving vaccination:", err);
       toast.error("Failed to save vaccination: " + (err.response?.data?.error || err.message));
     } finally {
       setSavingVaccine(null);
     }
 
-    if (onVaccinationUpdate) onVaccinationUpdate();
   };
 
   const deleteVaccinationAPI = async (idx) => {
+    if (deletingVaccine !== null) return;
+
     const vaccine = vaccinations[idx];
     if (!vaccine.id) {
       handleDeleteVaccine(idx);
@@ -393,6 +478,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
     }
     
     try {
+      setDeletingVaccine(idx);
       await vaccinationsAPI.deleteVaccination(vaccine.id);
       handleDeleteVaccine(idx);
       toast.success("Vaccination deleted");
@@ -400,6 +486,8 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
     } catch (err) {
       console.error("Error deleting vaccination:", err);
       toast.error("Failed to delete vaccination");
+    } finally {
+      setDeletingVaccine(null);
     }
   }
 
@@ -414,9 +502,10 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
 
           <button
             onClick={handleAddEvent}
-            className="cursor-pointer bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium"
+            disabled={addingEvent}
+            className="cursor-pointer bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium disabled:cursor-wait disabled:opacity-60"
           >
-            + Add Event
+            {addingEvent ? "Adding..." : "+ Add Event"}
           </button>
         </div>
 
@@ -475,14 +564,21 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <h3 className="text-gray-100 font-semibold">Event Details</h3>
-                    <p className="text-xs text-gray-500">Save updates when you're done editing.</p>
+                    <p className="text-xs text-gray-500">
+                      {savingEvent === selectedEventIndex || eventSaveStatus === "saving"
+                        ? "Saving..."
+                        : eventSaveStatus === "saved"
+                        ? "Saved"
+                        : "Saves changes when you leave a field."}
+                    </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => deleteHealthEventAPI(selectedEventIndex)}
-                    className="cursor-pointer rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-white hover:bg-red-500"
+                    disabled={deletingEvent === selectedEventIndex}
+                    className="cursor-pointer rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-60"
                   >
-                    Delete
+                    {deletingEvent === selectedEventIndex ? "Deleting..." : "Delete"}
                   </button>
                 </div>
 
@@ -598,9 +694,10 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
 
           <button
             onClick={handleAddVaccine}
-            className="cursor-pointer bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium"
+            disabled={addingVaccine}
+            className="cursor-pointer bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium disabled:cursor-wait disabled:opacity-60"
           >
-            + Add Vaccination
+            {addingVaccine ? "Adding..." : "+ Add Vaccination"}
           </button>
         </div>
 
@@ -655,14 +752,21 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <h3 className="text-gray-100 font-semibold">Vaccination Details</h3>
-                    <p className="text-xs text-gray-500">Save changes when you're done editing.</p>
+                    <p className="text-xs text-gray-500">
+                      {savingVaccine === selectedVaccineIndex || vaccineSaveStatus === "saving"
+                        ? "Saving..."
+                        : vaccineSaveStatus === "saved"
+                        ? "Saved"
+                        : "Saves changes when you leave a field."}
+                    </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => deleteVaccinationAPI(selectedVaccineIndex)}
-                    className="cursor-pointer rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-white hover:bg-red-500"
+                    disabled={deletingVaccine === selectedVaccineIndex}
+                    className="cursor-pointer rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-60"
                   >
-                    Delete
+                    {deletingVaccine === selectedVaccineIndex ? "Deleting..." : "Delete"}
                   </button>
                 </div>
 
@@ -770,7 +874,14 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
       {/* BIRTH INFO */}
       <div className="bg-gray-800 border border-gray-700 rounded-xl p-5 space-y-4">
 
-        <h2 className="text-gray-200 font-semibold">Birth Information</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-gray-200 font-semibold">Birth Information</h2>
+          {birthSaveStatus !== "idle" && (
+            <span className={`text-xs font-semibold ${birthSaveStatus === "saved" ? "text-emerald-300" : "text-blue-300"}`}>
+              {birthSaveStatus === "saved" ? "Saved" : "Saving..."}
+            </span>
+          )}
+        </div>
 
         <div>
           <label className="text-xs text-gray-400">Birth Date</label>

@@ -28,7 +28,7 @@ export default function TOSandPP() {
                 {/* Buttons */}
                 <div className="flex gap-4 mb-8">
                     <button
-                        onClick={() => setActiveTab('tos')}
+                        onClick={() => changeTab('tos')}
                         className={`px-5 py-3 rounded-md font-semibold transition-colors ${
                             activeTab === 'tos'
                                 ? 'bg-blue-500'
@@ -39,7 +39,7 @@ export default function TOSandPP() {
                     </button>
 
                     <button
-                        onClick={() => setActiveTab('pp')}
+                        onClick={() => changeTab('pp')}
                         className={`px-5 py-3 rounded-md font-semibold transition-colors ${
                             activeTab === 'pp'
                                 ? 'bg-blue-500'

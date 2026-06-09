@@ -38,6 +38,13 @@ router.get("/preferences", authMiddleware, async (req, res) => {
 
 router.patch("/preferences", authMiddleware, async (req, res) => {
     try {
+        if (req.body?.automaticReminders === true && !req.user.subscription?.isPremium) {
+            return res.status(403).json({
+                error: "Premium is required for automatic reminders.",
+                subscription: req.user.subscription || null,
+            });
+        }
+
         const preferences = await updateUserPreferences(req.user.id, req.body);
         res.json(preferences);
     } catch (err) {

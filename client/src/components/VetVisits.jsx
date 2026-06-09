@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { getVetVisitsForAnimal, createVetVisit, updateVetVisit, deleteVetVisit } from "../api/vetVisits";
 import { toast, ToastContainer } from "react-toastify";
 
@@ -84,12 +84,26 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingVisit, setDeletingVisit] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("idle");
+  const lastVisitSignatures = useRef(new Map());
+  const saveStatusTimer = useRef(null);
 
   useEffect(() => {
     if (animal?.id) {
       fetchVisits();
     }
   }, [animal]);
+
+  useEffect(() => () => {
+    if (saveStatusTimer.current) clearTimeout(saveStatusTimer.current);
+  }, []);
+
+  const markSaved = () => {
+    setSaveStatus("saved");
+    if (saveStatusTimer.current) clearTimeout(saveStatusTimer.current);
+    saveStatusTimer.current = setTimeout(() => setSaveStatus("idle"), 1600);
+  };
 
   const parseLocalDate = (value) => {
     if (!value) return null;
@@ -209,6 +223,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
 
       setVisits(sorted);
       setSelectedVisit(sorted[0] || emptyVisit(animal.id));
+      lastVisitSignatures.current = new Map(sorted.map((visit) => [visit.id, JSON.stringify(getVisitPayload(visit))]));
     } catch (error) {
       console.error("Error fetching vet visits:", error);
       toast.error("Failed to load vet visits. Please refresh the page.");
@@ -231,6 +246,12 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
     );
   };
 
+  const getVisitPayload = (visit) => ({
+    ...visit,
+    visit_date: visit.visit_date || null,
+    follow_up_date: visit.follow_up_date || null,
+  });
+
   const handleAddVisit = () => {
     setSelectedVisit(emptyVisit(animal.id));
   };
@@ -246,23 +267,31 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
   const saveVisit = async (visitToSave = selectedVisit) => {
     if (!visitToSave || (!visitToSave.id && !hasVisitData(visitToSave))) return;
 
+    const payload = getVisitPayload(visitToSave);
+    const signature = JSON.stringify(payload);
+    if (visitToSave.id && signature === lastVisitSignatures.current.get(visitToSave.id)) return;
+
     setSaving(true);
+    setSaveStatus("saving");
     try {
       if (visitToSave.id) {
-        const response = await updateVetVisit(visitToSave.id, visitToSave);
+        const response = await updateVetVisit(visitToSave.id, payload);
         const normalizedVisit = normalizeVisit(response.data);
+        lastVisitSignatures.current.set(normalizedVisit.id, JSON.stringify(getVisitPayload(normalizedVisit)));
         setVisits((current) => current.map((visit) => (visit.id === visitToSave.id ? normalizedVisit : visit)));
         setSelectedVisit(normalizedVisit);
-        toast.success("Vet visit updated.");
       } else {
-        const response = await createVetVisit(visitToSave);
+        const response = await createVetVisit(payload);
         const normalizedVisit = normalizeVisit(response.data);
+        lastVisitSignatures.current.set(normalizedVisit.id, JSON.stringify(getVisitPayload(normalizedVisit)));
         setVisits((current) => [normalizedVisit, ...current]);
         setSelectedVisit(normalizedVisit);
         toast.success("Vet visit added.");
       }
+      markSaved();
       onVetVisitUpdate?.();
     } catch (error) {
+      setSaveStatus("idle");
       console.error("Error saving vet visit:", error);
       toast.error("Failed to save vet visit. Please try again.");
     } finally {
@@ -275,7 +304,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
   };
 
   const handleDeleteVisit = async () => {
-    if (!selectedVisit) return;
+    if (!selectedVisit || deletingVisit) return;
 
     if (!selectedVisit.id) {
       setSelectedVisit(visits[0] || emptyVisit(animal.id));
@@ -283,6 +312,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
     }
 
     try {
+      setDeletingVisit(true);
       await deleteVetVisit(selectedVisit.id);
       const remainingVisits = visits.filter((visit) => visit.id !== selectedVisit.id);
       setVisits(remainingVisits);
@@ -292,6 +322,8 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
     } catch (error) {
       console.error("Error deleting vet visit:", error);
       toast.error("Failed to delete vet visit. Please try again.");
+    } finally {
+      setDeletingVisit(false);
     }
   };
 
@@ -457,13 +489,14 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
                 {selectedVisit?.id && (
                   <button
                     onClick={handleDeleteVisit}
-                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+                    disabled={deletingVisit}
+                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-60"
                   >
-                    Delete
+                    {deletingVisit ? "Deleting..." : "Delete"}
                   </button>
                 )}
                 <span className="rounded-lg bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-300">
-                  {saving ? "Saving..." : "Auto-saves"}
+                  {saving || saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Auto-saves"}
                 </span>
               </div>
             </div>

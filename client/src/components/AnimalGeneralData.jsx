@@ -1,11 +1,48 @@
 import { updateAnimal, deleteAnimal, uploadAnimalImage, removeAnimalImage } from "../api/animal";
 import * as vaccinationsAPI from "../api/vaccinations";
 import * as vetVisitsAPI from "../api/vetVisits";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 import { usePreferences } from "../context/PreferencesContext";
 import { API_URL } from "../config/env";
+import { SkeletonBlock } from "./LoadingSpinner";
+
+function AnimalGeneralDataSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" aria-busy="true">
+      <div className="space-y-4 rounded-2xl border border-gray-700 bg-gray-800 p-6">
+        <div className="flex items-center justify-between gap-3">
+          <SkeletonBlock className="h-5 w-28" />
+          <SkeletonBlock className="h-7 w-24" />
+        </div>
+        {[0, 1, 2, 3, 4, 5].map((item) => (
+          <div key={item}>
+            <SkeletonBlock className="mb-2 h-3 w-24" />
+            <SkeletonBlock className="h-10 w-full" />
+          </div>
+        ))}
+        <SkeletonBlock className="h-24 w-full" />
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-gray-700 bg-gray-800 p-6">
+        <div className="grid min-h-64 place-items-center rounded-xl border border-gray-700 bg-gray-900">
+          <SkeletonBlock className="h-40 w-40 rounded-full" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <SkeletonBlock className="h-10 w-full" />
+          <SkeletonBlock className="h-10 w-full" />
+        </div>
+        {[0, 1, 2].map((item) => (
+          <div key={item} className="rounded-xl border border-gray-700 bg-gray-900 p-4">
+            <SkeletonBlock className="h-4 w-32" />
+            <SkeletonBlock className="mt-3 h-3 w-full" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function AnimalGeneralData({
   animal,
@@ -35,8 +72,14 @@ export default function AnimalGeneralData({
   const [imageRefreshKey, setImageRefreshKey] = useState(0);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isRemovingImage, setIsRemovingImage] = useState(false);
+  const [isDeletingAnimal, setIsDeletingAnimal] = useState(false);
   const [upcomingVaccinations, setUpcomingVaccinations] = useState([]);
   const [upcomingVetVisitDates, setUpcomingVetVisitDates] = useState([]);
+  const [loadingVaccinationSummary, setLoadingVaccinationSummary] = useState(false);
+  const [loadingVetSummary, setLoadingVetSummary] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("idle");
+  const lastSavedAnimalSignature = useRef("");
+  const saveStatusTimer = useRef(null);
   const { authFetch } = useAuth();
   const { preferences } = usePreferences();
   const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
@@ -87,9 +130,34 @@ export default function AnimalGeneralData({
     setStatus(animal.status === "deceased" ? "deceased" : "active");
     setDeceasedDate(animal.deceased_date ? animal.deceased_date.slice(0, 10) : "");
     setDeceasedNotes(animal.deceased_notes || "");
+    lastSavedAnimalSignature.current = JSON.stringify({
+      herd_id: animal.herd_id === null || animal.herd_id === undefined ? null : String(animal.herd_id),
+      name: animal.name || "",
+      species: animal.species || "",
+      sex: animal.sex || "",
+      birthdate: animal.birthdate ? animal.birthdate.slice(0, 10) : "",
+      age: animal.birthdate ? calculateAge(animal.birthdate) : animal.age || "",
+      comments: animal.comments || "",
+      weight: animal.weight || "",
+      behavior: animal.behavior || "",
+      tag_id: animal.tag_id || "",
+      status: animal.status === "deceased" ? "deceased" : "active",
+      deceased_date: animal.status === "deceased" && animal.deceased_date ? animal.deceased_date.slice(0, 10) : null,
+      deceased_notes: animal.status === "deceased" ? animal.deceased_notes || null : null,
+    });
     // Image is now retrieved from database, use animal.id as a flag
     setImageUrl(animal.id ? `stored` : "");
   }, [animal]);
+
+  useEffect(() => () => {
+    if (saveStatusTimer.current) clearTimeout(saveStatusTimer.current);
+  }, []);
+
+  const markSaved = () => {
+    setSaveStatus("saved");
+    if (saveStatusTimer.current) clearTimeout(saveStatusTimer.current);
+    saveStatusTimer.current = setTimeout(() => setSaveStatus("idle"), 1600);
+  };
 
   // Load image from database when animal changes or after a new upload.
   useEffect(() => {
@@ -135,6 +203,7 @@ export default function AnimalGeneralData({
       }
 
       try {
+        setLoadingVaccinationSummary(true);
         const res = await vaccinationsAPI.getVaccinations(animal.id);
         const now = new Date();
 
@@ -172,6 +241,8 @@ export default function AnimalGeneralData({
       } catch (err) {
         console.error("Error loading upcoming vaccinations:", err);
         setUpcomingVaccinations([]);
+      } finally {
+        setLoadingVaccinationSummary(false);
       }
     };
 
@@ -186,6 +257,7 @@ export default function AnimalGeneralData({
       }
 
       try {
+        setLoadingVetSummary(true);
         const res = await vetVisitsAPI.getVetVisitsForAnimal(animal.id);
         const now = new Date();
         const today = new Date(now);
@@ -240,6 +312,8 @@ export default function AnimalGeneralData({
       } catch (err) {
         console.error("Error loading upcoming vet visits:", err);
         setUpcomingVetVisitDates([]);
+      } finally {
+        setLoadingVetSummary(false);
       }
     };
 
@@ -250,28 +324,34 @@ export default function AnimalGeneralData({
   async function saveAnimal(updatedData = {}) {
     if (!animal) return;
 
-    try {
-      const payload = {
-        herd_id: herdId === "unassigned" ? null : herdId,
-        name,
-        species,
-        sex,
-        birthdate: dob,
-        age,
-        comments: notes,
-        weight,
-        behavior,
-        tag_id: tag,
-        status,
-        deceased_date: status === "deceased" ? deceasedDate || null : null,
-        deceased_notes: status === "deceased" ? deceasedNotes : null,
-        ...updatedData, // merge in changes like herdId
-      };
+    const payload = {
+      herd_id: herdId === "unassigned" ? null : herdId,
+      name,
+      species,
+      sex,
+      birthdate: dob,
+      age,
+      comments: notes,
+      weight,
+      behavior,
+      tag_id: tag,
+      status,
+      deceased_date: status === "deceased" ? deceasedDate || null : null,
+      deceased_notes: status === "deceased" ? deceasedNotes || null : null,
+      ...updatedData,
+    };
+    const signature = JSON.stringify(payload);
 
+    if (signature === lastSavedAnimalSignature.current) return;
+
+    try {
+      setSaveStatus("saving");
       const res = await updateAnimal(payload, animalId);
+      lastSavedAnimalSignature.current = signature;
       onAnimalSaved?.(res.data || { ...animal, ...payload, id: animalId });
-      toast.success("Animal Data Saved!");
+      markSaved();
     } catch (err) {
+      setSaveStatus("idle");
       console.error("Failed to update animal:", err.response?.data || err.message);
       toast.error("Failed to save animal data!");
     }
@@ -397,7 +477,7 @@ export default function AnimalGeneralData({
   }
 
   async function handleDelete() {
-    if (!animal) return;
+    if (!animal || isDeletingAnimal) return;
 
     const confirmDelete = window.confirm(
       `Are you sure you want to delete ${animal.name}? This action cannot be undone!`
@@ -406,6 +486,7 @@ export default function AnimalGeneralData({
     if (!confirmDelete) return;
 
     try {
+      setIsDeletingAnimal(true);
       await deleteAnimal(animal.id);
 
       setSelectedAnimal(null);
@@ -428,14 +509,27 @@ export default function AnimalGeneralData({
     } catch (err) {
       console.error("Failed to delete animal:", err.response?.data || err.message);
       toast.error("Failed to delete animal!");
+    } finally {
+      setIsDeletingAnimal(false);
     }
+  }
+
+  if (!animal || (animal?.id && (loadingVaccinationSummary || loadingVetSummary))) {
+    return <AnimalGeneralDataSkeleton />;
   }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
       {/* Top Left - Basic Info */}
       <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-4">
-        <h3 className="text-gray-400 font-semibold mb-2">Basic Info</h3>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h3 className="text-gray-400 font-semibold">Basic Info</h3>
+          <span className={`rounded-lg px-3 py-1 text-xs font-semibold ${
+            saveStatus === "saved" ? "bg-emerald-500/15 text-emerald-200" : "bg-gray-700 text-gray-300"
+          }`}>
+            {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Auto-saves"}
+          </span>
+        </div>
         {primaryAnimalIdentifier === "tag" ? tagField : nameField}
 
         <div>
@@ -725,10 +819,11 @@ export default function AnimalGeneralData({
         <div className="border-t border-gray-700 pt-4">
           <label className="block text-gray-400 text-sm mb-1">Delete Animal</label>
           <button
-            className="w-full bg-red-500 text-gray-300 border-red-600 rounded-lg px-3 py-2 hover:bg-red-400 transition sm:w-auto"
+            className="w-full bg-red-500 text-gray-300 border-red-600 rounded-lg px-3 py-2 hover:bg-red-400 transition disabled:cursor-wait disabled:opacity-60 sm:w-auto"
             onClick={handleDelete}
+            disabled={isDeletingAnimal}
           >
-            Delete {animal.name}
+            {isDeletingAnimal ? "Deleting..." : `Delete ${animal.name}`}
           </button>
         </div>
       </div>

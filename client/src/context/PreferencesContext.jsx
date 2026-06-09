@@ -14,7 +14,7 @@ const preferenceDefaults = {
 const PreferencesContext = createContext(null);
 
 export function PreferencesProvider({ children }) {
-  const { user, loading, backendAuthLoading, authFetch } = useAuth();
+  const { user, loading, backendAuthLoading, backendPreferences, authFetch, subscription } = useAuth();
   const [preferences, setPreferences] = useState(preferenceDefaults);
   const [loadingPreferences, setLoadingPreferences] = useState(true);
   const [savingPreferences, setSavingPreferences] = useState(false);
@@ -39,11 +39,15 @@ export function PreferencesProvider({ children }) {
 
       try {
         setLoadingPreferences(true);
-        const res = await authFetch(`${API_URL}/auth/preferences`);
-        if (!res.ok) throw new Error("Failed to load preferences");
-        const data = await res.json();
+        const data = backendPreferences || (() => {
+          throw new Error("Failed to load preferences");
+        })();
         if (!cancelled) {
-          setPreferences({ ...preferenceDefaults, ...data });
+          setPreferences({
+            ...preferenceDefaults,
+            ...data,
+            automaticReminders: subscription.isPremium && Boolean(data.automaticReminders),
+          });
         }
       } catch (err) {
         console.error(err);
@@ -58,9 +62,13 @@ export function PreferencesProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [authFetch, backendAuthLoading, loading, user]);
+  }, [backendAuthLoading, backendPreferences, loading, subscription.isPremium, user]);
 
   const updatePreference = useCallback(async (field, value) => {
+    if (field === "automaticReminders" && value === true && !subscription.isPremium) {
+      return { ok: false, error: new Error("Premium is required for automatic reminders") };
+    }
+
     const nextPreferences = { ...preferences, [field]: value };
     setPreferences(nextPreferences);
 
@@ -73,7 +81,11 @@ export function PreferencesProvider({ children }) {
 
       if (!res.ok) throw new Error("Failed to save preferences");
       const saved = await res.json();
-      setPreferences({ ...preferenceDefaults, ...saved });
+      setPreferences({
+        ...preferenceDefaults,
+        ...saved,
+        automaticReminders: subscription.isPremium && Boolean(saved.automaticReminders),
+      });
       return { ok: true };
     } catch (err) {
       console.error(err);
@@ -82,7 +94,7 @@ export function PreferencesProvider({ children }) {
     } finally {
       setSavingPreferences(false);
     }
-  }, [authFetch, preferences]);
+  }, [authFetch, preferences, subscription.isPremium]);
 
   const value = useMemo(
     () => ({

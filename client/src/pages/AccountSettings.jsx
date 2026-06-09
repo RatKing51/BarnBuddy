@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserButton, useUser } from "@clerk/clerk-react";
 import { toast, ToastContainer } from "react-toastify";
@@ -26,12 +26,29 @@ export default function AccountSettings() {
   const [loadingReminders, setLoadingReminders] = useState(false);
   const [sendingReminderEmail, setSendingReminderEmail] = useState(false);
   const { preferences, loadingPreferences, savingPreferences, updatePreference } = usePreferences();
+  const [profileSaveStatus, setProfileSaveStatus] = useState("idle");
+  const lastProfileSignature = useRef("");
+  const profileSaveStatusTimer = useRef(null);
 
   useEffect(() => {
     if (!user) return;
     setFirstName(user.firstName || "");
     setLastName(user.lastName || "");
+    lastProfileSignature.current = JSON.stringify({
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+    });
   }, [user]);
+
+  useEffect(() => () => {
+    if (profileSaveStatusTimer.current) clearTimeout(profileSaveStatusTimer.current);
+  }, []);
+
+  const markProfileSaved = () => {
+    setProfileSaveStatus("saved");
+    if (profileSaveStatusTimer.current) clearTimeout(profileSaveStatusTimer.current);
+    profileSaveStatusTimer.current = setTimeout(() => setProfileSaveStatus("idle"), 1600);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -97,6 +114,7 @@ export default function AccountSettings() {
     if (!subscription.isPremium) {
       setReminderItems([]);
       setReminderWindow(null);
+      setReminderEmailEnabled(true);
       return;
     }
 
@@ -169,11 +187,17 @@ export default function AccountSettings() {
   const saveProfile = async () => {
     if (!user) return;
 
+    const signature = JSON.stringify({ firstName, lastName });
+    if (signature === lastProfileSignature.current) return;
+
     try {
       setSavingProfile(true);
+      setProfileSaveStatus("saving");
       await user.update({ firstName, lastName });
-      toast.success("Profile updated.");
+      lastProfileSignature.current = signature;
+      markProfileSaved();
     } catch (err) {
+      setProfileSaveStatus("idle");
       console.error(err);
       toast.error(err.errors?.[0]?.message || "Failed to update profile.");
     } finally {
@@ -351,7 +375,7 @@ export default function AccountSettings() {
                   <p className="text-sm text-gray-400">{user?.primaryEmailAddress?.emailAddress || "No email loaded"}</p>
                 </div>
                 <span className="rounded-full bg-gray-700 px-3 py-1 text-xs font-semibold text-gray-300">
-                  {savingProfile ? "Saving..." : "Auto-saves"}
+                  {savingProfile || profileSaveStatus === "saving" ? "Saving..." : profileSaveStatus === "saved" ? "Saved" : "Auto-saves"}
                 </span>
               </div>
             </section>
@@ -425,7 +449,7 @@ export default function AccountSettings() {
                 </div>
                 <input
                   type="checkbox"
-                  checked={Boolean(preferences.automaticReminders)}
+                  checked={subscription.isPremium && Boolean(preferences.automaticReminders)}
                   disabled={!subscription.isPremium || savingPreferences}
                   onChange={(e) => handlePreferenceChange("automaticReminders", e.target.checked)}
                   className="h-5 w-5 accent-blue-600 disabled:opacity-50"

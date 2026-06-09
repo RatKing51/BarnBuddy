@@ -18,6 +18,16 @@ export const deleteAnimal = (id) =>
 export const getAnimalsForHerd = (herdId) =>
     api.get(`/animals/herd/${herdId}`);
 
+export const getHerdCareSummary = (herdId, careWindowDays = 7) =>
+    api.get(`/animals/herd/${herdId}/care-summary`, {
+        params: { careWindowDays },
+    });
+
+export const getDashboardBootstrap = (careWindowDays = 7) =>
+    api.get("/animals/dashboard/bootstrap", {
+        params: { careWindowDays },
+    });
+
 export const getAnimalsUnassigned = () =>
     api.get("/animals/unassigned");
 

@@ -4,8 +4,16 @@ const env = require("../config/env");
 const { syncClerkWebhookUser } = require("../services/clerkUserSync");
 const { deleteUserDataByClerkUserId } = require("../services/deleteUserData");
 const { sendWelcomeEmail } = require("../services/emailService");
+const { downgradePremiumUserByClerkId } = require("../services/premiumDowngradeCleanup");
 
 const router = express.Router();
+const premiumPlanValues = new Set(["premium", "pro", "paid", "active"]);
+const downgradeBillingEvents = new Set([
+  "subscription.pastDue",
+  "subscriptionItem.canceled",
+  "subscriptionItem.ended",
+  "subscriptionItem.pastDue",
+]);
 
 function verifyClerkWebhook(req) {
   if (!env.clerk.webhookSigningSecret) {
@@ -48,6 +56,40 @@ function getPrimaryEmail(clerkUser) {
   );
 }
 
+function normalizeValue(value) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function getBillingPayerUserId(data = {}) {
+  return (
+    data.payer?.user_id ||
+    data.payer?.userId ||
+    data.user_id ||
+    data.userId ||
+    data.subscription?.payer?.user_id ||
+    data.subscription?.payer?.userId ||
+    null
+  );
+}
+
+function getPlanSlugs(data = {}) {
+  return [
+    data.plan?.slug,
+    data.plan_slug,
+    data.planSlug,
+    ...(Array.isArray(data.items) ? data.items.map((item) => item?.plan?.slug) : []),
+  ]
+    .map(normalizeValue)
+    .filter(Boolean);
+}
+
+function isPremiumBillingEvent(data = {}) {
+  const planSlugs = getPlanSlugs(data);
+
+  if (planSlugs.length === 0) return true;
+  return planSlugs.some((slug) => slug !== "free" && premiumPlanValues.has(slug));
+}
+
 router.post("/", async (req, res) => {
   let event;
 
@@ -74,6 +116,20 @@ router.post("/", async (req, res) => {
 
     if (event.type === "user.deleted" && event.data?.id) {
       await deleteUserDataByClerkUserId(event.data.id);
+    }
+
+    if (downgradeBillingEvents.has(event.type) && isPremiumBillingEvent(event.data)) {
+      const clerkUserId = getBillingPayerUserId(event.data);
+      const status = event.type.split(".")[1] || "free";
+
+      if (!clerkUserId) {
+        console.warn("Clerk billing downgrade webhook did not include a user payer.", {
+          eventType: event.type,
+          eventId: event.id,
+        });
+      } else {
+        await downgradePremiumUserByClerkId(clerkUserId, status);
+      }
     }
 
     return res.json({ received: true });

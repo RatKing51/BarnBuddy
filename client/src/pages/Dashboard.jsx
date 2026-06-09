@@ -8,10 +8,11 @@ import VetVisits from "../components/VetVisits";
 import { useNavigate } from "react-router-dom";
 import {
   createAnimal,
+  getDashboardBootstrap,
   getAnimalsForHerd,
   getAnimalsUnassigned,
+  getHerdCareSummary,
 } from "../api/animal";
-import { getHerdsForUser } from "../api/herd";
 import * as healthEventsAPI from "../api/healthEvents";
 import * as premiumRecordsAPI from "../api/premiumRecords";
 import * as reproductionsAPI from "../api/reproductions";
@@ -21,6 +22,14 @@ import { toast } from "react-toastify";
 import { UserButton, useUser } from "@clerk/clerk-react";
 import { usePreferences } from "../context/PreferencesContext";
 import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";
+
+const getAnimalCareSignature = (items) =>
+  items
+    .map((animal) => `${animal.id}:${animal.status || "active"}:${animal.deceased_date || ""}`)
+    .join("|");
+
+const getCareSummaryKey = (herd, items, careWindow, refreshKey) =>
+  `${herd?.id || "none"}:${careWindow}:${refreshKey}:${getAnimalCareSignature(items)}`;
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("general");
@@ -55,6 +64,8 @@ export default function Dashboard() {
   const { user } = useUser();
   const { preferences } = usePreferences();
   const { subscription } = useBarnBuddyAuth();
+  const loadedHerdIdRef = React.useRef(null);
+  const loadedCareSummaryKeyRef = React.useRef("");
   const navigate = useNavigate();
   const isCompact = preferences.dashboardDensity === "compact";
   const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
@@ -95,48 +106,63 @@ export default function Dashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  // Load herds once on mount
+  const applyCareSummary = (careSummary = {}) => {
+    setAnimalUrgencies(careSummary.animalUrgencies || {});
+    setVaccinationsDue(Number(careSummary.vaccinationsDue) || 0);
+    setVaccinationsDueSoon(Number(careSummary.vaccinationsDueSoon) || 0);
+    setUpcomingVetVisits(Number(careSummary.upcomingVetVisits) || 0);
+  };
+
+  // Load dashboard startup data in one API call.
   useEffect(() => {
-    async function loadHerds() {
+    let cancelled = false;
+
+    async function loadDashboardBootstrap() {
       try {
         setLoadingHerds(true);
-        const [herdsRes, unassignedRes] = await Promise.all([
-          getHerdsForUser(),
-          getAnimalsUnassigned(),
-        ]);
-        const loadedHerds = Array.isArray(herdsRes.data) ? herdsRes.data : [];
-        const unassignedAnimals = Array.isArray(unassignedRes.data) ? unassignedRes.data : [];
+        setLoadingAnimals(true);
+        const res = await getDashboardBootstrap(Number(preferences.careWindow) || 7);
+        if (cancelled) return;
+
+        const loadedHerds = Array.isArray(res.data?.herds) ? res.data.herds : [];
+        const loadedAnimals = Array.isArray(res.data?.animals) ? res.data.animals : [];
+        const nextSelectedHerd = res.data?.selectedHerd || null;
+
+        loadedHerdIdRef.current = nextSelectedHerd?.id || null;
+        loadedCareSummaryKeyRef.current = getCareSummaryKey(
+          nextSelectedHerd,
+          loadedAnimals,
+          preferences.careWindow,
+          0
+        );
         setHerds(loadedHerds);
-        setHasUnassignedAnimals(unassignedAnimals.length > 0);
-
-        // Default herd selection
-        setSelectedHerd((prev) => {
-          if (prev) {
-            if (prev.id === "unassigned" && unassignedAnimals.length === 0 && loadedHerds.length > 0) {
-              return loadedHerds[0];
-            }
-            return prev;
-          }
-
-          if (loadedHerds.length > 0) return loadedHerds[0];
-          if (unassignedAnimals.length > 0) return { id: "unassigned", name: "Unassigned" };
-          return null;
-        });
+        setAnimals(loadedAnimals);
+        setHasUnassignedAnimals(Boolean(res.data?.hasUnassignedAnimals));
+        setSelectedHerd(nextSelectedHerd);
+        applyCareSummary(res.data?.careSummary);
       } catch (err) {
         console.error(err);
-        toast.error("Failed to load herds");
+        toast.error("Failed to load dashboard data");
       } finally {
-        setLoadingHerds(false);
+        if (!cancelled) {
+          setLoadingHerds(false);
+          setLoadingAnimals(false);
+        }
       }
     }
 
-    loadHerds();
-  }, []);
+    loadDashboardBootstrap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [preferences.careWindow]);
 
   // Load animals when the herd changes. Individual edits patch local state below.
   useEffect(() => {
     async function loadAnimals() {
       if (!selectedHerd) return;
+      if (loadedHerdIdRef.current === selectedHerd.id) return;
 
       try {
         setLoadingAnimals(true);
@@ -149,6 +175,7 @@ export default function Dashboard() {
           const res = await getAnimalsForHerd(selectedHerd.id);
           animalsData = Array.isArray(res.data) ? res.data : [];
         }
+        loadedHerdIdRef.current = selectedHerd.id;
         setAnimals(animalsData);
       } catch (err) {
         console.error(err.response?.data || err.message);
@@ -165,108 +192,41 @@ export default function Dashboard() {
     setSelectedAnimal(null);
   }, [selectedHerd]);
 
-  const animalCareSignature = animals
-    .map((animal) => `${animal.id}:${animal.status || "active"}:${animal.deceased_date || ""}`)
-    .join("|");
+  const animalCareSignature = getAnimalCareSignature(animals);
 
-  // Fetch and calculate herd-wide vaccination dues and urgency per animal
+  // Load herd-wide care status in one request instead of per-animal vaccination/vet calls.
   useEffect(() => {
     const computeHerdStatus = async () => {
       const herdAnimals = Array.isArray(animals) ? animals : [];
-      if (herdAnimals.length === 0) {
+      if (!selectedHerd || herdAnimals.length === 0) {
         setVaccinationsDue(0);
+        setVaccinationsDueSoon(0);
         setAnimalUrgencies({});
         setUpcomingVetVisits(0);
         return;
       }
 
-      let herdDueCount = 0;
-      let herdDueSoonCount = 0;
-      let vetVisitsCount = 0;
-      const urgencies = {};
-      const now = new Date();
-      const careWindowDays = Number(preferences.careWindow) || 7;
-      const soonThreshold = new Date(now.getTime() + careWindowDays * 24 * 60 * 60 * 1000);
+      try {
+        const careWindowDays = Number(preferences.careWindow) || 7;
+        const careSummaryKey = getCareSummaryKey(selectedHerd, herdAnimals, preferences.careWindow, vaccinationRefresh);
+        if (loadedCareSummaryKeyRef.current === careSummaryKey) return;
 
-      await Promise.all(
-        herdAnimals.map(async (animal) => {
-          if (animal.status === "deceased") {
-            urgencies[animal.id] = "deceased";
-            return;
-          }
-
-          let hasOverdue = false;
-          let hasSoon = false;
-
-          // Check vaccinations
-          try {
-            const res = await vaccinationsAPI.getVaccinations(animal.id);
-            const vaccinations = res.data || [];
-
-            vaccinations.forEach((vac) => {
-              if (vac.next_due_date) {
-                const dueDate = new Date(vac.next_due_date);
-                if (dueDate < now) {
-                  hasOverdue = true;
-                  herdDueCount += 1;
-                } else if (dueDate <= soonThreshold) {
-                  hasSoon = true;
-                  herdDueCount += 1;
-                  herdDueSoonCount += 1;
-                }
-              }
-            });
-          } catch (err) {
-            console.error(`Error fetching vaccinations for animal ${animal.id}:`, err);
-          }
-
-          // Check vet visits
-          try {
-            const res = await vetVisitsAPI.getVetVisitsForAnimal(animal.id);
-            const vetVisits = res.data || [];
-
-            vetVisits.forEach((visit) => {
-              const visitDate = new Date(visit.visit_date);
-              const followUpDate = visit.follow_up_date ? new Date(visit.follow_up_date) : null;
-              const visitDone = visit.completed || visit.visit_completed;
-              const followUpDone = visit.completed || visit.follow_up_completed;
-              const isVisitOverdue = visitDate < now && !visitDone;
-              const isFollowUpOverdue = followUpDate && followUpDate < now && !followUpDone;
-
-              if (isVisitOverdue || isFollowUpOverdue) {
-                hasOverdue = true;
-              }
-
-              if (!visitDone && visitDate >= now && visitDate <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)) {
-                vetVisitsCount += 1;
-                if (visitDate <= soonThreshold) {
-                  hasSoon = true;
-                }
-              }
-
-              if (!followUpDone && followUpDate && followUpDate >= now && followUpDate <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)) {
-                vetVisitsCount += 1;
-                if (followUpDate <= soonThreshold) {
-                  hasSoon = true;
-                }
-              }
-            });
-          } catch (err) {
-            console.error(`Error fetching vet visits for animal ${animal.id}:`, err);
-          }
-
-          urgencies[animal.id] = hasOverdue ? "red" : hasSoon ? "yellow" : "green";
-        })
-      );
-
-      setAnimalUrgencies(urgencies);
-      setVaccinationsDue(herdDueCount);
-      setVaccinationsDueSoon(herdDueSoonCount);
-      setUpcomingVetVisits(vetVisitsCount);
+        const res = await getHerdCareSummary(selectedHerd.id, careWindowDays);
+        loadedCareSummaryKeyRef.current = careSummaryKey;
+        applyCareSummary(res.data || {});
+      } catch (err) {
+        console.error("Error fetching herd care summary:", err);
+        setAnimalUrgencies(
+          Object.fromEntries(herdAnimals.map((animal) => [animal.id, animal.status === "deceased" ? "deceased" : "green"]))
+        );
+        setVaccinationsDue(0);
+        setVaccinationsDueSoon(0);
+        setUpcomingVetVisits(0);
+      }
     };
 
     computeHerdStatus();
-  }, [animalCareSignature, vaccinationRefresh, preferences.careWindow]);
+  }, [animalCareSignature, selectedHerd, vaccinationRefresh, preferences.careWindow, animals]);
 
   const totalAnimals = animals.length;
   const activeAnimals = animals.filter((animal) => animal.status !== "deceased");
@@ -817,7 +777,9 @@ export default function Dashboard() {
                     animals={animals}
                     isPremium={subscription.isPremium}
                     onExportAnimal={handleExportAnimalPdf}
+                    exportLoading={exportLoading}
                     onAnimalSaved={handleAnimalSaved}
+                    onAnimalDeleted={handleAnimalDeleted}
                     view="reproduction"
                   />
                 )}
@@ -827,6 +789,7 @@ export default function Dashboard() {
                     animals={animals}
                     isPremium={subscription.isPremium}
                     onExportAnimal={handleExportAnimalPdf}
+                    exportLoading={exportLoading}
                     view="finance"
                   />
                 )}

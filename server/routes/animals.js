@@ -10,6 +10,141 @@ const normalizeAnimalStatus = (status) => {
     return "active";
 };
 
+async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
+    const animalFilter =
+        herdId === "unassigned"
+            ? "a.herd_id IS NULL AND a.user_id = $1"
+            : "a.herd_id = $2 AND a.user_id = $1";
+    const params = herdId === "unassigned" ? [userId] : [userId, herdId];
+
+    const animalResult = await pool.query(
+        `SELECT a.id, a.status, a.deceased_date
+         FROM animals a
+         WHERE ${animalFilter}`,
+        params
+    );
+    const animalIds = animalResult.rows.map((animal) => animal.id);
+
+    if (animalIds.length === 0) {
+        return {
+            vaccinationsDue: 0,
+            vaccinationsDueSoon: 0,
+            upcomingVetVisits: 0,
+            animalUrgencies: {},
+        };
+    }
+
+    const vaccinationResult = await pool.query(
+        `SELECT v.animal_id, v.next_due_date
+         FROM vaccinations v
+         JOIN animals a ON v.animal_id = a.id
+         WHERE a.user_id = $1
+           AND v.animal_id = ANY($2::int[])
+           AND v.next_due_date IS NOT NULL`,
+        [userId, animalIds]
+    );
+
+    const vetVisitResult = await pool.query(
+        `SELECT vv.animal_id,
+                vv.visit_date,
+                vv.follow_up_date,
+                COALESCE(vv.completed, false) AS completed,
+                COALESCE(vv.visit_completed, false) AS visit_completed,
+                COALESCE(vv.follow_up_completed, false) AS follow_up_completed
+         FROM vet_visits vv
+         JOIN animals a ON vv.animal_id = a.id
+         WHERE a.user_id = $1
+           AND vv.animal_id = ANY($2::int[])`,
+        [userId, animalIds]
+    );
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const soonThreshold = new Date(today.getTime() + careWindowDays * 24 * 60 * 60 * 1000);
+    const vetUpcomingThreshold = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const animalStates = new Map(
+        animalResult.rows.map((animal) => [
+            animal.id,
+            {
+                hasOverdue: false,
+                hasSoon: false,
+                urgency: animal.status === "deceased" ? "deceased" : "green",
+            },
+        ])
+    );
+    let vaccinationsDue = 0;
+    let vaccinationsDueSoon = 0;
+    let upcomingVetVisits = 0;
+
+    const parseDate = (value) => {
+        if (!value) return null;
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? null : date;
+    };
+
+    vaccinationResult.rows.forEach((vaccination) => {
+        const state = animalStates.get(vaccination.animal_id);
+        if (!state || state.urgency === "deceased") return;
+
+        const dueDate = parseDate(vaccination.next_due_date);
+        if (!dueDate) return;
+
+        if (dueDate < today) {
+            state.hasOverdue = true;
+            vaccinationsDue += 1;
+        } else if (dueDate <= soonThreshold) {
+            state.hasSoon = true;
+            vaccinationsDue += 1;
+            vaccinationsDueSoon += 1;
+        }
+    });
+
+    vetVisitResult.rows.forEach((visit) => {
+        const state = animalStates.get(visit.animal_id);
+        if (!state || state.urgency === "deceased") return;
+
+        const visitDate = parseDate(visit.visit_date);
+        const followUpDate = parseDate(visit.follow_up_date);
+        const visitDone = visit.completed || visit.visit_completed;
+        const followUpDone = visit.completed || visit.follow_up_completed;
+
+        if (visitDate && visitDate < today && !visitDone) {
+            state.hasOverdue = true;
+        }
+
+        if (followUpDate && followUpDate < today && !followUpDone) {
+            state.hasOverdue = true;
+        }
+
+        if (!visitDone && visitDate && visitDate >= today && visitDate <= vetUpcomingThreshold) {
+            upcomingVetVisits += 1;
+            if (visitDate <= soonThreshold) state.hasSoon = true;
+        }
+
+        if (!followUpDone && followUpDate && followUpDate >= today && followUpDate <= vetUpcomingThreshold) {
+            upcomingVetVisits += 1;
+            if (followUpDate <= soonThreshold) state.hasSoon = true;
+        }
+    });
+
+    const animalUrgencies = {};
+    animalStates.forEach((state, animalId) => {
+        animalUrgencies[animalId] =
+            state.urgency === "deceased" ? "deceased" : state.hasOverdue ? "red" : state.hasSoon ? "yellow" : "green";
+    });
+
+    return {
+        vaccinationsDue,
+        vaccinationsDueSoon,
+        upcomingVetVisits,
+        animalUrgencies,
+    };
+}
+
+function normalizeCareWindowDays(value) {
+    return Math.max(1, Math.min(Number.parseInt(value, 10) || 7, 90));
+}
+
 // Get unassigned animals
 router.get("/unassigned", authMiddleware, async (req, res) => {
     try {
@@ -22,6 +157,51 @@ router.get("/unassigned", authMiddleware, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Failed to get animals that are unassigned" });
+    }
+});
+
+router.get("/dashboard/bootstrap", authMiddleware, async (req, res) => {
+    const careWindowDays = normalizeCareWindowDays(req.query.careWindowDays);
+
+    try {
+        const [herdsResult, unassignedCountResult] = await Promise.all([
+            pool.query("SELECT * FROM herds WHERE user_id = $1 ORDER BY name ASC", [req.user.id]),
+            pool.query("SELECT COUNT(*)::int AS count FROM animals WHERE herd_id IS NULL AND user_id = $1", [req.user.id]),
+        ]);
+        const herds = herdsResult.rows;
+        const hasUnassignedAnimals = Number(unassignedCountResult.rows[0]?.count) > 0;
+        const selectedHerd = herds[0] || (hasUnassignedAnimals ? { id: "unassigned", name: "Unassigned" } : null);
+
+        if (!selectedHerd) {
+            return res.json({
+                herds,
+                hasUnassignedAnimals,
+                selectedHerd: null,
+                animals: [],
+                careSummary: {
+                    vaccinationsDue: 0,
+                    vaccinationsDueSoon: 0,
+                    upcomingVetVisits: 0,
+                    animalUrgencies: {},
+                },
+            });
+        }
+
+        const animalsResult = selectedHerd.id === "unassigned"
+            ? await pool.query("SELECT * FROM animals WHERE herd_id IS NULL AND user_id = $1 ORDER BY name ASC", [req.user.id])
+            : await pool.query("SELECT * FROM animals WHERE herd_id = $1 AND user_id = $2 ORDER BY name ASC", [selectedHerd.id, req.user.id]);
+        const careSummary = await getHerdCareSummaryData(req.user.id, selectedHerd.id, careWindowDays);
+
+        res.json({
+            herds,
+            hasUnassignedAnimals,
+            selectedHerd,
+            animals: animalsResult.rows,
+            careSummary,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to load dashboard data" });
     }
 });
 
@@ -47,6 +227,18 @@ router.get("/herd/:herdId", authMiddleware, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Failed to get animals for herd" });
+    }
+});
+
+router.get("/herd/:herdId/care-summary", authMiddleware, async (req, res) => {
+    const { herdId } = req.params;
+    const careWindowDays = normalizeCareWindowDays(req.query.careWindowDays);
+
+    try {
+        res.json(await getHerdCareSummaryData(req.user.id, herdId, careWindowDays));
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to get herd care summary" });
     }
 });
 

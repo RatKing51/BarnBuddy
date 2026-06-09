@@ -9,6 +9,18 @@ function ensurePremiumSchema() {
   return ensurePremiumRecordSchema();
 }
 
+function requirePremium(req, res) {
+  if (!req.user.subscription?.isPremium) {
+    res.status(403).json({
+      error: "Premium is required for premium records.",
+      subscription: req.user.subscription || null,
+    });
+    return false;
+  }
+
+  return true;
+}
+
 async function userOwnsHerd(userId, herdId) {
   const result = await pool.query(
     "SELECT id FROM herds WHERE id = $1 AND user_id = $2",
@@ -28,6 +40,8 @@ async function userOwnsAnimal(userId, animalId) {
 }
 
 router.get("/finance/animal/:animalId", authMiddleware, async (req, res) => {
+  if (!requirePremium(req, res)) return;
+
   try {
     await ensurePremiumSchema();
     const { animalId } = req.params;
@@ -47,6 +61,8 @@ router.get("/finance/animal/:animalId", authMiddleware, async (req, res) => {
 });
 
 router.post("/finance", authMiddleware, async (req, res) => {
+  if (!requirePremium(req, res)) return;
+
   try {
     await ensurePremiumSchema();
     const { animal_id, record_date, category, amount, vendor, notes } = req.body;
@@ -68,6 +84,8 @@ router.post("/finance", authMiddleware, async (req, res) => {
 });
 
 router.put("/finance/:id", authMiddleware, async (req, res) => {
+  if (!requirePremium(req, res)) return;
+
   try {
     await ensurePremiumSchema();
     const { id } = req.params;
@@ -89,6 +107,8 @@ router.put("/finance/:id", authMiddleware, async (req, res) => {
 });
 
 router.delete("/finance/:id", authMiddleware, async (req, res) => {
+  if (!requirePremium(req, res)) return;
+
   try {
     await ensurePremiumSchema();
     const result = await pool.query(
@@ -105,6 +125,8 @@ router.delete("/finance/:id", authMiddleware, async (req, res) => {
 });
 
 router.get("/feed/animal/:animalId", authMiddleware, async (req, res) => {
+  if (!requirePremium(req, res)) return;
+
   try {
     await ensurePremiumSchema();
     const { animalId } = req.params;
@@ -124,6 +146,8 @@ router.get("/feed/animal/:animalId", authMiddleware, async (req, res) => {
 });
 
 router.get("/feed/herd/:herdId", authMiddleware, async (req, res) => {
+  if (!requirePremium(req, res)) return;
+
   try {
     await ensurePremiumSchema();
     const { herdId } = req.params;
@@ -143,6 +167,8 @@ router.get("/feed/herd/:herdId", authMiddleware, async (req, res) => {
 });
 
 router.get("/feed/unassigned", authMiddleware, async (req, res) => {
+  if (!requirePremium(req, res)) return;
+
   try {
     await ensurePremiumSchema();
     const result = await pool.query(
@@ -157,6 +183,8 @@ router.get("/feed/unassigned", authMiddleware, async (req, res) => {
 });
 
 router.post("/feed", authMiddleware, async (req, res) => {
+  if (!requirePremium(req, res)) return;
+
   try {
     await ensurePremiumSchema();
     const { animal_id, herd_id, record_date, feed_type, amount, unit, cost, next_purchase_date, notes } = req.body;
@@ -185,6 +213,8 @@ router.post("/feed", authMiddleware, async (req, res) => {
 });
 
 router.put("/feed/:id", authMiddleware, async (req, res) => {
+  if (!requirePremium(req, res)) return;
+
   try {
     await ensurePremiumSchema();
     const { id } = req.params;
@@ -211,6 +241,8 @@ router.put("/feed/:id", authMiddleware, async (req, res) => {
 });
 
 router.delete("/feed/:id", authMiddleware, async (req, res) => {
+  if (!requirePremium(req, res)) return;
+
   try {
     await ensurePremiumSchema();
     const result = await pool.query(

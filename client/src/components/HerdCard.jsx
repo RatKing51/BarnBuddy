@@ -6,18 +6,29 @@ export default function HerdCard({ herd, onRefresh }) {
   const [location, setLocation] = useState(herd.location || "");
   const [description, setDescription] = useState(herd.description || "");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function handleSave() {
+    if (saving) return;
     setSaving(true);
-    await updateHerd(herd.id, { name, location, description });
-    setSaving(false);
-    onRefresh();
+    try {
+      await updateHerd(herd.id, { name, location, description });
+      onRefresh();
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDelete() {
+    if (deleting) return;
     if (!window.confirm("Delete this herd? This cannot be undone.")) return;
-    await deleteHerd(herd.id);
-    onRefresh();
+    setDeleting(true);
+    try {
+      await deleteHerd(herd.id);
+      onRefresh();
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -46,16 +57,17 @@ export default function HerdCard({ herd, onRefresh }) {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-4 py-2 bg-blue-600 rounded-xl hover:bg-blue-500 disabled:opacity-50"
+          className="px-4 py-2 bg-blue-600 rounded-xl hover:bg-blue-500 disabled:cursor-wait disabled:opacity-50"
         >
-          Save
+          {saving ? "Saving..." : "Save"}
         </button>
 
         <button
           onClick={handleDelete}
-          className="px-4 py-2 bg-red-600 rounded-xl hover:bg-red-500"
+          disabled={deleting}
+          className="px-4 py-2 bg-red-600 rounded-xl hover:bg-red-500 disabled:cursor-wait disabled:opacity-50"
         >
-          Delete
+          {deleting ? "Deleting..." : "Delete"}
         </button>
       </div>
     </div>
