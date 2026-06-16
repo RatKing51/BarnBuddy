@@ -551,11 +551,40 @@ export default function Dashboard() {
     </tr>
   ));
 
+  const animalRecordTabs = [
+    { key: "general", label: "General" },
+    { key: "health", label: "Health" },
+    { key: "vet", label: "Vet" },
+    { key: "reproduction", label: "Repro" },
+    { key: "finance", label: "Money" },
+  ];
+
+  const setHerdFromValue = (value) => {
+    if (value === "unassigned") {
+      setSelectedHerd({ id: "unassigned", name: "Unassigned" });
+      return;
+    }
+
+    const herd = herds.find((h) => String(h.id) === value);
+    setSelectedHerd(herd);
+  };
+
+  const currentViewTitle = selectedAnimal
+    ? getAnimalPrimaryLabel(selectedAnimal)
+    : activeTab === "feed"
+    ? "Herd Feed"
+    : activeTab === "herd-finance"
+    ? "Herd Finances"
+    : "Farm Overview";
+
+  const currentViewSubtitle = selectedAnimal
+    ? `${selectedAnimal.species || "Animal"} - ${getAnimalSecondaryLabel(selectedAnimal)}`
+    : selectedHerd?.name || "Select a herd";
 
   return (
     <div className={`dashboard-page flex min-h-screen flex-col bg-gray-950 text-gray-100 md:h-screen md:flex-row md:overflow-hidden ${isCompact ? "dashboard-compact" : "dashboard-comfortable"}`}>
       {/* SIDEBAR */}
-      <aside className="w-full md:w-72 bg-gray-800 shadow-lg border-b md:border-b-0 md:border-r border-gray-700 flex flex-col flex-shrink-0 md:h-screen">
+      <aside className="hidden w-full flex-shrink-0 flex-col border-b border-gray-700 bg-gray-800 shadow-lg md:flex md:h-screen md:w-72 md:border-b-0 md:border-r">
         <div className="px-6 py-6 border-b border-gray-700">
           <button
             type="button"
@@ -573,15 +602,7 @@ export default function Dashboard() {
           <select
             value={selectedHerd ? selectedHerd.id : ""}
             disabled={loadingHerds}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (value === "unassigned") {
-                setSelectedHerd({ id: "unassigned", name: "Unassigned" });
-              } else {
-                const herd = herds.find((h) => String(h.id) === value);
-                setSelectedHerd(herd);
-              }
-            }}
+            onChange={(e) => setHerdFromValue(e.target.value)}
             className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-gray-100 outline-none cursor-pointer disabled:cursor-wait disabled:opacity-70"
           >
             <option value="" disabled>
@@ -695,9 +716,164 @@ export default function Dashboard() {
       </aside>
 
       {/* MAIN AREA */}
-      <main className={`dashboard-main flex-1 overflow-y-scroll bg-gray-950 ${isCompact ? "p-4 md:p-5" : "p-6 md:p-8"}`}>
+      <main className={`dashboard-main min-h-screen flex-1 overflow-y-auto bg-gray-950 pb-24 md:min-h-0 md:pb-0 ${isCompact ? "md:p-5" : "md:p-8"}`}>
+        {/* MOBILE APP HEADER */}
+        <section className="sticky top-0 z-30 border-b border-gray-800 bg-gray-950/95 px-3 pb-3 pt-3 shadow-lg shadow-black/20 backdrop-blur md:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              className="text-left text-xl font-bold tracking-tight"
+              aria-label="Go to BarnBuddy home"
+            >
+              <span className="text-blue-400">Barn</span>Buddy.
+            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleExportDashboardPdf}
+                disabled={exportLoading}
+                className="rounded-full border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+              >
+                {exportLoading ? "..." : "Export"}
+              </button>
+              <div className="rounded-full border border-gray-700 bg-gray-900 p-1">
+                <UserButton afterSignOutUrl="/" />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <div className="mb-2 flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-semibold text-white">{currentViewTitle}</h1>
+                <p className="truncate text-xs text-gray-400">{currentViewSubtitle}</p>
+              </div>
+              {selectedAnimal ? (
+                <button
+                  type="button"
+                  onClick={() => setSelectedAnimal(null)}
+                  className="shrink-0 rounded-full bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-200"
+                >
+                  Close
+                </button>
+              ) : (
+                <span className="shrink-0 rounded-full bg-blue-500/15 px-2.5 py-1 text-[11px] font-semibold text-blue-100">
+                  {subscription.planName}
+                </span>
+              )}
+            </div>
+            <select
+              value={selectedHerd ? selectedHerd.id : ""}
+              disabled={loadingHerds}
+              onChange={(e) => setHerdFromValue(e.target.value)}
+              className="w-full rounded-xl border border-gray-700 bg-gray-900 px-3 py-2.5 text-base text-gray-100 outline-none disabled:opacity-70"
+            >
+              <option value="" disabled>
+                {loadingHerds ? "Loading herds..." : "Select Herd"}
+              </option>
+              <option value="unassigned">Unassigned Animals</option>
+              {herds.map((herd) => (
+                <option key={herd.id} value={String(herd.id)}>
+                  {herd.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </section>
+
+        {!selectedAnimal && (
+        <section className="border-b border-gray-800 bg-gray-950 px-3 py-2 md:hidden">
+          <div className="grid grid-cols-4 gap-2">
+            <button
+              type="button"
+              onClick={handleFarmOverviewClick}
+              className={`rounded-xl px-2 py-2 text-xs font-semibold ${
+                !selectedAnimal && activeTab !== "feed" && activeTab !== "herd-finance"
+                  ? "bg-blue-600 text-white"
+                  : "border border-gray-700 bg-gray-900 text-gray-300"
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              type="button"
+              onClick={handleHerdFeedClick}
+              className={`rounded-xl px-2 py-2 text-xs font-semibold ${
+                !selectedAnimal && activeTab === "feed"
+                  ? "bg-blue-600 text-white"
+                  : "border border-gray-700 bg-gray-900 text-gray-300"
+              }`}
+            >
+              Feed
+            </button>
+            <button
+              type="button"
+              onClick={handleHerdFinanceClick}
+              className={`rounded-xl px-2 py-2 text-xs font-semibold ${
+                !selectedAnimal && activeTab === "herd-finance"
+                  ? "bg-blue-600 text-white"
+                  : "border border-gray-700 bg-gray-900 text-gray-300"
+              }`}
+            >
+              Finances
+            </button>
+            <button
+              type="button"
+              onClick={handleAddAnimal}
+              disabled={!selectedHerd || addingAnimal}
+              className="rounded-xl bg-emerald-500 px-2 py-2 text-xs font-semibold text-gray-950 disabled:opacity-60"
+            >
+              {addingAnimal ? "Adding" : "Add"}
+            </button>
+          </div>
+
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+            {loadingAnimals ? (
+              [0, 1, 2].map((item) => (
+                <div key={item} className="h-14 w-32 shrink-0 animate-pulse rounded-xl bg-gray-800" />
+              ))
+            ) : animals.length === 0 ? (
+              <div className="w-full rounded-xl border border-dashed border-gray-700 bg-gray-900 p-3 text-sm text-gray-400">
+                No animals in this herd yet.
+              </div>
+            ) : animals.map((animal) => {
+              const urgency = getAnimalStatus(animal);
+              return (
+                <button
+                  key={animal.id}
+                  type="button"
+                  onClick={() => handleSelectAnimal(animal)}
+                  className={`min-w-32 max-w-40 shrink-0 rounded-xl border p-2.5 text-left ${
+                    selectedAnimal?.id === animal.id
+                      ? "border-blue-400 bg-blue-600/25"
+                      : "border-gray-800 bg-gray-900"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full ${
+                        urgency === "red"
+                          ? "bg-red-400"
+                          : urgency === "yellow"
+                          ? "bg-yellow-300"
+                          : urgency === "deceased"
+                          ? "bg-gray-500"
+                          : "bg-emerald-400"
+                      }`}
+                    />
+                    <span className="truncate text-sm font-semibold text-white">{getAnimalPrimaryLabel(animal)}</span>
+                  </div>
+                  <p className="mt-1 truncate text-xs text-gray-400">{animal.species || "Unknown"} - {getAnimalSecondaryLabel(animal)}</p>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+        )}
+
         {/* HEADER */}
-        <header className={`flex flex-col sm:flex-row items-start sm:items-center justify-between ${isCompact ? "mb-4" : "mb-6"}`}>
+        <header className={`hidden flex-col sm:flex-row items-start sm:items-center justify-between md:flex ${isCompact ? "mb-4" : "mb-6"}`}>
           <div className="mb-4 sm:mb-0">
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-2xl font-semibold">Welcome back</h2>
@@ -739,7 +915,7 @@ export default function Dashboard() {
         </header>
 
         {/* QUICK STATS */}
-        <section className={`grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 ${isCompact ? "gap-3 mb-4" : "gap-4 mb-6"}`}>
+        <section className={`hidden grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 md:grid ${isCompact ? "gap-3 mb-4" : "gap-4 mb-6"}`}>
           {[
             { title: "Animals", value: animals.length },
             { title: "Active", value: totalActiveAnimals },
@@ -766,9 +942,9 @@ export default function Dashboard() {
         </section>
 
         {/* ANIMAL DATA */}
-        <div className="rounded-2xl border border-gray-800 bg-gray-900 shadow-md">
+        <div className="bg-gray-950 md:rounded-2xl md:border md:border-gray-800 md:bg-gray-900 md:shadow-md">
           {!selectedAnimal && activeTab === "feed" ? (
-            <div className="p-4 sm:p-6">
+            <div className="p-3 sm:p-6">
               <HerdFeedRecords
                 selectedHerd={selectedHerd}
                 isPremium={subscription.isPremium}
@@ -776,7 +952,7 @@ export default function Dashboard() {
               />
             </div>
           ) : !selectedAnimal && activeTab === "herd-finance" ? (
-            <div className="p-4 sm:p-6">
+            <div className="p-3 sm:p-6">
               <HerdFinanceRecords
                 selectedHerd={selectedHerd}
                 animals={animals}
@@ -806,28 +982,24 @@ export default function Dashboard() {
           ) : (
             <>
               {/* TABS */}
-              <div className="border-b border-gray-700 flex flex-wrap">
-                {["general", "health", "vet", "reproduction", "finance"].map((tab) => (
+              <div className="hidden border-b border-gray-700 md:flex md:flex-wrap">
+                {animalRecordTabs.map((tab) => (
                   <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
                     className={`flex-1 py-3 text-sm font-medium transition rounded-t-2xl ${
-                      activeTab === tab
+                      activeTab === tab.key
                         ? "bg-blue-600 text-white shadow-inner"
                         : "text-gray-400 hover:bg-gray-700"
                     }`}
                   >
-                    {tab === "general" && "General Data"}
-                    {tab === "health" && "Health Records"}
-                    {tab === "vet" && "Vet Visits"}
-                    {tab === "reproduction" && "Reproduction"}
-                    {tab === "finance" && "Finance"}
+                    {tab.label}
                   </button>
                 ))}
               </div>
 
               {/* TAB CONTENT */}
-              <div className="p-4 sm:p-6 text-gray-300 overflow-auto">
+              <div className="p-3 text-gray-300 sm:p-6 md:overflow-auto">
                 {activeTab === "general" && (
                   <AnimalGeneralData
                     animal={selectedAnimal}
@@ -867,6 +1039,69 @@ export default function Dashboard() {
             </>
           )}
         </div>
+        <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-800 bg-gray-950/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-2 shadow-[0_-16px_32px_rgba(0,0,0,0.35)] backdrop-blur md:hidden">
+          {selectedAnimal ? (
+            <div className="grid grid-cols-5 gap-1">
+              {animalRecordTabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`min-h-12 rounded-2xl px-1 text-[11px] font-semibold ${
+                    activeTab === tab.key ? "bg-blue-600 text-white" : "text-gray-400"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-5 gap-1">
+              <button
+                type="button"
+                onClick={handleFarmOverviewClick}
+                className={`min-h-12 rounded-2xl px-1 text-[11px] font-semibold ${
+                  activeTab !== "feed" && activeTab !== "herd-finance" ? "bg-blue-600 text-white" : "text-gray-400"
+                }`}
+              >
+                Home
+              </button>
+              <button
+                type="button"
+                onClick={handleHerdFeedClick}
+                className={`min-h-12 rounded-2xl px-1 text-[11px] font-semibold ${
+                  activeTab === "feed" ? "bg-blue-600 text-white" : "text-gray-400"
+                }`}
+              >
+                Feed
+              </button>
+              <button
+                type="button"
+                onClick={handleHerdFinanceClick}
+                className={`min-h-12 rounded-2xl px-1 text-[11px] font-semibold ${
+                  activeTab === "herd-finance" ? "bg-blue-600 text-white" : "text-gray-400"
+                }`}
+              >
+                Money
+              </button>
+              <button
+                type="button"
+                onClick={handleAddAnimal}
+                disabled={!selectedHerd || addingAnimal}
+                className="min-h-12 rounded-2xl px-1 text-[11px] font-semibold text-emerald-200 disabled:opacity-50"
+              >
+                Add
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/settings/account")}
+                className="min-h-12 rounded-2xl px-1 text-[11px] font-semibold text-gray-400"
+              >
+                Settings
+              </button>
+            </div>
+          )}
+        </nav>
       </main>
 
       <section id="dashboard-pdf" className="hidden">

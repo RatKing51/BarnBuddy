@@ -219,6 +219,88 @@ select {
   margin-top: 1rem;
 }
 
+@media (max-width: 767px) {
+  html,
+  body,
+  #root {
+    min-height: 100dvh;
+  }
+
+  .dashboard-page {
+    background:
+      radial-gradient(circle at 18% -8%, rgba(59, 130, 246, 0.14), transparent 16rem),
+      #030712;
+    min-height: 100dvh;
+  }
+
+  .dashboard-page .dashboard-main {
+    background: transparent !important;
+    overflow-x: hidden;
+  }
+
+  .dashboard-page *,
+  .dashboard-page *::before,
+  .dashboard-page *::after {
+    min-width: 0;
+  }
+
+  .dashboard-page p,
+  .dashboard-page h1,
+  .dashboard-page h2,
+  .dashboard-page h3,
+  .dashboard-page h4,
+  .dashboard-page span,
+  .dashboard-page button,
+  .dashboard-page label {
+    overflow-wrap: anywhere;
+  }
+
+  .dashboard-page .rounded-2xl {
+    border-radius: 1rem;
+  }
+
+  .dashboard-page input,
+  .dashboard-page select,
+  .dashboard-page textarea {
+    font-size: 16px;
+  }
+
+  .dashboard-page button,
+  .dashboard-page select,
+  .dashboard-page input {
+    min-height: 44px;
+  }
+
+  .dashboard-page textarea {
+    min-height: 96px;
+  }
+
+  .dashboard-page [class*="overflow-x-auto"],
+  .dashboard-page [class*="overflow-y-auto"] {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .dashboard-page [class*="overflow-x-auto"]::-webkit-scrollbar,
+  .dashboard-page [class*="overflow-y-auto"]::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dashboard-page table {
+    font-size: 13px;
+  }
+
+  .dashboard-page th,
+  .dashboard-page td {
+    white-space: nowrap;
+  }
+
+  .dashboard-page .shadow-md,
+  .dashboard-page .shadow-lg {
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22) !important;
+  }
+}
+
 @media print {
   @page {
     margin: 0.5in;

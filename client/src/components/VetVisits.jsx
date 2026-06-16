@@ -222,7 +222,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
       });
 
       setVisits(sorted);
-      setSelectedVisit(sorted[0] || emptyVisit(animal.id));
+      setSelectedVisit(sorted[0] || null);
       lastVisitSignatures.current = new Map(sorted.map((visit) => [visit.id, JSON.stringify(getVisitPayload(visit))]));
     } catch (error) {
       console.error("Error fetching vet visits:", error);
@@ -306,8 +306,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
     if (!selectedVisit || deletingVisit) return;
 
     if (!selectedVisit.id) {
-      setSelectedVisit(visits[0] || emptyVisit(animal.id));
-      toast.success("Vet visit deleted.");
+      setSelectedVisit(visits[0] || null);
       return;
     }
 
@@ -316,7 +315,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
       await deleteVetVisit(selectedVisit.id);
       const remainingVisits = visits.filter((visit) => visit.id !== selectedVisit.id);
       setVisits(remainingVisits);
-      setSelectedVisit(remainingVisits[0] || emptyVisit(animal.id));
+      setSelectedVisit(remainingVisits[0] || null);
       toast.success("Vet visit deleted.");
       onVetVisitUpdate?.();
     } catch (error) {
@@ -383,7 +382,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
               onClick={handleAddVisit}
               className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500"
             >
-              + Add
+              New visit
             </button>
           </div>
 
@@ -486,13 +485,21 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
                 </p>
               </div>
               <div className="flex gap-2">
-                {selectedVisit?.id && (
+                {selectedVisit?.id ? (
                   <button
                     onClick={handleDeleteVisit}
                     disabled={deletingVisit}
                     className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-60"
                   >
                     {deletingVisit ? "Deleting..." : "Delete"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedVisit(visits[0] || null)}
+                    className="rounded-lg border border-gray-600 bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-600"
+                  >
+                    Cancel
                   </button>
                 )}
                 <span className="rounded-lg bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-300">
@@ -614,15 +621,19 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
           </>
         ) : (
           <div className="flex min-h-96 flex-col items-center justify-center rounded-xl border border-dashed border-gray-600 p-8 text-center">
-            <h3 className="text-xl font-semibold text-white">No vet visit selected</h3>
+            <h3 className="text-xl font-semibold text-white">
+              {visits.length ? "Select a vet visit" : "No vet visits yet"}
+            </h3>
             <p className="mt-2 max-w-md text-sm text-gray-400">
-              Select a visit from the timeline or add a new one to start tracking care.
+              {visits.length
+                ? "Choose a visit from the timeline to edit it, or start a new visit record."
+                : "Create the first vet visit when you are ready to track care, costs, follow-ups, and notes."}
             </p>
             <button
               onClick={handleAddVisit}
               className="mt-5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
             >
-              Add first visit
+              {visits.length ? "New visit" : "Create first visit"}
             </button>
           </div>
         )}
