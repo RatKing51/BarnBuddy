@@ -1,6 +1,20 @@
 export const newsPosts = [
   // Add new posts at the top so the newest stories appear first.
   {
+    id: "weight-tracking",
+    title: "Weight Tracking Added for All Tiers",
+    date: "2026-06-18",
+    category: "Updates",
+    excerpt:
+      "Now track your animals weight from day to day, week to week, or however you please — all in one location!",
+    body:
+      "Weight tracking is now available for all BarnBuddy users. You can log animal weights as often as you need, whether that is daily, weekly, or whenever you check in. Each entry stays connected to the animal profile, making it easier to watch growth over time, compare progress, and keep better records in one place.",
+    image: "/weight-graph.png",
+    imageAlt: "BarnBuddy logo",
+    imageFit: "contain",
+    featured: true,
+  },
+  {
     id: "barnbuddy-record-keeping-launch",
     title: "BarnBuddy launches smarter record-keeping for small farms",
     date: "2026-05-24",
@@ -42,4 +56,5 @@ export const newsPosts = [
     imageFit: "contain",
     featured: false,
   },
+  
 ];
