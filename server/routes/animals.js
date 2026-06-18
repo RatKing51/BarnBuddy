@@ -145,6 +145,45 @@ function normalizeCareWindowDays(value) {
     return Math.max(1, Math.min(Number.parseInt(value, 10) || 7, 90));
 }
 
+function normalizeWeightUnit(unit) {
+    const allowedUnits = ["lb", "kg"];
+    return allowedUnits.includes(unit) ? unit : "lb";
+}
+
+function normalizeWeightValue(value) {
+    const number = Number.parseFloat(value);
+    if (!Number.isFinite(number) || number <= 0) return null;
+    return number.toFixed(2);
+}
+
+async function ensureAnimalOwner(animalId, userId) {
+    const result = await pool.query(
+        "SELECT id FROM animals WHERE id = $1 AND user_id = $2",
+        [animalId, userId]
+    );
+
+    return result.rows[0] || null;
+}
+
+async function syncAnimalCurrentWeight(animalId, userId) {
+    const latest = await pool.query(
+        `SELECT weight
+         FROM weight_records
+         WHERE animal_id = $1 AND user_id = $2
+         ORDER BY recorded_date DESC, created_at DESC, id DESC
+         LIMIT 1`,
+        [animalId, userId]
+    );
+
+    const latestWeight = latest.rows[0]?.weight || null;
+    const result = await pool.query(
+        "UPDATE animals SET weight = $1 WHERE id = $2 AND user_id = $3 RETURNING *",
+        [latestWeight, animalId, userId]
+    );
+
+    return result.rows[0] || null;
+}
+
 // Get unassigned animals
 router.get("/unassigned", authMiddleware, async (req, res) => {
     try {
@@ -239,6 +278,118 @@ router.get("/herd/:herdId/care-summary", authMiddleware, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Failed to get herd care summary" });
+    }
+});
+
+router.get("/:id/weight-records", authMiddleware, async (req, res) => {
+    try {
+        const animal = await ensureAnimalOwner(req.params.id, req.user.id);
+        if (!animal) return res.status(404).json({ error: "Animal not found" });
+
+        const result = await pool.query(
+            `SELECT *
+             FROM weight_records
+             WHERE animal_id = $1 AND user_id = $2
+             ORDER BY recorded_date ASC, created_at ASC, id ASC`,
+            [req.params.id, req.user.id]
+        );
+
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch weight records" });
+    }
+});
+
+router.post("/:id/weight-records", authMiddleware, async (req, res) => {
+    const weight = normalizeWeightValue(req.body.weight);
+    const unit = normalizeWeightUnit(req.body.unit);
+    const recordedDate = req.body.recorded_date || new Date().toISOString().slice(0, 10);
+    const notes = req.body.notes || "";
+
+    if (!weight) return res.status(400).json({ error: "A positive weight is required" });
+
+    try {
+        const animal = await ensureAnimalOwner(req.params.id, req.user.id);
+        if (!animal) return res.status(404).json({ error: "Animal not found" });
+
+        const result = await pool.query(
+            `INSERT INTO weight_records
+             (user_id, animal_id, recorded_date, weight, unit, notes)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING *`,
+            [req.user.id, req.params.id, recordedDate, weight, unit, notes]
+        );
+        const updatedAnimal = await syncAnimalCurrentWeight(req.params.id, req.user.id);
+
+        res.status(201).json({ record: result.rows[0], animal: updatedAnimal });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to create weight record" });
+    }
+});
+
+router.put("/:id/weight-records/:recordId", authMiddleware, async (req, res) => {
+    const weight = normalizeWeightValue(req.body.weight);
+    const unit = normalizeWeightUnit(req.body.unit);
+    const recordedDate = req.body.recorded_date || new Date().toISOString().slice(0, 10);
+    const notes = req.body.notes || "";
+
+    if (!weight) return res.status(400).json({ error: "A positive weight is required" });
+
+    try {
+        const result = await pool.query(
+            `UPDATE weight_records wr
+             SET recorded_date = $1,
+                 weight = $2,
+                 unit = $3,
+                 notes = $4,
+                 updated_at = CURRENT_TIMESTAMP
+             FROM animals a
+             WHERE wr.id = $5
+               AND wr.animal_id = a.id
+               AND wr.animal_id = $6
+               AND wr.user_id = $7
+               AND a.user_id = $7
+             RETURNING wr.*`,
+            [recordedDate, weight, unit, notes, req.params.recordId, req.params.id, req.user.id]
+        );
+
+        if (!result.rows.length) {
+            return res.status(404).json({ error: "Weight record not found" });
+        }
+
+        const updatedAnimal = await syncAnimalCurrentWeight(req.params.id, req.user.id);
+        res.json({ record: result.rows[0], animal: updatedAnimal });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to update weight record" });
+    }
+});
+
+router.delete("/:id/weight-records/:recordId", authMiddleware, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `DELETE FROM weight_records wr
+             USING animals a
+             WHERE wr.id = $1
+               AND wr.animal_id = a.id
+               AND wr.animal_id = $2
+               AND wr.user_id = $3
+               AND a.user_id = $3
+             RETURNING wr.id`,
+            [req.params.recordId, req.params.id, req.user.id]
+        );
+
+        if (!result.rows.length) {
+            return res.status(404).json({ error: "Weight record not found" });
+        }
+
+        const updatedAnimal = await syncAnimalCurrentWeight(req.params.id, req.user.id);
+        res.json({ message: "Weight record deleted", animal: updatedAnimal });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to delete weight record" });
     }
 });
 

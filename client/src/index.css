@@ -303,7 +303,8 @@ select {
 
 @media print {
   @page {
-    margin: 0.5in;
+    size: letter portrait;
+    margin: 0.45in;
   }
 
   html,
@@ -344,58 +345,74 @@ select {
     width: 100%;
     color: #111827;
     background: #ffffff;
-    font-family: Arial, sans-serif;
-    font-size: 11px;
-    line-height: 1.45;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+    line-height: 1.55;
   }
 
   #dashboard-pdf header {
-    margin-bottom: 20px;
-    border-bottom: 2px solid #1d4ed8;
-    padding-bottom: 12px;
+    margin-bottom: 18px;
+    border-bottom: 3px solid #2563eb;
+    padding-bottom: 14px;
   }
 
   #dashboard-pdf .report-eyebrow {
     color: #2563eb;
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    margin: 0 0 4px;
+    letter-spacing: 0.12em;
+    margin: 0 0 5px;
     text-transform: uppercase;
   }
 
   #dashboard-pdf h1 {
     margin: 4px 0;
     color: #0f172a;
-    font-size: 24px;
+    font-size: 26px;
     line-height: 1.2;
   }
 
+  #dashboard-pdf section {
+    break-inside: avoid;
+    border: 1px solid #dbe3ef;
+    border-radius: 10px;
+    margin: 0 0 14px;
+    padding: 12px;
+  }
+
   #dashboard-pdf h2 {
-    margin: 18px 0 8px;
-    color: #1e3a8a;
-    font-size: 15px;
+    border-bottom: 1px solid #e5e7eb;
+    color: #1d4ed8;
+    font-size: 15.5px;
+    line-height: 1.25;
+    margin: 0 0 10px;
+    padding-bottom: 7px;
   }
 
   #dashboard-pdf p {
-    margin: 0 0 8px;
+    margin: 0 0 9px;
   }
 
   #dashboard-pdf .report-metrics {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    gap: 9px;
     margin: 0;
   }
 
   #dashboard-pdf .report-metrics div {
-    border: 1px solid #d1d5db;
-    padding: 8px;
+    background: #f8fafc;
+    border: 1px solid #d9e2ee;
+    border-radius: 8px;
+    padding: 9px 10px;
   }
 
   #dashboard-pdf dt {
     color: #4b5563;
+    font-size: 10px;
     font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   #dashboard-pdf dd {
@@ -403,6 +420,7 @@ select {
     color: #111827;
     font-size: 18px;
     font-weight: 700;
+    line-height: 1.25;
   }
 
   #dashboard-pdf .report-chart-row {
@@ -426,14 +444,18 @@ select {
 
   #dashboard-pdf .report-chart-legend {
     display: grid;
-    gap: 6px;
+    gap: 7px;
   }
 
   #dashboard-pdf .report-chart-legend div {
     align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 7px;
     display: grid;
     gap: 8px;
     grid-template-columns: 12px minmax(0, 1fr) auto;
+    padding: 6px 8px;
   }
 
   #dashboard-pdf .report-chart-legend span {
@@ -451,33 +473,72 @@ select {
   }
 
   #dashboard-pdf table {
+    background: #ffffff;
+    border: 1px solid #d9e2ee;
+    border-radius: 8px;
+    border-spacing: 0;
+    border-collapse: separate;
     width: 100%;
-    border-collapse: collapse;
     break-inside: auto;
+    font-size: 10.5px;
+    line-height: 1.4;
+    overflow: hidden;
+  }
+
+  #dashboard-pdf thead {
+    display: table-header-group;
   }
 
   #dashboard-pdf tr {
     break-inside: avoid;
   }
 
+  #dashboard-pdf tbody tr:nth-child(even) {
+    background: #f8fafc;
+  }
+
   #dashboard-pdf th,
   #dashboard-pdf td {
-    border: 1px solid #d1d5db;
-    padding: 6px 8px;
+    border-bottom: 1px solid #e5e7eb;
+    border-right: 1px solid #e5e7eb;
+    padding: 7px 8px;
     text-align: left;
     vertical-align: top;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+
+  #dashboard-pdf th:last-child,
+  #dashboard-pdf td:last-child {
+    border-right: 0;
+  }
+
+  #dashboard-pdf tbody tr:last-child td {
+    border-bottom: 0;
   }
 
   #dashboard-pdf th {
-    background: #eff6ff;
+    background: #eaf2ff;
     color: #1e3a8a;
+    font-size: 10px;
     font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   #dashboard-pdf .report-two-col {
     display: grid;
     gap: 14px;
     grid-template-columns: 1fr 1fr;
+    border: 0;
+    padding: 0;
+  }
+
+  #dashboard-pdf .report-two-col > div {
+    border: 1px solid #dbe3ef;
+    border-radius: 10px;
+    padding: 12px;
   }
 
   #dashboard-pdf .report-amount {

@@ -247,15 +247,14 @@ export default function DashboardOverview({
 
   return (
     <div className="space-y-3 bg-gray-950 p-3 sm:p-6 md:space-y-6">
-      <section className="hidden flex-col gap-5 rounded-2xl border border-gray-800 bg-gray-900 p-4 sm:p-5 md:flex lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-blue-300">{selectedHerd?.name || "Herd"} dashboard</p>
-          <h2 className="mt-1 text-2xl font-semibold text-white">Animal operations at a glance</h2>
-          <p className="mt-2 hidden max-w-3xl text-sm leading-6 text-gray-400 sm:block">
-            Track health risk, species mix, weights, and animal records from one clean view.
-          </p>
+      <section className="hidden md:block">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-blue-300">{selectedHerd?.name || "Herd"}</p>
+            <h2 className="mt-1 text-2xl font-semibold text-white">Farm overview</h2>
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:w-[560px]">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           {kpis.map((item) => (
             <div key={item.label} className="rounded-xl border border-gray-800 bg-gray-950 px-4 py-3">
               <p className="text-xs uppercase tracking-[0.12em] text-gray-500">{item.label}</p>
@@ -266,35 +265,25 @@ export default function DashboardOverview({
         </div>
       </section>
 
-      <section className={`hidden rounded-2xl border p-4 sm:p-5 md:block ${
-        isPremium
-          ? "border-blue-400/30 bg-blue-500/10"
-          : "border-amber-300/30 bg-amber-400/10"
-      }`}>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isPremium ? "text-blue-300" : "text-amber-200"}`}>
-              Premium
-            </p>
-            <h3 className="mt-2 text-lg font-semibold text-white">
-              {isPremium ? "Premium dashboard tools are active" : "Premium dashboard tools"}
-            </h3>
-            <p className="mt-2 max-w-3xl text-sm text-gray-300">
-              {isPremium
-                ? "Use advanced exports, richer analytics, reminders, and planning tools as they roll into the dashboard."
-                : "Upgrade to unlock advanced exports, automatic reminders, and deeper herd planning views."}
-            </p>
-          </div>
-          {!isPremium && (
+      {!isPremium && (
+        <section className="hidden rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 sm:p-5 md:block">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-200">Premium</p>
+              <h3 className="mt-2 text-lg font-semibold text-white">Premium dashboard tools</h3>
+              <p className="mt-2 max-w-3xl text-sm text-gray-300">
+                Upgrade to unlock advanced exports, automatic reminders, and deeper herd planning views.
+              </p>
+            </div>
             <a
               href="/pricing"
               className="inline-flex items-center justify-center rounded-lg bg-amber-300 px-4 py-2 font-semibold text-gray-950 transition hover:bg-amber-200"
             >
               View Premium
             </a>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
       <section className="grid grid-cols-1 gap-3 md:gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="rounded-2xl border border-gray-800 bg-gray-900 p-3 sm:p-5">

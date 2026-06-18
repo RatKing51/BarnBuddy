@@ -38,6 +38,33 @@ async function ensureAnimalSchema() {
     SET status = 'active'
     WHERE status IS NULL OR status = '';
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS weight_records (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      animal_id INTEGER NOT NULL REFERENCES animals(id) ON DELETE CASCADE,
+      recorded_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      weight DECIMAL(10,2) NOT NULL,
+      unit TEXT NOT NULL DEFAULT 'lb',
+      notes TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    ALTER TABLE weight_records
+      ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      ADD COLUMN IF NOT EXISTS animal_id INTEGER REFERENCES animals(id) ON DELETE CASCADE,
+      ADD COLUMN IF NOT EXISTS recorded_date DATE DEFAULT CURRENT_DATE,
+      ADD COLUMN IF NOT EXISTS weight DECIMAL(10,2),
+      ADD COLUMN IF NOT EXISTS unit TEXT DEFAULT 'lb',
+      ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+    CREATE INDEX IF NOT EXISTS idx_weight_records_animal_date
+      ON weight_records (animal_id, recorded_date DESC, created_at DESC);
+  `);
 }
 
 module.exports = ensureAnimalSchema;

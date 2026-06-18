@@ -6,6 +6,7 @@ import HerdFeedRecords from "../components/HerdFeedRecords";
 import HerdFinanceRecords from "../components/HerdFinanceRecords";
 import PremiumRecords from "../components/PremiumRecords";
 import VetVisits from "../components/VetVisits";
+import WeightRecords from "../components/WeightRecords";
 import { useNavigate } from "react-router-dom";
 import {
   createAnimal,
@@ -553,9 +554,10 @@ export default function Dashboard() {
 
   const animalRecordTabs = [
     { key: "general", label: "General" },
+    { key: "weight", label: "Weight" },
     { key: "health", label: "Health" },
     { key: "vet", label: "Vet" },
-    { key: "reproduction", label: "Repro" },
+    { key: "reproduction", label: "Reproduction", compact: true },
     { key: "finance", label: "Money" },
   ];
 
@@ -757,11 +759,11 @@ export default function Dashboard() {
                 >
                   Close
                 </button>
-              ) : (
+              ) : !subscription.isPremium ? (
                 <span className="shrink-0 rounded-full bg-blue-500/15 px-2.5 py-1 text-[11px] font-semibold text-blue-100">
                   {subscription.planName}
                 </span>
-              )}
+              ) : null}
             </div>
             <select
               value={selectedHerd ? selectedHerd.id : ""}
@@ -877,13 +879,11 @@ export default function Dashboard() {
           <div className="mb-4 sm:mb-0">
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-2xl font-semibold">Welcome back</h2>
-              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                subscription.isPremium
-                  ? "bg-blue-500/20 text-blue-100 ring-1 ring-blue-300/30"
-                  : "bg-gray-800 text-gray-300 ring-1 ring-gray-700"
-              }`}>
-                {subscription.planName}
-              </span>
+              {!subscription.isPremium && (
+                <span className="rounded-full bg-gray-800 px-3 py-1 text-xs font-semibold text-gray-300 ring-1 ring-gray-700">
+                  {subscription.planName}
+                </span>
+              )}
             </div>
             <p className="text-gray-400">{dateTime}</p>
           </div>
@@ -987,11 +987,11 @@ export default function Dashboard() {
                   <button
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
-                    className={`flex-1 py-3 text-sm font-medium transition rounded-t-2xl ${
+                    className={`flex-1 py-3 font-medium transition rounded-t-2xl ${
                       activeTab === tab.key
                         ? "bg-blue-600 text-white shadow-inner"
                         : "text-gray-400 hover:bg-gray-700"
-                    }`}
+                    } ${tab.compact ? "text-xs" : "text-sm"}`}
                   >
                     {tab.label}
                   </button>
@@ -1012,6 +1012,12 @@ export default function Dashboard() {
                   />
                 )}
                 {activeTab === "health" && <HealthRecords animal={selectedAnimal} onVaccinationUpdate={() => setVaccinationRefresh(prev => prev + 1)} />}
+                {activeTab === "weight" && (
+                  <WeightRecords
+                    animal={selectedAnimal}
+                    onAnimalSaved={handleAnimalSaved}
+                  />
+                )}
                 {activeTab === "vet" && <VetVisits animal={selectedAnimal} onVetVisitUpdate={() => setVaccinationRefresh(prev => prev + 1)} />}
                 {activeTab === "reproduction" && (
                   <PremiumRecords
@@ -1041,15 +1047,15 @@ export default function Dashboard() {
         </div>
         <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-800 bg-gray-950/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-2 shadow-[0_-16px_32px_rgba(0,0,0,0.35)] backdrop-blur md:hidden">
           {selectedAnimal ? (
-            <div className="grid grid-cols-5 gap-1">
+            <div className="grid grid-cols-6 gap-1">
               {animalRecordTabs.map((tab) => (
                 <button
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
-                  className={`min-h-12 rounded-2xl px-1 text-[11px] font-semibold ${
+                  className={`min-h-12 rounded-2xl px-1 font-semibold ${
                     activeTab === tab.key ? "bg-blue-600 text-white" : "text-gray-400"
-                  }`}
+                  } ${tab.compact ? "text-[9px]" : "text-[11px]"}`}
                 >
                   {tab.label}
                 </button>
@@ -1107,7 +1113,7 @@ export default function Dashboard() {
       <section id="dashboard-pdf" className="hidden">
         <header>
           <p className="report-eyebrow">
-            {exportMode === "animal" ? "BarnBuddy Animal Report" : exportMode === "herd-finance" ? "BarnBuddy Premium Finance Report" : "BarnBuddy Farm Report"}
+            {exportMode === "animal" ? "BarnBuddy Animal Report" : exportMode === "herd-finance" ? "BarnBuddy Finance Report" : "BarnBuddy Farm Report"}
           </p>
           <h1>
             {exportMode === "animal"

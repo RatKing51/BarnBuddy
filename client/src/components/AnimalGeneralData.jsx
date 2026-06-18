@@ -1,6 +1,7 @@
 import { updateAnimal, deleteAnimal, uploadAnimalImage, removeAnimalImage } from "../api/animal";
 import * as vaccinationsAPI from "../api/vaccinations";
 import * as vetVisitsAPI from "../api/vetVisits";
+import { createWeightRecord } from "../api/weightRecords";
 import React, { useState, useEffect, useRef } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
@@ -79,6 +80,7 @@ export default function AnimalGeneralData({
   const [loadingVetSummary, setLoadingVetSummary] = useState(false);
   const [saveStatus, setSaveStatus] = useState("idle");
   const lastSavedAnimalSignature = useRef("");
+  const lastSavedAnimalData = useRef(null);
   const saveStatusTimer = useRef(null);
   const hydratedAnimalIdRef = useRef(null);
   const currentAnimalIdRef = useRef(null);
@@ -115,6 +117,16 @@ export default function AnimalGeneralData({
     return years;
   }
 
+  function hasWeightChanged(previousWeight, nextWeight) {
+    const previous = Number.parseFloat(previousWeight);
+    const next = Number.parseFloat(nextWeight);
+
+    if (!Number.isFinite(next) || next <= 0) return false;
+    if (!Number.isFinite(previous) || previous <= 0) return true;
+
+    return Math.abs(previous - next) >= 0.01;
+  }
+
 
   // Setting values when animal changes
   useEffect(() => {
@@ -137,7 +149,7 @@ export default function AnimalGeneralData({
     setStatus(animal.status === "deceased" ? "deceased" : "active");
     setDeceasedDate(animal.deceased_date ? animal.deceased_date.slice(0, 10) : "");
     setDeceasedNotes(animal.deceased_notes || "");
-    lastSavedAnimalSignature.current = JSON.stringify({
+    const savedAnimalData = {
       herd_id: animal.herd_id === null || animal.herd_id === undefined ? null : String(animal.herd_id),
       name: animal.name || "",
       species: animal.species || "",
@@ -151,7 +163,9 @@ export default function AnimalGeneralData({
       status: animal.status === "deceased" ? "deceased" : "active",
       deceased_date: animal.status === "deceased" && animal.deceased_date ? animal.deceased_date.slice(0, 10) : null,
       deceased_notes: animal.status === "deceased" ? animal.deceased_notes || null : null,
-    });
+    };
+    lastSavedAnimalData.current = savedAnimalData;
+    lastSavedAnimalSignature.current = JSON.stringify(savedAnimalData);
     // Image is now retrieved from database, use animal.id as a flag
     setImageUrl(animal.id ? `stored` : "");
   }, [animal]);
@@ -351,12 +365,31 @@ export default function AnimalGeneralData({
 
     if (signature === lastSavedAnimalSignature.current) return;
     const savingAnimalId = animalId;
+    const shouldCreateWeightRecord = hasWeightChanged(lastSavedAnimalData.current?.weight, payload.weight);
 
     try {
       setSaveStatus("saving");
       const res = await updateAnimal(payload, animalId);
+      let savedAnimal = res.data || { ...animal, ...payload, id: animalId };
+
+      if (shouldCreateWeightRecord) {
+        try {
+          const weightRes = await createWeightRecord(animalId, {
+            recorded_date: new Date().toISOString().slice(0, 10),
+            weight: payload.weight,
+            unit: "lb",
+            notes: "Logged from General weight field",
+          });
+          savedAnimal = weightRes.data?.animal || savedAnimal;
+        } catch (weightErr) {
+          console.error("Failed to add weight history record:", weightErr.response?.data || weightErr.message);
+          toast.warning("Animal saved, but weight history was not added.");
+        }
+      }
+
+      lastSavedAnimalData.current = payload;
       lastSavedAnimalSignature.current = signature;
-      onAnimalSaved?.(res.data || { ...animal, ...payload, id: animalId });
+      onAnimalSaved?.(savedAnimal);
       if (String(currentAnimalIdRef.current) !== String(savingAnimalId)) return;
       markSaved();
     } catch (err) {

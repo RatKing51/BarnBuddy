@@ -409,12 +409,11 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
   const saveBadgeText = saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Auto-saves on blur";
   return (
     <div className="space-y-6">
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-        <div className="rounded-2xl border border-blue-400/30 bg-blue-500/10 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-300">Premium</p>
-          <h2 className="mt-2 text-xl font-semibold text-white">{selectedHerd?.name || "Herd"} finances</h2>
-          <p className="mt-2 text-sm text-gray-300">A full herd ledger with feed, vet, income, expenses, and trend charts.</p>
-        </div>
+      <div>
+        <h2 className="text-2xl font-semibold text-white">{selectedHerd?.name || "Herd"} finances</h2>
+      </div>
+
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-gray-700 bg-gray-900 p-5">
           <p className="text-xs uppercase tracking-[0.14em] text-gray-500">Net</p>
           <p className={`mt-3 text-3xl font-bold ${totals.net < 0 ? "text-red-200" : "text-emerald-200"}`}>{money(totals.net)}</p>

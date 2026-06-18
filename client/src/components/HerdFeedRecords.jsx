@@ -234,12 +234,11 @@ export default function HerdFeedRecords({ selectedHerd, isPremium = false, autom
 
   return (
     <div className="space-y-6">
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-        <div className="rounded-2xl border border-blue-400/30 bg-blue-500/10 p-5 lg:col-span-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-300">Premium</p>
-          <h2 className="mt-2 text-xl font-semibold text-white">{selectedHerd?.name || "Herd"} feed</h2>
-          <p className="mt-2 text-sm text-gray-300">Track feed purchases, quantities, costs, and next purchase dates for the selected herd.</p>
-        </div>
+      <div>
+        <h2 className="text-2xl font-semibold text-white">{selectedHerd?.name || "Herd"} feed</h2>
+      </div>
+
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-gray-700 bg-gray-900 p-5">
           <p className="text-xs uppercase tracking-[0.14em] text-gray-500">Total feed cost</p>
           <p className="mt-3 text-3xl font-bold text-white">{money(feedTotal)}</p>

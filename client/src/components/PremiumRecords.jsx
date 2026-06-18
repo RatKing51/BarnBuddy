@@ -685,17 +685,9 @@ export default function PremiumRecords({
   if (view === "reproduction") {
     return (
       <div className="space-y-6">
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
-          <div className="rounded-2xl border border-blue-400/30 bg-blue-500/10 p-5">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-300">Premium</p>
-              <h2 className="mt-2 text-xl font-semibold text-white">Reproduction records for {animal.name || animal.tag_id}</h2>
-              <p className="mt-2 text-sm text-gray-300">
-                Manage breeding pairs, pregnancy checks, due dates, birth outcomes, and notes.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 rounded-2xl border border-gray-700 bg-gray-900 p-5 sm:min-w-56">
+        <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-2xl font-semibold text-white">Reproduction records</h2>
+          <div className="flex flex-col gap-2 sm:min-w-48 sm:flex-row">
             <button
               onClick={addReproduction}
               disabled={addingReproduction}
@@ -1034,12 +1026,11 @@ export default function PremiumRecords({
 
   return (
     <div className="space-y-6">
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl border border-blue-400/30 bg-blue-500/10 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-300">Premium</p>
-          <h2 className="mt-2 text-xl font-semibold text-white">Finance</h2>
-          <p className="mt-2 text-sm text-gray-300">Track animal-level cost, income, and vet visit costs.</p>
-        </div>
+      <div>
+        <h2 className="text-2xl font-semibold text-white">Money</h2>
+      </div>
+
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-gray-700 bg-gray-900 p-5">
           <p className="text-xs uppercase tracking-[0.14em] text-gray-500">Finance net</p>
           <p className={`mt-3 text-3xl font-bold ${financeTotal < 0 ? "text-red-200" : "text-emerald-200"}`}>{money(financeTotal)}</p>

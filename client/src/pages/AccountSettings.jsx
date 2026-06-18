@@ -284,11 +284,15 @@ export default function AccountSettings() {
 
             <button
               onClick={() => navigate("/pricing")}
-              className="w-full rounded-2xl border border-blue-400/30 bg-blue-500/10 p-5 text-left transition hover:border-blue-300 hover:bg-blue-500/15"
+              className={`w-full rounded-2xl border p-5 text-left transition ${
+                subscription.isPremium
+                  ? "border-gray-700 bg-gray-800 hover:border-blue-400 hover:bg-gray-700"
+                  : "border-blue-400/30 bg-blue-500/10 hover:border-blue-300 hover:bg-blue-500/15"
+              }`}
             >
               <p className="font-semibold text-white">Subscription</p>
-              <p className="mt-2 text-sm text-blue-100/80">
-                {subscription.isPremium ? "Premium tools are active." : "Review Premium tools and pricing."}
+              <p className={`mt-2 text-sm ${subscription.isPremium ? "text-gray-400" : "text-blue-100/80"}`}>
+                {subscription.isPremium ? "Manage billing and plan details." : "Review Premium tools and pricing."}
               </p>
             </button>
 
@@ -303,18 +307,24 @@ export default function AccountSettings() {
           </aside>
 
           <div className="space-y-6">
-            <section className="rounded-2xl border border-blue-400/30 bg-blue-500/10 p-6">
+            <section className={`rounded-2xl border p-6 ${
+              subscription.isPremium
+                ? "border-gray-700 bg-gray-800"
+                : "border-blue-400/30 bg-blue-500/10"
+            }`}>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">Billing</p>
+                  <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${subscription.isPremium ? "text-gray-500" : "text-blue-300"}`}>Billing</p>
                   <h2 className="mt-2 text-xl font-semibold text-white">Subscription</h2>
-                  <p className="mt-2 text-sm text-blue-100/80">
+                  <p className={`mt-2 text-sm ${subscription.isPremium ? "text-gray-400" : "text-blue-100/80"}`}>
                     BarnBuddy uses Clerk Billing for upgrades and subscription management.
                   </p>
                 </div>
-                <span className="w-fit rounded-full bg-blue-500 px-3 py-1 text-xs font-semibold text-white">
-                  {subscription.planName} - {subscription.statusLabel}
-                </span>
+                {!subscription.isPremium && (
+                  <span className="w-fit rounded-full bg-blue-500 px-3 py-1 text-xs font-semibold text-white">
+                    {subscription.planName} - {subscription.statusLabel}
+                  </span>
+                )}
               </div>
 
               <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
@@ -322,7 +332,7 @@ export default function AccountSettings() {
                   <p className="font-semibold text-white">{PLANS[subscription.planId].name} plan</p>
                   <p className="mt-1 text-sm text-gray-400">
                     {subscription.isPremium
-                      ? "Your account can access Premium dashboard and export tools."
+                      ? "Your account has access to dashboard, export, reminder, and planning tools."
                       : `${PLANS[PLAN_IDS.premium].price}/${PLANS[PLAN_IDS.premium].interval.replace("per ", "")} unlocks the Premium toolset.`}
                   </p>
                 </div>
@@ -333,14 +343,16 @@ export default function AccountSettings() {
                 />
               </div>
 
-              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {PREMIUM_FEATURES.map((feature) => (
-                  <div key={feature} className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-sm text-gray-200">
-                    <span className="mr-2 text-blue-300">Premium</span>
-                    {feature}
-                  </div>
-                ))}
-              </div>
+              {!subscription.isPremium && (
+                <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {PREMIUM_FEATURES.map((feature) => (
+                    <div key={feature} className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-sm text-gray-200">
+                      <span className="mr-2 text-blue-300">Premium</span>
+                      {feature}
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
 
             <section className="rounded-2xl border border-gray-700 bg-gray-800 p-6">
