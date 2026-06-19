@@ -35,6 +35,12 @@ function getNewsletterAudienceId() {
   return env.email.newsletterAudienceId;
 }
 
+function createNewsletterError(message, status = 502) {
+  const error = new Error(message);
+  error.status = status;
+  throw error;
+}
+
 function formatResendError(response) {
   return response?.error?.message || "Resend contact sync failed.";
 }
@@ -48,13 +54,18 @@ function isMissingContactError(response) {
 function isDuplicateContactError(response) {
   const message = formatResendError(response).toLowerCase();
   const statusCode = response?.error?.statusCode;
-  return statusCode === 409 || message.includes("already") || message.includes("exist");
+  return (
+    statusCode === 409 ||
+    message.includes("already") ||
+    message.includes("exist") ||
+    message.includes("duplicate")
+  );
 }
 
 function assertNewsletterSyncConfigured() {
   if (!resend) {
     if (env.nodeEnv === "production") {
-      throw new Error("RESEND_API_KEY is required to sync newsletter contacts.");
+      createNewsletterError("RESEND_API_KEY is required to sync newsletter contacts.", 500);
     }
 
     return {
@@ -66,10 +77,10 @@ function assertNewsletterSyncConfigured() {
   const audienceId = getNewsletterAudienceId();
 
   if (!audienceId) {
-    throw new Error("RESEND_NEWSLETTER_AUDIENCE_ID is required to sync newsletter contacts.");
+    createNewsletterError("RESEND_NEWSLETTER_AUDIENCE_ID is required to sync newsletter contacts.", 500);
   }
 
-  return { audienceId };
+  return { segmentId: audienceId };
 }
 
 async function syncResendNewsletterContact({ email, source, unsubscribed }) {
@@ -81,13 +92,9 @@ async function syncResendNewsletterContact({ email, source, unsubscribed }) {
   }
 
   const payload = {
-    audienceId: config.audienceId,
     email,
     unsubscribed,
-    properties: {
-      source,
-      last_source: source,
-    },
+    segments: [{ id: config.segmentId }],
   };
 
   const created = await resend.contacts.create(payload);
@@ -97,23 +104,33 @@ async function syncResendNewsletterContact({ email, source, unsubscribed }) {
   }
 
   if (!isDuplicateContactError(created)) {
-    throw new Error(formatResendError(created));
+    createNewsletterError(formatResendError(created));
   }
 
   const updated = await resend.contacts.update({
-    audienceId: config.audienceId,
     email,
     unsubscribed,
-    properties: {
-      last_source: source,
-    },
   });
 
   if (updated.error) {
-    throw new Error(formatResendError(updated));
+    createNewsletterError(formatResendError(updated));
   }
 
-  return { synced: true, action: "updated", data: updated.data };
+  const addedToSegment = await resend.contacts.segments.add({
+    email,
+    segmentId: config.segmentId,
+  });
+
+  if (addedToSegment.error && !isDuplicateContactError(addedToSegment)) {
+    createNewsletterError(formatResendError(addedToSegment));
+  }
+
+  return {
+    synced: true,
+    action: "updated",
+    data: updated.data,
+    segment: addedToSegment.data || null,
+  };
 }
 
 async function unsubscribeResendNewsletterContact({ email }) {
@@ -125,7 +142,6 @@ async function unsubscribeResendNewsletterContact({ email }) {
   }
 
   const updated = await resend.contacts.update({
-    audienceId: config.audienceId,
     email,
     unsubscribed: true,
   });
@@ -138,7 +154,7 @@ async function unsubscribeResendNewsletterContact({ email }) {
     return { synced: true, action: "already_absent" };
   }
 
-  throw new Error(formatResendError(updated));
+  createNewsletterError(formatResendError(updated));
 }
 
 async function subscribeToNewsletter({ email, source = "footer" }) {
