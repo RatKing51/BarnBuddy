@@ -10,36 +10,90 @@ import { API_URL } from "../config/env";
 import { SkeletonBlock } from "./LoadingSpinner";
 
 function AnimalGeneralDataSkeleton() {
+  const cardClass = "rounded-2xl border border-gray-700 bg-gray-800 p-6 shadow-md";
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" aria-busy="true">
-      <div className="space-y-4 rounded-2xl border border-gray-700 bg-gray-800 p-6">
-        <div className="flex items-center justify-between gap-3">
+      <div className={`${cardClass} space-y-4`}>
+        <div className="mb-2 flex items-center justify-between gap-3">
           <SkeletonBlock className="h-5 w-28" />
           <SkeletonBlock className="h-7 w-24" />
         </div>
-        {[0, 1, 2, 3, 4, 5].map((item) => (
+        <div>
+          <SkeletonBlock className="mb-2 h-3 w-24" />
+          <SkeletonBlock className="h-10 w-full" />
+        </div>
+        <div>
+          <SkeletonBlock className="mb-2 h-3 w-24" />
+          <SkeletonBlock className="h-10 w-full" />
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {[0, 1, 2].map((item) => (
+            <div key={item}>
+              <SkeletonBlock className="mb-2 h-3 w-20" />
+              <SkeletonBlock className="h-10 w-full" />
+            </div>
+          ))}
+        </div>
+        {[0, 1].map((item) => (
           <div key={item}>
             <SkeletonBlock className="mb-2 h-3 w-24" />
             <SkeletonBlock className="h-10 w-full" />
           </div>
         ))}
-        <SkeletonBlock className="h-24 w-full" />
       </div>
 
-      <div className="space-y-4 rounded-2xl border border-gray-700 bg-gray-800 p-6">
-        <div className="grid min-h-64 place-items-center rounded-xl border border-gray-700 bg-gray-900">
+      <div className="min-h-80 overflow-hidden rounded-2xl border border-gray-700 bg-gray-800 shadow-lg">
+        <div className="relative grid min-h-80 place-items-center bg-gray-900">
+          <SkeletonBlock className="absolute left-4 top-4 h-7 w-36 rounded-full" />
           <SkeletonBlock className="h-40 w-40 rounded-full" />
+          <div className="absolute inset-x-0 bottom-0 space-y-2 p-5">
+            <SkeletonBlock className="h-5 w-32" />
+            <SkeletonBlock className="h-4 w-56 max-w-full" />
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <SkeletonBlock className="h-10 w-full" />
-          <SkeletonBlock className="h-10 w-full" />
-        </div>
+      </div>
+
+      <div className={`${cardClass} space-y-4`}>
+        <SkeletonBlock className="h-5 w-44" />
         {[0, 1, 2].map((item) => (
-          <div key={item} className="rounded-xl border border-gray-700 bg-gray-900 p-4">
-            <SkeletonBlock className="h-4 w-32" />
-            <SkeletonBlock className="mt-3 h-3 w-full" />
+          <SkeletonBlock key={item} className="h-14 w-full rounded-lg" />
+        ))}
+      </div>
+
+      <div className={`${cardClass} space-y-4`}>
+        <SkeletonBlock className="h-5 w-28" />
+        {[0, 1, 2, 3].map((item) => (
+          <div key={item}>
+            <SkeletonBlock className="mb-2 h-3 w-24" />
+            <SkeletonBlock className="h-10 w-full" />
           </div>
         ))}
+      </div>
+
+      <div className={`${cardClass} space-y-4 lg:col-span-2`}>
+        <div className="space-y-2">
+          <SkeletonBlock className="h-5 w-28" />
+          <SkeletonBlock className="h-4 w-full max-w-xl" />
+        </div>
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(260px,360px)]">
+          <div>
+            <SkeletonBlock className="mb-2 h-3 w-20" />
+            <SkeletonBlock className="h-10 w-full" />
+          </div>
+          <div className="rounded-xl border border-gray-700 bg-gray-900/70 p-4">
+            <div className="flex items-center gap-3">
+              <SkeletonBlock className="h-3 w-3 rounded-full" />
+              <SkeletonBlock className="h-5 w-32" />
+            </div>
+            <SkeletonBlock className="mt-3 h-4 w-full" />
+            <SkeletonBlock className="mt-2 h-4 w-4/5" />
+          </div>
+        </div>
+        <div className="border-t border-gray-700 pt-4">
+          <SkeletonBlock className="mb-2 h-3 w-24" />
+          <SkeletonBlock className="h-10 w-32" />
+        </div>
       </div>
     </div>
   );
@@ -677,7 +731,7 @@ export default function AnimalGeneralData({
         {loadingVaccinationSummary || loadingVetSummary ? (
           <div className="space-y-2" aria-busy="true">
             {[0, 1, 2].map((item) => (
-              <SkeletonBlock key={item} className="h-14 w-full rounded-lg bg-gray-700" />
+              <SkeletonBlock key={item} className="h-14 w-full rounded-lg" />
             ))}
           </div>
         ) : upcomingQuickDates.length === 0 ? (

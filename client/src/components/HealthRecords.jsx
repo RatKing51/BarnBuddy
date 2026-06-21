@@ -3,10 +3,7 @@ import { toast, ToastContainer } from "react-toastify";
 import * as healthEventsAPI from "../api/healthEvents";
 import * as vaccinationsAPI from "../api/vaccinations";
 import * as birthDataAPI from "../api/birthData";
-
-function SkeletonBlock({ className = "" }) {
-  return <div className={`animate-pulse rounded-lg bg-gray-800 ${className}`} />;
-}
+import { SkeletonBlock } from "./LoadingSpinner";
 
 function HealthRecordsSkeleton() {
   return (

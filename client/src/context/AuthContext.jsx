@@ -23,7 +23,10 @@ export function AuthProvider({ children }) {
     }, [signOut]);
 
     const authFetch = useCallback(async function authFetch(url, options = {}) {
-        const token = await getToken();
+        let token = await getToken();
+        if (!token && isSignedIn) {
+            token = await getToken({ skipCache: true });
+        }
         const headers = new Headers(options.headers || {});
 
         if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
@@ -38,7 +41,7 @@ export function AuthProvider({ children }) {
             ...options,
             headers,
         });
-    }, [getToken]);
+    }, [getToken, isSignedIn]);
 
     useEffect(() => {
         let cancelled = false;

@@ -13,8 +13,8 @@ export function PageLoadingBar({ active }) {
   if (!active) return null;
 
   return (
-    <div className="fixed left-0 right-0 top-0 z-50 h-1 bg-blue-950">
-      <div className="h-full w-2/3 animate-pulse rounded-r-full bg-blue-500" />
+    <div className="fixed left-0 right-0 top-0 z-50 h-1 overflow-hidden bg-blue-950">
+      <div className="bb-loading-bar h-full w-2/3 rounded-r-full bg-blue-500" />
     </div>
   );
 }
@@ -28,12 +28,12 @@ export function LoadingPanel({ label = "Loading..." }) {
 }
 
 export function SkeletonBlock({ className = "" }) {
-  return <div className={`animate-pulse rounded-lg bg-gray-800 ${className}`} />;
+  return <div className={`bb-skeleton rounded-lg ${className}`} />;
 }
 
 export function SkeletonCard({ children, className = "" }) {
   return (
-    <div className={`rounded-2xl border border-gray-800 bg-gray-900 p-5 ${className}`}>
+    <div className={`rounded-2xl border border-gray-800 bg-gray-900 p-5 shadow-md ${className}`}>
       {children}
     </div>
   );
@@ -41,15 +41,14 @@ export function SkeletonCard({ children, className = "" }) {
 
 export function DashboardOverviewSkeleton({ label = "Loading dashboard..." }) {
   return (
-    <div className="space-y-6 bg-gray-950 p-5 sm:p-6" aria-busy="true">
-      <section className="flex flex-col gap-5 rounded-2xl border border-gray-800 bg-gray-900 p-5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="w-full max-w-2xl space-y-3">
-          <SkeletonBlock className="h-4 w-36" />
-          <SkeletonBlock className="h-8 w-full max-w-md" />
-          <SkeletonBlock className="h-4 w-full max-w-xl" />
+    <div className="space-y-3 bg-gray-950 p-3 sm:p-6 md:space-y-6" aria-busy="true">
+      <section className="hidden md:block">
+        <div className="mb-3 space-y-2">
+          <SkeletonBlock className="h-4 w-28" />
+          <SkeletonBlock className="h-8 w-48" />
         </div>
-        <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4 lg:w-[560px]">
-          {[0, 1, 2, 3].map((item) => (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          {[0, 1, 2, 3, 4].map((item) => (
             <div key={item} className="rounded-xl border border-gray-800 bg-gray-950 px-4 py-3">
               <SkeletonBlock className="h-3 w-20" />
               <SkeletonBlock className="mt-3 h-8 w-14" />
@@ -121,8 +120,8 @@ export function DashboardOverviewSkeleton({ label = "Loading dashboard..." }) {
             <SkeletonBlock className="h-5 w-32" />
             <SkeletonBlock className="h-4 w-64" />
           </div>
-          <div className="flex gap-2">
-            {[0, 1, 2, 3].map((item) => (
+          <div className="flex max-w-full gap-2 overflow-hidden">
+            {[0, 1, 2, 3, 4].map((item) => (
               <SkeletonBlock key={item} className="h-9 w-20" />
             ))}
           </div>

@@ -154,19 +154,89 @@ function CashflowChart({ months }) {
 }
 
 function HerdFinanceSkeleton() {
+  const panelClass = "rounded-2xl border border-gray-700 bg-gray-900 p-5 shadow-md";
+  const surfaceClass = "rounded-2xl border border-gray-700 bg-gray-800 p-5 shadow-md";
+
   return (
     <div className="space-y-6" aria-busy="true">
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((item) => (
-          <div key={item} className="rounded-2xl border border-gray-700 bg-gray-900 p-5">
+      <SkeletonBlock className="h-8 w-56" />
+
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {[0, 1, 2].map((item) => (
+          <div key={item} className={panelClass}>
             <SkeletonBlock className="h-3 w-28" />
             <SkeletonBlock className="mt-3 h-8 w-32" />
           </div>
         ))}
       </section>
+
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        {[0, 1].map((panel) => (
+          <div key={panel} className={surfaceClass}>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <SkeletonBlock className="h-5 w-36" />
+              <div className="flex gap-2">
+                <SkeletonBlock className="h-7 w-24" />
+                <SkeletonBlock className="h-7 w-24" />
+              </div>
+            </div>
+            <div className="grid grid-cols-[112px_1fr] items-center gap-4">
+              <SkeletonBlock className="h-28 w-28 rounded-full" />
+              <div className="space-y-3">
+                {[0, 1, 2, 3].map((item) => (
+                  <SkeletonBlock key={item} className="h-4 w-full" />
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </section>
+
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[380px_1fr]">
-        <SkeletonBlock className="h-96 w-full rounded-2xl" />
-        <SkeletonBlock className="h-96 w-full rounded-2xl" />
+        <div className={surfaceClass}>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <SkeletonBlock className="h-5 w-28" />
+            <SkeletonBlock className="h-9 w-16" />
+          </div>
+          <SkeletonBlock className="mt-4 h-20 w-full rounded-xl" />
+          <SkeletonBlock className="mt-3 h-20 w-full rounded-xl" />
+          <SkeletonBlock className="mt-3 h-20 w-full rounded-xl" />
+        </div>
+        <div className="space-y-6">
+          <div className={surfaceClass}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {[0, 1, 2, 3, 4, 5].map((item) => (
+                <div key={item}>
+                  <SkeletonBlock className="mb-2 h-3 w-24" />
+                  <SkeletonBlock className="h-10 w-full" />
+                </div>
+              ))}
+            </div>
+            <SkeletonBlock className="mt-5 h-24 w-full" />
+            <div className="mt-4 flex gap-2">
+              <SkeletonBlock className="h-10 w-32" />
+              <SkeletonBlock className="h-10 w-20" />
+            </div>
+          </div>
+          <div className={surfaceClass}>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <SkeletonBlock className="h-5 w-40" />
+              <div className="flex gap-2">
+                <SkeletonBlock className="h-7 w-20" />
+                <SkeletonBlock className="h-7 w-20" />
+              </div>
+            </div>
+            <div className="rounded-xl border border-gray-700">
+              {[0, 1, 2, 3, 4].map((row) => (
+                <div key={row} className="grid grid-cols-5 gap-3 border-t border-gray-700 px-3 py-3 first:border-t-0">
+                  {[0, 1, 2, 3, 4].map((cell) => (
+                    <SkeletonBlock key={cell} className="h-4 w-full" />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
     </div>
   );

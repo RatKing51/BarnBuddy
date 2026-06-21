@@ -36,24 +36,24 @@ function getFeedPayload(record, herd) {
 }
 
 function HerdFeedRecordsSkeleton() {
+  const panelClass = "rounded-2xl border border-gray-700 bg-gray-900 p-5 shadow-md";
+  const surfaceClass = "rounded-2xl border border-gray-700 bg-gray-800 p-5 shadow-md";
+
   return (
     <div className="space-y-6" aria-busy="true">
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-        <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-5 lg:col-span-2">
-          <SkeletonBlock className="h-4 w-24" />
-          <SkeletonBlock className="mt-3 h-6 w-48" />
-          <SkeletonBlock className="mt-3 h-4 w-full max-w-lg" />
-        </div>
+      <SkeletonBlock className="h-8 w-52" />
+
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {[0, 1].map((item) => (
-          <div key={item} className="rounded-2xl border border-gray-700 bg-gray-900 p-5">
+          <div key={item} className={panelClass}>
             <SkeletonBlock className="h-3 w-28" />
-            <SkeletonBlock className="mt-3 h-8 w-24" />
+            <SkeletonBlock className="mt-3 h-8 w-32" />
           </div>
         ))}
       </section>
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_1fr]">
-        <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
+        <div className={surfaceClass}>
           <div className="mb-4 flex items-center justify-between gap-3">
             <SkeletonBlock className="h-5 w-32" />
             <SkeletonBlock className="h-9 w-16" />
@@ -62,7 +62,7 @@ function HerdFeedRecordsSkeleton() {
             <SkeletonBlock key={item} className="mb-2 h-20 w-full rounded-xl" />
           ))}
         </div>
-        <div className="space-y-4 rounded-2xl border border-gray-700 bg-gray-800 p-5">
+        <div className={`${surfaceClass} space-y-4`}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {[0, 1, 2, 3, 4, 5].map((item) => (
               <div key={item}>

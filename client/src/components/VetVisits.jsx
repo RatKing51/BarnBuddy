@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { getVetVisitsForAnimal, createVetVisit, updateVetVisit, deleteVetVisit } from "../api/vetVisits";
 import { toast, ToastContainer } from "react-toastify";
+import { SkeletonBlock } from "./LoadingSpinner";
 
 const emptyVisit = (animalId) => ({
   animal_id: animalId,
@@ -16,10 +17,6 @@ const emptyVisit = (animalId) => ({
   visit_completed: false,
   follow_up_completed: false,
 });
-
-function SkeletonBlock({ className = "" }) {
-  return <div className={`animate-pulse rounded-lg bg-gray-700/70 ${className}`} />;
-}
 
 function VetVisitsSkeleton() {
   return (

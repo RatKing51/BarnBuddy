@@ -115,10 +115,18 @@ module.exports = async function authMiddleware(req, res, next) {
         const auth = getAuth(req);
 
         if (!auth.isAuthenticated || !auth.userId) {
-            console.warn("Rejected unauthenticated request:", {
+            const details = {
                 method: req.method,
                 path: req.originalUrl,
-            });
+            };
+
+            if (process.env.NODE_ENV !== "production") {
+                details.origin = req.headers.origin || "";
+                details.hasAuthorizationHeader = Boolean(req.headers.authorization);
+                details.hasBearerToken = typeof req.headers.authorization === "string" && req.headers.authorization.startsWith("Bearer ");
+            }
+
+            console.warn("Rejected unauthenticated request:", details);
             return res.status(401).json({ message: "Not authenticated" });
         }
 

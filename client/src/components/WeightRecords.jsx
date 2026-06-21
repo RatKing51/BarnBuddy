@@ -130,17 +130,67 @@ function WeightChart({ records }) {
 }
 
 function WeightRecordsSkeleton() {
+  const panelClass = "rounded-2xl border border-gray-700 bg-gray-900 p-4 shadow-md";
+  const surfaceClass = "space-y-4 rounded-2xl border border-gray-700 bg-gray-800 p-5 shadow-md";
+
   return (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]" aria-busy="true">
-      <div className="space-y-4 rounded-2xl border border-gray-700 bg-gray-800 p-5">
-        <SkeletonBlock className="h-6 w-40" />
-        <SkeletonBlock className="h-72 w-full rounded-2xl bg-gray-700" />
-      </div>
-      <div className="space-y-4 rounded-2xl border border-gray-700 bg-gray-800 p-5">
-        <SkeletonBlock className="h-6 w-36" />
-        {[0, 1, 2, 3].map((item) => (
-          <SkeletonBlock key={item} className="h-11 w-full bg-gray-700" />
+    <div className="space-y-6" aria-busy="true">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {[0, 1, 2].map((item) => (
+          <div key={item} className={panelClass}>
+            <SkeletonBlock className="h-4 w-20" />
+            <SkeletonBlock className="mt-2 h-8 w-24" />
+          </div>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+        <div className="rounded-2xl border border-gray-700 bg-gray-900 p-3 shadow-md sm:p-5">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-2">
+              <SkeletonBlock className="h-5 w-32" />
+              <SkeletonBlock className="h-4 w-44" />
+            </div>
+            <SkeletonBlock className="h-5 w-20" />
+          </div>
+          <SkeletonBlock className="h-72 w-full rounded-xl" />
+        </div>
+        <div className={surfaceClass}>
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="space-y-2">
+              <SkeletonBlock className="h-5 w-28" />
+              <SkeletonBlock className="h-4 w-44" />
+            </div>
+            <SkeletonBlock className="h-7 w-14 rounded-full" />
+          </div>
+          {[0, 1, 2].map((item) => (
+            <div key={item}>
+              <SkeletonBlock className="mb-2 h-3 w-20" />
+              <SkeletonBlock className="h-10 w-full" />
+            </div>
+          ))}
+          <SkeletonBlock className="h-20 w-full" />
+          <SkeletonBlock className="h-10 w-full rounded-xl" />
+        </div>
+      </div>
+
+      <div className={surfaceClass}>
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
+            <SkeletonBlock className="h-5 w-20" />
+            <SkeletonBlock className="h-4 w-52" />
+          </div>
+          <SkeletonBlock className="h-4 w-16" />
+        </div>
+        <div className="overflow-hidden rounded-xl border border-gray-700">
+          {[0, 1, 2, 3, 4].map((row) => (
+            <div key={row} className="grid grid-cols-5 gap-3 border-t border-gray-700 px-3 py-3 first:border-t-0">
+              {[0, 1, 2, 3, 4].map((cell) => (
+                <SkeletonBlock key={cell} className="h-4 w-full" />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

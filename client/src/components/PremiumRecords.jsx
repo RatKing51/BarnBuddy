@@ -79,18 +79,16 @@ function PremiumLocked({ label }) {
 
 function PremiumRecordsSkeleton({ view }) {
   const isReproduction = view === "reproduction";
+  const panelClass = "rounded-2xl border border-gray-700 bg-gray-900 p-5 shadow-md";
+  const surfaceClass = "rounded-2xl border border-gray-700 bg-gray-800 p-5 shadow-md";
 
   return (
     <div className="space-y-6" aria-busy="true">
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
-        <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-5">
-          <SkeletonBlock className="h-4 w-24" />
-          <SkeletonBlock className="mt-3 h-6 w-72 max-w-full" />
-          <SkeletonBlock className="mt-3 h-4 w-full max-w-xl" />
-        </div>
-        <div className="flex flex-col gap-2 rounded-2xl border border-gray-700 bg-gray-900 p-5 sm:min-w-56">
-          <SkeletonBlock className="h-10 w-full" />
-          <SkeletonBlock className="h-10 w-full" />
+      <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <SkeletonBlock className="h-8 w-56" />
+        <div className="flex flex-col gap-2 sm:min-w-48 sm:flex-row">
+          <SkeletonBlock className="h-10 w-full sm:w-32" />
+          <SkeletonBlock className="h-10 w-full sm:w-32" />
         </div>
       </section>
 
@@ -98,53 +96,91 @@ function PremiumRecordsSkeleton({ view }) {
         <>
           <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {[0, 1, 2].map((item) => (
-              <div key={item} className="rounded-2xl border border-gray-700 bg-gray-900 p-5">
-                <SkeletonBlock className="h-3 w-28" />
-                <SkeletonBlock className="mt-3 h-6 w-36" />
-                <SkeletonBlock className="mt-2 h-4 w-full" />
+              <div key={item} className="rounded-2xl border border-gray-700 bg-gray-900 p-4 shadow-md">
+                <SkeletonBlock className="h-3 w-40" />
+                <SkeletonBlock className="mt-2 h-10 w-full" />
+                <SkeletonBlock className="mt-2 h-4 w-48 max-w-full" />
               </div>
             ))}
           </section>
-          <section className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_1fr]">
-            <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
-              <SkeletonBlock className="mb-4 h-5 w-36" />
+          <section className="grid grid-cols-1 gap-6 xl:grid-cols-[340px_1fr]">
+            <div className={surfaceClass}>
+              <div className="mb-4 space-y-2">
+                <SkeletonBlock className="h-5 w-40" />
+                <SkeletonBlock className="h-4 w-24" />
+              </div>
               {[0, 1, 2, 3].map((item) => (
                 <SkeletonBlock key={item} className="mb-2 h-20 w-full rounded-xl" />
               ))}
             </div>
-            <div className="space-y-4 rounded-2xl border border-gray-700 bg-gray-800 p-5">
+            <div className={`${surfaceClass} space-y-4`}>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                {[0, 1, 2].map((item) => (
+                  <div key={item} className="rounded-xl border border-gray-700 bg-gray-900 p-4">
+                    <SkeletonBlock className="h-3 w-28" />
+                    <SkeletonBlock className="mt-2 h-6 w-32" />
+                    <SkeletonBlock className="mt-1 h-4 w-28" />
+                  </div>
+                ))}
+              </div>
               {[0, 1, 2].map((section) => (
                 <div key={section} className="rounded-xl border border-gray-700 bg-gray-900 p-4">
                   <SkeletonBlock className="h-5 w-40" />
-                  <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-                    {[0, 1, 2].map((item) => (
+                  <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                    {[0, 1, 2, 3].map((item) => (
                       <SkeletonBlock key={item} className="h-10 w-full" />
                     ))}
                   </div>
                 </div>
               ))}
+              <SkeletonBlock className="h-28 w-full rounded-xl" />
+              <div className="flex gap-2">
+                <SkeletonBlock className="h-10 w-36" />
+                <SkeletonBlock className="h-10 w-24" />
+              </div>
             </div>
           </section>
         </>
       ) : (
-        <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_420px]">
-          <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <SkeletonBlock className="h-5 w-28" />
-              <SkeletonBlock className="h-9 w-16" />
+        <>
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {[0, 1].map((item) => (
+              <div key={item} className={panelClass}>
+                <SkeletonBlock className="h-3 w-28" />
+                <SkeletonBlock className="mt-3 h-8 w-32" />
+              </div>
+            ))}
+          </section>
+          <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_420px]">
+            <div className={surfaceClass}>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <SkeletonBlock className="h-5 w-24" />
+                <SkeletonBlock className="h-9 w-16" />
+              </div>
+              <SkeletonBlock className="h-4 w-16" />
+              {[0, 1, 2, 3].map((item) => (
+                <SkeletonBlock key={item} className="mt-2 h-20 w-full rounded-xl" />
+              ))}
+              <div className="mt-4 space-y-3 rounded-xl border border-gray-700 bg-gray-900 p-4">
+                {[0, 1, 2, 3, 4].map((item) => (
+                  <SkeletonBlock key={item} className="h-10 w-full" />
+                ))}
+                <SkeletonBlock className="h-20 w-full" />
+                <div className="flex gap-2">
+                  <SkeletonBlock className="h-10 w-32" />
+                  <SkeletonBlock className="h-10 w-20" />
+                </div>
+              </div>
             </div>
-            {[0, 1, 2, 3].map((item) => (
-              <SkeletonBlock key={item} className="mb-2 h-20 w-full rounded-xl" />
-            ))}
-          </div>
-          <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
-            <SkeletonBlock className="h-5 w-32" />
-            <SkeletonBlock className="mt-2 h-4 w-64" />
-            {[0, 1, 2].map((item) => (
-              <SkeletonBlock key={item} className="mt-4 h-20 w-full rounded-xl" />
-            ))}
-          </div>
-        </section>
+            <div className={surfaceClass}>
+              <SkeletonBlock className="h-5 w-32" />
+              <SkeletonBlock className="mt-2 h-4 w-64 max-w-full" />
+              {[0, 1, 2].map((item) => (
+                <SkeletonBlock key={item} className="mt-4 h-20 w-full rounded-xl" />
+              ))}
+            </div>
+          </section>
+        </>
       )}
     </div>
   );
