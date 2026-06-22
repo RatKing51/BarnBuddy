@@ -15,6 +15,7 @@ import News from "./pages/News";
 import Contact from "./pages/Contact";
 import HelpCenter from "./pages/HelpCenter";
 import Status from "./pages/Status";
+import AdminContent from "./pages/AdminContent";
 import { ToastContainer } from "react-toastify";
 import { PageLoadingBar } from "./components/LoadingSpinner";
 
@@ -75,6 +76,7 @@ function AppContent() {
 
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/admin" element={<AdminContent />} />
           <Route path="/settings/account" element={<AccountSettings />} />
           <Route path="/settings/herd" element={<HerdSettings />} />
         </Route>

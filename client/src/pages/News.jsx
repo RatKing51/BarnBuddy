@@ -1,10 +1,35 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import Footer from '../components/Footer'
-import { newsPosts } from '../data/newsPosts'
+import { getSiteContent } from '../api/siteContent'
+import { defaultSiteContent } from '../data/siteContent'
 
 export default function News() {
+  const [posts, setPosts] = useState(defaultSiteContent.newsPosts)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadContent() {
+      try {
+        const data = await getSiteContent()
+        if (!cancelled && Array.isArray(data.newsPosts)) {
+          setPosts(data.newsPosts)
+        }
+      } catch (err) {
+        console.warn('Using bundled news content:', err.message)
+      }
+    }
+
+    loadContent()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const newsPosts = posts.filter((post) => post.published !== false)
   const featuredPost = newsPosts.find((post) => post.featured) || newsPosts[0]
-  const otherPosts = newsPosts.filter((post) => post.id !== featuredPost.id)
+  const otherPosts = featuredPost ? newsPosts.filter((post) => post.id !== featuredPost.id) : []
   const formatDate = (date) =>
     new Intl.DateTimeFormat('en', {
       month: 'long',
@@ -31,7 +56,7 @@ export default function News() {
                   <img
                     src={featuredPost.image}
                     alt={featuredPost.imageAlt}
-                    className="h-full min-h-80 w-full object-cover"
+                    className={`h-full min-h-80 w-full ${featuredPost.imageFit === 'contain' ? 'object-contain p-8' : 'object-cover'}`}
                   />
                 </div>
 
@@ -56,7 +81,11 @@ export default function News() {
                   className="bg-white/6 border border-white/8 rounded-lg overflow-hidden shadow-lg flex flex-col"
                 >
                   <div className="aspect-[16/10] bg-[#101D42]">
-                    <img src={post.image} alt={post.imageAlt} className="h-full w-full object-cover" />
+                    <img
+                      src={post.image}
+                      alt={post.imageAlt}
+                      className={`h-full w-full ${post.imageFit === 'contain' ? 'object-contain p-6' : 'object-cover'}`}
+                    />
                   </div>
                   <div className="p-6 flex flex-col flex-1">
                     <div className="flex flex-wrap items-center gap-3 text-xs text-white/65">

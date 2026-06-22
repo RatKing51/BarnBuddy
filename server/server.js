@@ -23,6 +23,7 @@ const contactRoutes = require("./routes/contact");
 const emailRoutes = require("./routes/email");
 const newsletterRoutes = require("./routes/newsletter");
 const notificationRoutes = require("./routes/notifications");
+const siteContentRoutes = require("./routes/siteContent");
 const { ensureAppSchema } = require("./services/ensureAppSchema");
 
 const app = express();
@@ -39,7 +40,10 @@ app.use(cors({
 }));
 app.use("/webhooks/clerk", express.raw({ type: "application/json" }), clerkWebhookRoutes);
 app.use(express.json());
-app.use(clerkMiddleware());
+app.use(clerkMiddleware({
+  publishableKey: env.clerk.publishableKey,
+  secretKey: env.clerk.secretKey,
+}));
 
 app.use("/api/animals", animalRoutes);
 app.use("/api/herds", herdRoutes);
@@ -49,6 +53,7 @@ app.use("/api/healthEvents", healthEventRoutes);
 app.use("/api/email", emailRoutes);
 app.use("/api/newsletter", newsletterRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/site-content", siteContentRoutes);
 app.use("/auth", authRoutes);
 app.use("/contact", contactRoutes);
 app.use("/api/reproductions", reproductionRoutes);

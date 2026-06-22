@@ -121,9 +121,16 @@ async function getClerkProfileFromAuth(auth) {
       throw new Error("CLERK_SECRET_KEY is required to link Clerk users to BarnBuddy records by email.");
     }
 
-    const clerkUser = await clerkClient.users.getUser(auth.userId);
-    email = getEmailFromClerkUser(clerkUser);
-    name = getNameFromClerkUser(clerkUser, email);
+    try {
+      const clerkUser = await clerkClient.users.getUser(auth.userId);
+      email = getEmailFromClerkUser(clerkUser);
+      name = getNameFromClerkUser(clerkUser, email);
+    } catch (err) {
+      console.warn("Could not fetch Clerk user profile; using Clerk-id fallback email.", {
+        clerkUserId: auth.userId,
+        error: err.message,
+      });
+    }
   }
 
   if (!email) {

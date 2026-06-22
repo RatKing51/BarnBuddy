@@ -112,9 +112,13 @@ function getSubscriptionFromClaims(claims = {}, hasPremiumAccess = false, clerkM
 
 module.exports = async function authMiddleware(req, res, next) {
     try {
-        const auth = getAuth(req);
+        const auth =
+            typeof req.auth === "function"
+                ? req.auth({ acceptsToken: "any" })
+                : getAuth(req, { acceptsToken: "any" });
+        const authenticatedUserId = auth.userId || auth.sessionClaims?.sub || "";
 
-        if (!auth.isAuthenticated || !auth.userId) {
+        if (!authenticatedUserId) {
             const details = {
                 method: req.method,
                 path: req.originalUrl,
@@ -124,6 +128,13 @@ module.exports = async function authMiddleware(req, res, next) {
                 details.origin = req.headers.origin || "";
                 details.hasAuthorizationHeader = Boolean(req.headers.authorization);
                 details.hasBearerToken = typeof req.headers.authorization === "string" && req.headers.authorization.startsWith("Bearer ");
+                details.authStatus = auth.status || "";
+                details.authReason = auth.reason || "";
+                details.authMessage = auth.message || "";
+                details.tokenType = auth.tokenType || "";
+                details.sessionStatus = auth.sessionStatus || "";
+                details.isAuthenticated = auth.isAuthenticated;
+                details.hasSessionSubject = Boolean(auth.sessionClaims?.sub);
             }
 
             console.warn("Rejected unauthenticated request:", details);
@@ -138,10 +149,14 @@ module.exports = async function authMiddleware(req, res, next) {
             [...premiumPlanCandidates, ...premiumPlanIdCandidates],
             premiumFeatureCandidates
         );
+        const authForSync = {
+            ...auth,
+            userId: authenticatedUserId,
+        };
         let clerkMetadata = {};
         if (!hasPremiumAccess) {
             try {
-                const clerkUser = await clerkClient.users.getUser(auth.userId);
+                const clerkUser = await clerkClient.users.getUser(authenticatedUserId);
                 clerkMetadata = {
                     publicMetadata: clerkUser.publicMetadata || clerkUser.public_metadata || {},
                     privateMetadata: clerkUser.privateMetadata || clerkUser.private_metadata || {},
@@ -152,7 +167,7 @@ module.exports = async function authMiddleware(req, res, next) {
             }
         }
 
-        const user = await findOrCreateLocalUserFromAuth(auth);
+        const user = await findOrCreateLocalUserFromAuth(authForSync);
         const subscription = getSubscriptionFromClaims(auth.sessionClaims, hasPremiumAccess, clerkMetadata);
         await pool.query(
             `UPDATE users
@@ -176,7 +191,7 @@ module.exports = async function authMiddleware(req, res, next) {
             id: user.id,
             email: user.email,
             name: user.name,
-            clerkUserId: auth.userId,
+            clerkUserId: authenticatedUserId,
             subscription,
         };
         next();

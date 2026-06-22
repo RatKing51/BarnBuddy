@@ -6,13 +6,14 @@ export const newsPosts = [
     date: "2026-06-18",
     category: "Updates",
     excerpt:
-      "Now track your animals weight from day to day, week to week, or however you please — all in one location!",
+      "Now track your animals weight from day to day, week to week, or however you please -- all in one location!",
     body:
       "Weight tracking is now available for all BarnBuddy users. You can log animal weights as often as you need, whether that is daily, weekly, or whenever you check in. Each entry stays connected to the animal profile, making it easier to watch growth over time, compare progress, and keep better records in one place.",
     image: "/weight-graph.png",
     imageAlt: "BarnBuddy logo",
     imageFit: "contain",
     featured: true,
+    published: true,
   },
   {
     id: "barnbuddy-record-keeping-launch",
@@ -26,7 +27,8 @@ export const newsPosts = [
     image: "/IMG_5761.JPEG",
     imageAlt: "Livestock in a pasture",
     imageFit: "cover",
-    featured: true,
+    featured: false,
+    published: true,
   },
   {
     id: "care-reminders-progress",
@@ -41,6 +43,7 @@ export const newsPosts = [
     imageAlt: "BarnBuddy logo",
     imageFit: "contain",
     featured: false,
+    published: true,
   },
   {
     id: "ffa-4h-small-farm-focus",
@@ -55,6 +58,6 @@ export const newsPosts = [
     imageAlt: "BarnBuddy logo",
     imageFit: "contain",
     featured: false,
+    published: true,
   },
-  
-];
+]

@@ -2,6 +2,7 @@ const pool = require("../data-source");
 const ensureAnimalSchema = require("./ensureAnimalSchema");
 const { ensureSchema: ensureUserSchema } = require("./clerkUserSync");
 const { ensurePreferenceSchema } = require("./userPreferences");
+const { ensureSiteContentSchema } = require("./siteContent");
 
 let appSchemaReadyPromise;
 
@@ -118,6 +119,7 @@ async function ensureAppSchema() {
       await ensureUserSchema();
       await ensurePreferenceSchema();
       await ensureAnimalSchema();
+      await ensureSiteContentSchema();
       await ensurePremiumRecordSchema();
       await ensureReproductionSchema();
       await ensureBirthSchema();

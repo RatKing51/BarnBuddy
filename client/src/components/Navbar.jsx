@@ -1,12 +1,20 @@
 import React, { useState } from 'react'
-import { UserButton, useAuth } from '@clerk/clerk-react'
+import { UserButton, useAuth, useUser } from '@clerk/clerk-react'
 import { Link } from 'react-router-dom'
+import { ADMIN_CLERK_USER_IDS, ADMIN_EMAILS } from '../config/env'
 import '../index.css'
 
 const Navbar = () => {
   const [open, setOpen] = useState(false)
   const { isLoaded, isSignedIn } = useAuth()
+  const { user } = useUser()
   const showSignedIn = isLoaded && isSignedIn
+  const primaryEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || ''
+  const showAdmin = Boolean(
+    showSignedIn &&
+      ((primaryEmail && ADMIN_EMAILS.includes(primaryEmail)) ||
+        (user?.id && ADMIN_CLERK_USER_IDS.includes(user.id)))
+  )
 
   const closeMenu = () => setOpen(false)
 
@@ -42,6 +50,11 @@ const Navbar = () => {
             </Link>
             {showSignedIn ? (
               <>
+                {showAdmin && (
+                  <Link to="/admin" className="text-white text-xl font-bold hover:text-blue-300 transition-colors">
+                    Admin
+                  </Link>
+                )}
                 <Link to="/dashboard" className="bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-2 px-4 rounded-md transition-colors">
                   Dashboard
                 </Link>
@@ -93,6 +106,11 @@ const Navbar = () => {
           </Link>
           {showSignedIn ? (
             <>
+              {showAdmin && (
+                <Link to="/admin" onClick={closeMenu} className="block text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
+                  Admin
+                </Link>
+              )}
               <Link to="/dashboard" onClick={closeMenu} className="block bg-blue-500 hover:bg-blue-600 text-white text-base font-medium py-2 px-3 rounded-md">
                 Dashboard
               </Link>
