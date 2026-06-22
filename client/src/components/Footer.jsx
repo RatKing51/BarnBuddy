@@ -56,6 +56,16 @@ export default function Footer() {
                   <path d="M12 .5A12 12 0 0 0 0 12.7c0 5.3 3.4 9.8 8.2 11.4.6.1.8-.2.8-.5v-2c-3.3.7-4-1.6-4-1.6-.5-1.3-1.2-1.7-1.2-1.7-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 .1 1.6.7 2 .7.1-.6.4-1 .7-1.2-2.6-.3-5.3-1.3-5.3-6 0-1.3.5-2.3 1.1-3.1-.1-.3-.5-1.6.1-3.2 0 0 .9-.3 3 .9.8-.2 1.7-.3 2.6-.3s1.8.1 2.6.3c2-.1 3-.9 3-.9.6 1.6.2 2.9.1 3.2.7.8 1.1 1.8 1.1 3.1 0 4.7-2.7 5.6-5.3 6 .4.4.8 1 .8 2v3c0 .3.2.6.8.5A12 12 0 0 0 24 .5 12 12 0 0 0 12 .5z"/>
                 </svg>
               </a>
+              <a href="https://www.tiktok.com/@barnbuddypro?is_from_webapp=1&sender_device=pc" className="text-white/70 hover:text-white transition-colors" aria-label="TikTok">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.35 6.35 0 0 0-5.46 10.96 6.34 6.34 0 0 0 10.87-4.43v-7a8.16 8.16 0 0 0 4.77 1.52V7a4.84 4.84 0 0 1-.95-.31z" />
+                </svg>
+              </a>
+              <a href="https://www.instagram.com/barnbuddypro/" className="text-white/70 hover:text-white transition-colors" aria-label="Instagram">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M7.75 2h8.5A5.76 5.76 0 0 1 22 7.75v8.5A5.76 5.76 0 0 1 16.25 22h-8.5A5.76 5.76 0 0 1 2 16.25v-8.5A5.76 5.76 0 0 1 7.75 2zm0 2A3.75 3.75 0 0 0 4 7.75v8.5A3.75 3.75 0 0 0 7.75 20h8.5A3.75 3.75 0 0 0 20 16.25v-8.5A3.75 3.75 0 0 0 16.25 4h-8.5zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm5.25-2.75a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5z" />
+                </svg>
+              </a>
             </div>
           </div>
 
