@@ -1,4 +1,5 @@
 import { newsPosts } from './newsPosts'
+import { landingReviews } from './reviews'
 
 export const defaultStatus = {
   headline: 'All systems normal',
@@ -17,5 +18,20 @@ export const defaultStatus = {
 
 export const defaultSiteContent = {
   newsPosts,
+  reviews: landingReviews,
   status: defaultStatus,
+  announcement: {
+    enabled: false,
+    tone: 'blue',
+    title: '',
+    message: '',
+    linkText: '',
+    linkUrl: '',
+  },
+  maintenance: {
+    enabled: false,
+    title: 'BarnBuddy is down for maintenance',
+    message: 'We are making a few updates and will be back soon.',
+    estimatedReturn: '',
+  },
 }

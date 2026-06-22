@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import LargeLandingCard from '../components/LargeLandingCard'
 import ReviewLandingCard from '../components/ReviewLandingCard'
 import LargeAboutMeLanding from '../components/LargeAboutMeLanding'
@@ -6,9 +6,35 @@ import RecentNewsCard from '../components/RecentNewsCard'
 import Footer from '../components/Footer'
 import { newsPosts } from '../data/newsPosts'
 import { landingReviews } from '../data/reviews'
+import { getSiteContent } from '../api/siteContent'
+import { defaultSiteContent } from '../data/siteContent'
 
 export default function Landing() {
-  const recentPosts = newsPosts.slice(0, 2)
+  const [reviews, setReviews] = useState(landingReviews)
+  const [posts, setPosts] = useState(newsPosts)
+  const recentPosts = posts.slice(0, 2)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadContent() {
+      try {
+        const content = await getSiteContent()
+        if (!cancelled) {
+          setReviews(Array.isArray(content.reviews) ? content.reviews : defaultSiteContent.reviews)
+          setPosts(Array.isArray(content.newsPosts) ? content.newsPosts : defaultSiteContent.newsPosts)
+        }
+      } catch (err) {
+        console.warn('Using bundled landing content:', err.message)
+      }
+    }
+
+    loadContent()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <div className='bg-[#101D42]'>
@@ -25,10 +51,10 @@ export default function Landing() {
               </p>
             </div>
 
-            {landingReviews.length > 0 ? (
+            {reviews.length > 0 ? (
               <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-                {landingReviews.map((review) => (
-                  <ReviewLandingCard key={`${review.name}-${review.date}`} {...review} />
+                {reviews.map((review) => (
+                  <ReviewLandingCard key={review.id || `${review.name}-${review.date}`} {...review} />
                 ))}
               </div>
             ) : (

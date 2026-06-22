@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-toastify'
 import { API_BASE_URL, API_URL } from '../config/env'
 import { useAuth } from '../context/AuthContext'
+import ReviewLandingCard from '../components/ReviewLandingCard'
 import { defaultSiteContent } from '../data/siteContent'
 
 const blankPost = {
@@ -18,6 +19,16 @@ const blankPost = {
   published: true,
 }
 
+const blankReview = {
+  name: '',
+  role: '',
+  rating: 5,
+  date: new Date().toLocaleString('en', { month: 'short', year: 'numeric' }),
+  tag: 'Verified user',
+  text: '',
+  published: false,
+}
+
 const blankService = {
   name: '',
   status: 'Operational',
@@ -32,6 +43,13 @@ const toneOptions = [
 ]
 
 const toneClasses = {
+  green: 'border-emerald-300/25 bg-emerald-400/10 text-emerald-100',
+  blue: 'border-sky-300/25 bg-sky-400/10 text-sky-100',
+  yellow: 'border-amber-300/25 bg-amber-400/10 text-amber-100',
+  red: 'border-red-300/25 bg-red-400/10 text-red-100',
+}
+
+const announcementPreviewClasses = {
   green: 'border-emerald-300/25 bg-emerald-400/10 text-emerald-100',
   blue: 'border-sky-300/25 bg-sky-400/10 text-sky-100',
   yellow: 'border-amber-300/25 bg-amber-400/10 text-amber-100',
@@ -76,6 +94,58 @@ function formatDate(date) {
   }).format(new Date(`${date}T12:00:00`))
 }
 
+function formatDateTime(value) {
+  if (!value) return 'Unknown time'
+
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
+
+function formatBytes(value) {
+  const bytes = Number(value) || 0
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function activityLabel(action) {
+  const labels = {
+    website_content_updated: 'Saved website content',
+    site_media_uploaded: 'Uploaded site image',
+    support_message_updated: 'Updated support message',
+  }
+
+  return labels[action] || action.replace(/_/g, ' ')
+}
+
+function broadcastAnnouncement(announcement) {
+  const eventName = 'barnbuddy:announcement-updated'
+  const nextAnnouncement = { ...defaultSiteContent.announcement, ...(announcement || {}) }
+  window.dispatchEvent(new CustomEvent(eventName, { detail: nextAnnouncement }))
+  localStorage.setItem(eventName, JSON.stringify(nextAnnouncement))
+}
+
+function broadcastMaintenance(maintenance) {
+  const eventName = 'barnbuddy:maintenance-updated'
+  const nextMaintenance = { ...defaultSiteContent.maintenance, ...(maintenance || {}) }
+  window.dispatchEvent(new CustomEvent(eventName, { detail: nextMaintenance }))
+  localStorage.setItem(eventName, JSON.stringify(nextMaintenance))
+}
+
+const quickLinks = [
+  { label: 'Clerk', url: 'https://dashboard.clerk.com/' },
+  { label: 'Railway', url: 'https://railway.app/dashboard' },
+  { label: 'Resend', url: 'https://resend.com/emails' },
+  { label: 'GitHub', url: 'https://github.com/' },
+  { label: 'Docs Site', url: 'https://doc.barnbuddy.pro' },
+  { label: 'Live Site', url: 'https://barnbuddy.pro' },
+]
+
 function EmptyState({ title, text, action }) {
   return (
     <div className="rounded-lg border border-dashed border-slate-700 bg-slate-950/35 p-8 text-center">
@@ -90,13 +160,63 @@ export default function AdminContent() {
   const { authFetch } = useAuth()
   const [activeTab, setActiveTab] = useState('overview')
   const [content, setContent] = useState(defaultSiteContent)
+  const [lastSavedContent, setLastSavedContent] = useState(defaultSiteContent)
   const [selectedPostIndex, setSelectedPostIndex] = useState(0)
+  const [selectedReviewIndex, setSelectedReviewIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [activity, setActivity] = useState([])
+  const [activityLoading, setActivityLoading] = useState(false)
+  const [mediaLibrary, setMediaLibrary] = useState([])
+  const [supportMessages, setSupportMessages] = useState([])
+  const [newsletterSubscribers, setNewsletterSubscribers] = useState([])
+  const [adminDataLoading, setAdminDataLoading] = useState(false)
   const [accessDenied, setAccessDenied] = useState(false)
   const [notAuthenticated, setNotAuthenticated] = useState(false)
   const [loadError, setLoadError] = useState('')
+
+  const loadActivity = useCallback(async function loadActivity() {
+    try {
+      setActivityLoading(true)
+      const res = await authFetch(`${API_BASE_URL}/site-content/admin/activity?limit=40`)
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Failed to load admin activity.')
+      }
+
+      setActivity(Array.isArray(data.activity) ? data.activity : [])
+    } catch (err) {
+      console.warn('Failed to load admin activity:', err.message)
+    } finally {
+      setActivityLoading(false)
+    }
+  }, [authFetch])
+
+  const loadAdminTools = useCallback(async function loadAdminTools() {
+    try {
+      setAdminDataLoading(true)
+      const [mediaRes, supportRes] = await Promise.all([
+        authFetch(`${API_BASE_URL}/site-content/admin/media?limit=80`),
+        authFetch(`${API_BASE_URL}/site-content/admin/support`),
+      ])
+      const [mediaData, supportData] = await Promise.all([
+        mediaRes.json().catch(() => ({})),
+        supportRes.json().catch(() => ({})),
+      ])
+
+      if (mediaRes.ok) setMediaLibrary(Array.isArray(mediaData.media) ? mediaData.media : [])
+      if (supportRes.ok) {
+        setSupportMessages(Array.isArray(supportData.messages) ? supportData.messages : [])
+        setNewsletterSubscribers(Array.isArray(supportData.newsletterSubscribers) ? supportData.newsletterSubscribers : [])
+      }
+    } catch (err) {
+      console.warn('Failed to load admin tools:', err.message)
+    } finally {
+      setAdminDataLoading(false)
+    }
+  }, [authFetch])
 
   useEffect(() => {
     let cancelled = false
@@ -113,10 +233,15 @@ export default function AdminContent() {
         }
 
         if (!cancelled) {
-          setContent({
+          const loadedContent = {
             newsPosts: Array.isArray(data.newsPosts) ? data.newsPosts : defaultSiteContent.newsPosts,
             status: { ...defaultSiteContent.status, ...(data.status || {}) },
-          })
+            announcement: { ...defaultSiteContent.announcement, ...(data.announcement || {}) },
+            maintenance: { ...defaultSiteContent.maintenance, ...(data.maintenance || {}) },
+            reviews: Array.isArray(data.reviews) ? data.reviews : defaultSiteContent.reviews,
+          }
+          setContent(loadedContent)
+          setLastSavedContent(loadedContent)
         }
       } catch (err) {
         if (err.status === 401) {
@@ -133,11 +258,13 @@ export default function AdminContent() {
     }
 
     loadContent()
+    loadActivity()
+    loadAdminTools()
 
     return () => {
       cancelled = true
     }
-  }, [authFetch])
+  }, [authFetch, loadActivity, loadAdminTools])
 
   useEffect(() => {
     if (selectedPostIndex > content.newsPosts.length - 1) {
@@ -145,9 +272,16 @@ export default function AdminContent() {
     }
   }, [content.newsPosts.length, selectedPostIndex])
 
+  useEffect(() => {
+    if (selectedReviewIndex > (content.reviews || []).length - 1) {
+      setSelectedReviewIndex(Math.max((content.reviews || []).length - 1, 0))
+    }
+  }, [content.reviews, selectedReviewIndex])
+
   const dashboardStats = useMemo(() => {
     const publishedPosts = content.newsPosts.filter((post) => post.published !== false).length
     const draftPosts = content.newsPosts.length - publishedPosts
+    const publishedReviews = (content.reviews || []).filter((review) => review.published !== false).length
     const flaggedServices = (content.status.services || []).filter((service) =>
       ['yellow', 'red'].includes(service.tone)
     ).length
@@ -155,13 +289,21 @@ export default function AdminContent() {
     return [
       { label: 'Published posts', value: publishedPosts },
       { label: 'Draft posts', value: draftPosts },
+      { label: 'Reviews', value: publishedReviews },
       { label: 'Services', value: content.status.services?.length || 0 },
+      { label: 'Support', value: supportMessages.length },
+      { label: 'Activity items', value: activity.length },
       { label: 'Needs attention', value: flaggedServices },
     ]
-  }, [content])
+  }, [activity.length, content, supportMessages.length])
 
   const selectedPost = content.newsPosts[selectedPostIndex] || null
+  const selectedReview = (content.reviews || [])[selectedReviewIndex] || null
   const featuredPostId = content.newsPosts.find((post) => post.featured)?.id || ''
+  const hasUnsavedChanges = useMemo(
+    () => JSON.stringify(content) !== JSON.stringify(lastSavedContent),
+    [content, lastSavedContent]
+  )
 
   function updatePost(index, changes) {
     setContent((current) => {
@@ -193,6 +335,32 @@ export default function AdminContent() {
     setSelectedPostIndex((current) => Math.max(current - 1, 0))
   }
 
+  function updateReview(index, changes) {
+    setContent((current) => ({
+      ...current,
+      reviews: (current.reviews || []).map((review, reviewIndex) =>
+        reviewIndex === index ? { ...review, ...changes } : review
+      ),
+    }))
+  }
+
+  function addReview() {
+    setContent((current) => ({
+      ...current,
+      reviews: [{ ...blankReview }, ...(current.reviews || [])],
+    }))
+    setSelectedReviewIndex(0)
+    setActiveTab('reviews')
+  }
+
+  function removeReview(index) {
+    setContent((current) => ({
+      ...current,
+      reviews: (current.reviews || []).filter((_, reviewIndex) => reviewIndex !== index),
+    }))
+    setSelectedReviewIndex((current) => Math.max(current - 1, 0))
+  }
+
   function setFeaturedPost(index) {
     setContent((current) => ({
       ...current,
@@ -207,6 +375,20 @@ export default function AdminContent() {
     setContent((current) => ({
       ...current,
       status: { ...current.status, ...changes },
+    }))
+  }
+
+  function updateAnnouncement(changes) {
+    setContent((current) => ({
+      ...current,
+      announcement: { ...defaultSiteContent.announcement, ...current.announcement, ...changes },
+    }))
+  }
+
+  function updateMaintenance(changes) {
+    setContent((current) => ({
+      ...current,
+      maintenance: { ...defaultSiteContent.maintenance, ...current.maintenance, ...changes },
     }))
   }
 
@@ -258,13 +440,32 @@ export default function AdminContent() {
       setContent({
         newsPosts: Array.isArray(data.newsPosts) ? data.newsPosts : content.newsPosts,
         status: { ...content.status, ...(data.status || {}) },
+        announcement: { ...content.announcement, ...(data.announcement || {}) },
+        maintenance: { ...content.maintenance, ...(data.maintenance || {}) },
+        reviews: Array.isArray(data.reviews) ? data.reviews : content.reviews,
       })
+      setLastSavedContent({
+        newsPosts: Array.isArray(data.newsPosts) ? data.newsPosts : content.newsPosts,
+        status: { ...content.status, ...(data.status || {}) },
+        announcement: { ...content.announcement, ...(data.announcement || {}) },
+        maintenance: { ...content.maintenance, ...(data.maintenance || {}) },
+        reviews: Array.isArray(data.reviews) ? data.reviews : content.reviews,
+      })
+      broadcastAnnouncement({ ...content.announcement, ...(data.announcement || {}) })
+      broadcastMaintenance({ ...content.maintenance, ...(data.maintenance || {}) })
       toast.success('Website content saved.')
+      await loadActivity()
+      await loadAdminTools()
     } catch (err) {
       toast.error(err.message || 'Failed to save website content.')
     } finally {
       setSaving(false)
     }
+  }
+
+  function discardChanges() {
+    setContent(lastSavedContent)
+    toast.info('Unsaved changes discarded.')
   }
 
   async function uploadPostImage(event) {
@@ -304,10 +505,32 @@ export default function AdminContent() {
         imageFit: selectedPost.imageFit || 'cover',
       })
       toast.success('Image uploaded. Save changes to publish it.')
+      await loadActivity()
+      await loadAdminTools()
     } catch (err) {
       toast.error(err.message || 'Failed to upload image.')
     } finally {
       setUploadingImage(false)
+    }
+  }
+
+  async function updateSupportStatus(id, status) {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/site-content/admin/support/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      })
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Failed to update support message.')
+      }
+
+      setSupportMessages((current) => current.map((message) => (message.id === id ? data.message : message)))
+      toast.success('Support message updated.')
+      await loadActivity()
+    } catch (err) {
+      toast.error(err.message || 'Failed to update support message.')
     }
   }
 
@@ -384,11 +607,25 @@ export default function AdminContent() {
             </button>
           </div>
 
-          <nav className="mt-5 grid grid-cols-3 gap-2 lg:grid-cols-1">
+          <a
+            href="/"
+            className="mt-5 hidden rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-center text-sm font-semibold text-slate-200 transition hover:bg-slate-800 hover:text-white lg:block"
+          >
+            Back to site
+          </a>
+
+          <nav className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-1">
             {[
               ['overview', 'Overview'],
+              ['announcement', 'Banner'],
+              ['maintenance', 'Maintenance'],
               ['news', 'News'],
+              ['reviews', 'Reviews'],
               ['status', 'Status'],
+              ['media', 'Media'],
+              ['links', 'Links'],
+              ['support', 'Support'],
+              ['activity', 'Activity'],
             ].map(([id, label]) => (
               <button
                 key={id}
@@ -419,8 +656,17 @@ export default function AdminContent() {
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Website content</p>
               <h2 className="mt-2 text-3xl font-semibold leading-tight">Manage updates, posts, and service status</h2>
+              <p className={`mt-2 text-sm ${hasUnsavedChanges ? 'text-amber-300' : 'text-emerald-300'}`}>
+                {hasUnsavedChanges ? 'Unsaved changes' : 'All changes saved'}
+              </p>
             </div>
             <div className="hidden gap-3 lg:flex">
+              <a
+                href="/"
+                className="rounded-md border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
+              >
+                Landing
+              </a>
               <a
                 href="/news"
                 className="rounded-md border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
@@ -435,8 +681,16 @@ export default function AdminContent() {
               </a>
               <button
                 type="button"
+                onClick={discardChanges}
+                disabled={!hasUnsavedChanges || saving}
+                className="rounded-md border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Discard
+              </button>
+              <button
+                type="button"
                 onClick={saveContent}
-                disabled={saving}
+                disabled={saving || !hasUnsavedChanges}
                 className="rounded-md bg-sky-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving ? 'Saving...' : 'Save changes'}
@@ -446,7 +700,7 @@ export default function AdminContent() {
 
           {activeTab === 'overview' && (
             <div className="mt-6 space-y-6">
-              <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 xl:grid-cols-7">
                 {dashboardStats.map((stat) => (
                   <div key={stat.label} className="rounded-lg border border-slate-800 bg-slate-900 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{stat.label}</p>
@@ -483,7 +737,7 @@ export default function AdminContent() {
                       >
                         <div className="min-w-0">
                           <p className="truncate font-semibold text-white">{post.title || 'Untitled post'}</p>
-                          <p className="mt-1 text-sm text-slate-400">{post.category || 'Updates'} · {formatDate(post.date)}</p>
+                          <p className="mt-1 text-sm text-slate-400">{post.category || 'Updates'} - {formatDate(post.date)}</p>
                         </div>
                         <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${post.published === false ? 'border-amber-300/25 bg-amber-400/10 text-amber-100' : 'border-emerald-300/25 bg-emerald-400/10 text-emerald-100'}`}>
                           {post.published === false ? 'Draft' : 'Live'}
@@ -510,6 +764,175 @@ export default function AdminContent() {
                   </div>
                 </section>
               </div>
+
+              <section className="rounded-lg border border-slate-800 bg-slate-900">
+                <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+                  <div>
+                    <h3 className="font-semibold">Recent admin activity</h3>
+                    <p className="mt-1 text-sm text-slate-400">Latest saves and uploads.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('activity')}
+                    className="rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
+                  >
+                    View all
+                  </button>
+                </div>
+                <div className="divide-y divide-slate-800">
+                  {activity.slice(0, 5).map((item) => (
+                    <div key={item.id} className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="font-semibold text-white">{activityLabel(item.action)}</p>
+                        <p className="mt-1 text-sm text-slate-400">{item.actor?.name || 'Unknown admin'}</p>
+                      </div>
+                      <time className="text-sm text-slate-500" dateTime={item.createdAt}>
+                        {formatDateTime(item.createdAt)}
+                      </time>
+                    </div>
+                  ))}
+                  {!activity.length && (
+                    <div className="px-5 py-6 text-sm text-slate-400">
+                      {activityLoading ? 'Loading activity...' : 'No admin activity recorded yet.'}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section className="rounded-lg border border-slate-800 bg-slate-900 p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold">Quick links</h3>
+                    <p className="mt-1 text-sm text-slate-400">Jump to admin tools outside BarnBuddy.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('links')}
+                    className="rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
+                  >
+                    Open
+                  </button>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {quickLinks.slice(0, 6).map((link) => (
+                    <a key={link.label} href={link.url} target="_blank" rel="noreferrer" className="rounded-md border border-slate-800 bg-slate-950/45 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800">
+                      {link.label}
+                    </a>
+                  ))}
+                </div>
+              </section>
+            </div>
+          )}
+
+          {activeTab === 'announcement' && (
+            <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_24rem]">
+              <section className="rounded-lg border border-slate-800 bg-slate-900 p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold">Announcement banner</h3>
+                    <p className="mt-1 text-sm text-slate-400">Show a large site-wide message above public pages.</p>
+                  </div>
+                  <label className={`flex w-fit items-center gap-3 rounded-md border px-4 py-3 text-sm font-semibold ${content.announcement?.enabled ? 'border-emerald-300/25 bg-emerald-400/10 text-emerald-100' : 'border-slate-800 bg-slate-950/45 text-slate-200'}`}>
+                    <input
+                      type="checkbox"
+                      checked={content.announcement?.enabled === true}
+                      onChange={(event) => updateAnnouncement({ enabled: event.target.checked })}
+                    />
+                    Enabled
+                  </label>
+                </div>
+
+                <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field label="Title">
+                    <input className={inputClass()} value={content.announcement?.title || ''} onChange={(event) => updateAnnouncement({ title: event.target.value })} />
+                  </Field>
+                  <Field label="Tone">
+                    <select className={inputClass()} value={content.announcement?.tone || 'blue'} onChange={(event) => updateAnnouncement({ tone: event.target.value })}>
+                      {toneOptions.map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Message" span="md:col-span-2">
+                    <textarea className={inputClass('min-h-40 resize-y text-base leading-relaxed')} value={content.announcement?.message || ''} onChange={(event) => updateAnnouncement({ message: event.target.value })} />
+                  </Field>
+                  <Field label="Link text">
+                    <input className={inputClass()} value={content.announcement?.linkText || ''} onChange={(event) => updateAnnouncement({ linkText: event.target.value })} />
+                  </Field>
+                  <Field label="Link URL">
+                    <input className={inputClass()} value={content.announcement?.linkUrl || ''} onChange={(event) => updateAnnouncement({ linkUrl: event.target.value })} />
+                  </Field>
+                </div>
+              </section>
+
+              <aside className="rounded-lg border border-slate-800 bg-slate-900 p-5">
+                <h3 className="font-semibold">Preview</h3>
+                <div className={`mt-4 rounded-lg border p-5 ${announcementPreviewClasses[content.announcement?.tone || 'blue'] || announcementPreviewClasses.blue}`}>
+                  {content.announcement?.title && (
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-85">
+                      {content.announcement.title}
+                    </p>
+                  )}
+                  <p className="mt-2 text-xl font-semibold leading-snug">
+                    {content.announcement?.message || 'Your announcement message will appear here.'}
+                  </p>
+                  {content.announcement?.linkText && (
+                    <p className="mt-4 inline-flex rounded-md bg-white/90 px-4 py-2 text-sm font-semibold text-slate-950">
+                      {content.announcement.linkText}
+                    </p>
+                  )}
+                </div>
+              </aside>
+            </div>
+          )}
+
+          {activeTab === 'maintenance' && (
+            <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_24rem]">
+              <section className="rounded-lg border border-slate-800 bg-slate-900 p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold">Maintenance mode</h3>
+                    <p className="mt-1 text-sm text-slate-400">Temporarily replace public pages with a maintenance screen.</p>
+                  </div>
+                  <label className={`flex w-fit items-center gap-3 rounded-md border px-4 py-3 text-sm font-semibold ${content.maintenance?.enabled ? 'border-amber-300/25 bg-amber-400/10 text-amber-100' : 'border-slate-800 bg-slate-950/45 text-slate-200'}`}>
+                    <input
+                      type="checkbox"
+                      checked={content.maintenance?.enabled === true}
+                      onChange={(event) => updateMaintenance({ enabled: event.target.checked })}
+                    />
+                    {content.maintenance?.enabled ? 'Maintenance on' : 'Maintenance off'}
+                  </label>
+                </div>
+
+                <div className="mt-6 grid grid-cols-1 gap-4">
+                  <Field label="Title">
+                    <input className={inputClass()} value={content.maintenance?.title || ''} onChange={(event) => updateMaintenance({ title: event.target.value })} />
+                  </Field>
+                  <Field label="Message">
+                    <textarea className={inputClass('min-h-36 resize-y text-base leading-relaxed')} value={content.maintenance?.message || ''} onChange={(event) => updateMaintenance({ message: event.target.value })} />
+                  </Field>
+                  <Field label="Estimated return">
+                    <input className={inputClass()} value={content.maintenance?.estimatedReturn || ''} onChange={(event) => updateMaintenance({ estimatedReturn: event.target.value })} placeholder="Example: Tonight at 9 PM CT" />
+                  </Field>
+                </div>
+              </section>
+
+              <aside className="rounded-lg border border-slate-800 bg-slate-900 p-5">
+                <h3 className="font-semibold">Public preview</h3>
+                <div className="mt-4 rounded-lg border border-sky-300/20 bg-[#0f2650] p-6 text-center">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">Maintenance Mode</p>
+                  <h4 className="mt-3 text-2xl font-semibold leading-tight">{content.maintenance?.title || defaultSiteContent.maintenance.title}</h4>
+                  <p className="mt-3 text-sm leading-relaxed text-white/75">{content.maintenance?.message || defaultSiteContent.maintenance.message}</p>
+                  {content.maintenance?.estimatedReturn && (
+                    <p className="mt-4 rounded-md border border-white/10 bg-white/8 px-3 py-2 text-xs font-semibold text-sky-100">
+                      Expected back: {content.maintenance.estimatedReturn}
+                    </p>
+                  )}
+                </div>
+                <p className="mt-4 text-sm leading-relaxed text-slate-400">
+                  Admin stays accessible while this is on. Login remains available so you can get back into admin if your session expires.
+                </p>
+              </aside>
             </div>
           )}
 
@@ -567,7 +990,7 @@ export default function AdminContent() {
                     <div className="flex flex-col gap-4 border-b border-slate-800 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
                       <div className="min-w-0">
                         <h3 className="truncate text-xl font-semibold">{selectedPost.title || 'Untitled post'}</h3>
-                        <p className="mt-1 text-sm text-slate-400">{selectedPost.category || 'Updates'} · {formatDate(selectedPost.date)}</p>
+                        <p className="mt-1 text-sm text-slate-400">{selectedPost.category || 'Updates'} - {formatDate(selectedPost.date)}</p>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <button
@@ -688,6 +1111,156 @@ export default function AdminContent() {
             </div>
           )}
 
+          {activeTab === 'reviews' && (
+            <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[24rem_1fr]">
+              <section className="rounded-lg border border-slate-800 bg-slate-900">
+                <div className="flex items-center justify-between border-b border-slate-800 px-4 py-4">
+                  <div>
+                    <h3 className="font-semibold">Reviews</h3>
+                    <p className="mt-1 text-sm text-slate-400">{(content.reviews || []).length} total reviews</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addReview}
+                    className="rounded-md bg-sky-500 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-600"
+                  >
+                    Add review
+                  </button>
+                </div>
+
+                <div className="max-h-[calc(100vh-15rem)] overflow-y-auto p-3">
+                  {(content.reviews || []).length ? (
+                    (content.reviews || []).map((review, index) => (
+                      <button
+                        key={`${review.name || 'review'}-${index}`}
+                        type="button"
+                        onClick={() => setSelectedReviewIndex(index)}
+                        className={`mb-2 w-full rounded-md border p-3 text-left transition ${
+                          selectedReviewIndex === index
+                            ? 'border-sky-300 bg-sky-500/12'
+                            : 'border-slate-800 bg-slate-950/35 hover:bg-slate-800/60'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-white">{review.name || 'Unnamed review'}</p>
+                            <p className="mt-1 text-xs text-slate-400">{review.role || 'No role'} - {review.rating || 5} stars</p>
+                          </div>
+                          <span className={`rounded-full px-2 py-1 text-xs font-semibold ${review.published === false ? 'bg-amber-400/10 text-amber-100' : 'bg-emerald-400/10 text-emerald-100'}`}>
+                            {review.published === false ? 'Draft' : 'Live'}
+                          </span>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <EmptyState
+                      title="No reviews yet"
+                      text="Add a customer review and save changes to show it on the landing page."
+                      action={
+                        <button type="button" onClick={addReview} className="mt-5 rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600">
+                          Add review
+                        </button>
+                      }
+                    />
+                  )}
+                </div>
+              </section>
+
+              <section className="rounded-lg border border-slate-800 bg-slate-900">
+                {selectedReview ? (
+                  <>
+                    <div className="flex flex-col gap-4 border-b border-slate-800 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-xl font-semibold">{selectedReview.name || 'Unnamed review'}</h3>
+                        <p className="mt-1 text-sm text-slate-400">{selectedReview.role || 'No role'} - {selectedReview.date || 'No date'}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => updateReview(selectedReviewIndex, { published: selectedReview.published === false })}
+                          className={`rounded-md border px-3 py-2 text-sm font-semibold ${
+                            selectedReview.published === false
+                              ? 'border-amber-300/25 bg-amber-400/10 text-amber-100'
+                              : 'border-emerald-300/25 bg-emerald-400/10 text-emerald-100'
+                          }`}
+                        >
+                          {selectedReview.published === false ? 'Draft' : 'Published'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeReview(selectedReviewIndex)}
+                          className="rounded-md border border-red-300/20 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-100"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-5 p-5 2xl:grid-cols-[1fr_24rem]">
+                      <div className="space-y-5">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <Field label="Name">
+                            <input className={inputClass()} value={selectedReview.name || ''} onChange={(event) => updateReview(selectedReviewIndex, { name: event.target.value })} />
+                          </Field>
+                          <Field label="Role">
+                            <input className={inputClass()} value={selectedReview.role || ''} onChange={(event) => updateReview(selectedReviewIndex, { role: event.target.value })} placeholder="Example: Small Farmer" />
+                          </Field>
+                          <Field label="Rating">
+                            <select className={inputClass()} value={selectedReview.rating || 5} onChange={(event) => updateReview(selectedReviewIndex, { rating: Number(event.target.value) })}>
+                              <option value="5">5 stars</option>
+                              <option value="4.5">4.5 stars</option>
+                              <option value="4">4 stars</option>
+                              <option value="3.5">3.5 stars</option>
+                              <option value="3">3 stars</option>
+                            </select>
+                          </Field>
+                          <Field label="Date">
+                            <input className={inputClass()} value={selectedReview.date || ''} onChange={(event) => updateReview(selectedReviewIndex, { date: event.target.value })} placeholder="Example: Jun 2026" />
+                          </Field>
+                          <Field label="Tag" span="md:col-span-2">
+                            <input className={inputClass()} value={selectedReview.tag || ''} onChange={(event) => updateReview(selectedReviewIndex, { tag: event.target.value })} placeholder="Example: Verified user" />
+                          </Field>
+                          <Field label="Review text" span="md:col-span-2">
+                            <textarea className={inputClass('min-h-44 resize-y')} value={selectedReview.text || ''} onChange={(event) => updateReview(selectedReviewIndex, { text: event.target.value })} />
+                          </Field>
+                        </div>
+                      </div>
+
+                      <aside className="rounded-lg border border-slate-800 bg-slate-950/45 p-4">
+                        <h4 className="font-semibold">Landing page preview</h4>
+                        <div className="mt-4 rounded-lg bg-slate-950 p-3">
+                          <ReviewLandingCard
+                            name={selectedReview.name || 'Customer Name'}
+                            role={selectedReview.role || 'BarnBuddy user'}
+                            rating={Number(selectedReview.rating) || 5}
+                            date={selectedReview.date || 'Jun 2026'}
+                            tag={selectedReview.tag || 'Verified user'}
+                            text={selectedReview.text || 'Write the review text here and the preview will update.'}
+                          />
+                        </div>
+                        <p className="mt-3 text-xs leading-relaxed text-slate-500">
+                          Draft reviews stay saved in admin but do not show on the public landing page.
+                        </p>
+                      </aside>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-5">
+                    <EmptyState
+                      title="Select or add a review"
+                      text="Choose a review from the list or add a new one to start editing."
+                      action={
+                        <button type="button" onClick={addReview} className="mt-5 rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600">
+                          Add review
+                        </button>
+                      }
+                    />
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
+
           {activeTab === 'status' && (
             <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_24rem]">
               <section className="rounded-lg border border-slate-800 bg-slate-900 p-5">
@@ -770,6 +1343,171 @@ export default function AdminContent() {
                   </Field>
                 </div>
               </aside>
+            </div>
+          )}
+
+          {activeTab === 'media' && (
+            <div className="mt-6 rounded-lg border border-slate-800 bg-slate-900">
+              <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold">Media library</h3>
+                  <p className="mt-1 text-sm text-slate-400">Uploaded images for news posts and site content.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => loadAdminTools()}
+                  className="rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
+                >
+                  {adminDataLoading ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4">
+                {mediaLibrary.map((item) => (
+                  <article key={item.id} className="overflow-hidden rounded-lg border border-slate-800 bg-slate-950/45">
+                    <div className="aspect-[16/10] bg-slate-950">
+                      <img src={item.url?.startsWith('/api/') ? `${API_URL}${item.url}` : item.url} alt={item.filename} className="h-full w-full object-cover" />
+                    </div>
+                    <div className="p-4">
+                      <p className="truncate text-sm font-semibold text-white">{item.filename}</p>
+                      <p className="mt-1 text-xs text-slate-500">{formatBytes(item.size)} - {formatDateTime(item.createdAt)}</p>
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard?.writeText(item.url?.startsWith('/api/') ? `${API_URL}${item.url}` : item.url)}
+                        className="mt-3 rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800"
+                      >
+                        Copy URL
+                      </button>
+                    </div>
+                  </article>
+                ))}
+
+                {!mediaLibrary.length && (
+                  <div className="sm:col-span-2 xl:col-span-4">
+                    <EmptyState title="No media yet" text="Images uploaded from news posts will show up here." />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'links' && (
+            <div className="mt-6 rounded-lg border border-slate-800 bg-slate-900">
+              <div className="border-b border-slate-800 px-5 py-4">
+                <h3 className="text-xl font-semibold">Admin quick links</h3>
+                <p className="mt-1 text-sm text-slate-400">Shortcuts to the tools you use to run BarnBuddy.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
+                {quickLinks.map((link) => (
+                  <a key={link.label} href={link.url} target="_blank" rel="noreferrer" className="rounded-lg border border-slate-800 bg-slate-950/45 p-5 transition hover:border-sky-300/40 hover:bg-slate-800">
+                    <p className="text-lg font-semibold text-white">{link.label}</p>
+                    <p className="mt-2 break-all text-sm text-slate-500">{link.url}</p>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'support' && (
+            <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_22rem]">
+              <section className="rounded-lg border border-slate-800 bg-slate-900">
+                <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+                  <div>
+                    <h3 className="text-xl font-semibold">Support inbox</h3>
+                    <p className="mt-1 text-sm text-slate-400">Contact form messages saved from the website.</p>
+                  </div>
+                  <button type="button" onClick={() => loadAdminTools()} className="rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800">
+                    Refresh
+                  </button>
+                </div>
+                <div className="divide-y divide-slate-800">
+                  {supportMessages.map((message) => (
+                    <article key={message.id} className="p-5">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="font-semibold text-white">{message.name} - {message.topic}</p>
+                          <p className="mt-1 text-sm text-slate-400">{message.email} - {formatDateTime(message.created_at)}</p>
+                        </div>
+                        <select className={inputClass('w-fit')} value={message.status} onChange={(event) => updateSupportStatus(message.id, event.target.value)}>
+                          <option value="new">New</option>
+                          <option value="open">Open</option>
+                          <option value="closed">Closed</option>
+                        </select>
+                      </div>
+                      <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-slate-300">{message.message}</p>
+                    </article>
+                  ))}
+                  {!supportMessages.length && <div className="p-5"><EmptyState title="No support messages" text="New contact form submissions will appear here." /></div>}
+                </div>
+              </section>
+
+              <aside className="rounded-lg border border-slate-800 bg-slate-900 p-5">
+                <h3 className="font-semibold">Newsletter</h3>
+                <p className="mt-1 text-sm text-slate-400">Latest subscription records.</p>
+                <div className="mt-4 space-y-3">
+                  {newsletterSubscribers.slice(0, 12).map((subscriber) => (
+                    <div key={subscriber.id} className="rounded-md border border-slate-800 bg-slate-950/45 p-3">
+                      <p className="truncate text-sm font-semibold text-white">{subscriber.email}</p>
+                      <p className="mt-1 text-xs text-slate-500">{subscriber.status} - {subscriber.source}</p>
+                    </div>
+                  ))}
+                  {!newsletterSubscribers.length && <p className="text-sm text-slate-500">No newsletter subscribers yet.</p>}
+                </div>
+              </aside>
+            </div>
+          )}
+
+          {activeTab === 'activity' && (
+            <div className="mt-6 rounded-lg border border-slate-800 bg-slate-900">
+              <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold">Admin activity</h3>
+                  <p className="mt-1 text-sm text-slate-400">A running log of website content changes and uploads.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadActivity}
+                  className="rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
+                >
+                  {activityLoading ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
+
+              <div className="divide-y divide-slate-800">
+                {activity.map((item) => (
+                  <article key={item.id} className="grid grid-cols-1 gap-4 px-5 py-5 xl:grid-cols-[14rem_1fr_13rem]">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{item.actor?.name || 'Unknown admin'}</p>
+                      <p className="mt-1 truncate text-xs text-slate-500">{item.actor?.email || item.actor?.clerkUserId || 'No actor details'}</p>
+                    </div>
+
+                    <div>
+                      <p className="font-semibold text-white">{activityLabel(item.action)}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {Object.entries(item.details || {}).map(([key, value]) => (
+                          <span key={key} className="rounded-md border border-slate-800 bg-slate-950/55 px-2.5 py-1 text-xs text-slate-300">
+                            <span className="text-slate-500">{key}: </span>
+                            {String(value)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <time className="text-sm text-slate-500 xl:text-right" dateTime={item.createdAt}>
+                      {formatDateTime(item.createdAt)}
+                    </time>
+                  </article>
+                ))}
+
+                {!activity.length && (
+                  <div className="px-5 py-10">
+                    <EmptyState
+                      title={activityLoading ? 'Loading activity' : 'No activity yet'}
+                      text={activityLoading ? 'Checking the latest admin actions.' : 'Saves and image uploads will appear here once they happen.'}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </section>

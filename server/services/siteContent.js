@@ -77,6 +77,21 @@ const defaultSiteContent = {
     recentUpdateTitle: "Recent updates",
     recentUpdateBody: "No incidents reported.",
   },
+  announcement: {
+    enabled: false,
+    tone: "blue",
+    title: "",
+    message: "",
+    linkText: "",
+    linkUrl: "",
+  },
+  maintenance: {
+    enabled: false,
+    title: "BarnBuddy is down for maintenance",
+    message: "We are making a few updates and will be back soon.",
+    estimatedReturn: "",
+  },
+  reviews: [],
 };
 
 async function ensureSiteContentSchema() {
@@ -85,9 +100,17 @@ async function ensureSiteContentSchema() {
       id TEXT PRIMARY KEY DEFAULT 'default',
       news_posts JSONB NOT NULL DEFAULT '[]'::jsonb,
       status JSONB NOT NULL DEFAULT '{}'::jsonb,
+      announcement JSONB NOT NULL DEFAULT '{}'::jsonb,
+      maintenance JSONB NOT NULL DEFAULT '{}'::jsonb,
+      reviews JSONB NOT NULL DEFAULT '[]'::jsonb,
       updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    ALTER TABLE site_content
+      ADD COLUMN IF NOT EXISTS announcement JSONB NOT NULL DEFAULT '{}'::jsonb,
+      ADD COLUMN IF NOT EXISTS maintenance JSONB NOT NULL DEFAULT '{}'::jsonb,
+      ADD COLUMN IF NOT EXISTS reviews JSONB NOT NULL DEFAULT '[]'::jsonb;
 
     CREATE TABLE IF NOT EXISTS site_media (
       id SERIAL PRIMARY KEY,
@@ -97,19 +120,44 @@ async function ensureSiteContentSchema() {
       uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS admin_activity_log (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      action TEXT NOT NULL,
+      details JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      topic TEXT NOT NULL DEFAULT 'General question',
+      message TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'new',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   await pool.query(
-    `INSERT INTO site_content (id, news_posts, status)
-     VALUES ('default', $1::jsonb, $2::jsonb)
+    `INSERT INTO site_content (id, news_posts, status, announcement, maintenance, reviews)
+     VALUES ('default', $1::jsonb, $2::jsonb, $3::jsonb, $4::jsonb, $5::jsonb)
      ON CONFLICT (id) DO NOTHING`,
-    [JSON.stringify(defaultSiteContent.newsPosts), JSON.stringify(defaultSiteContent.status)]
+    [
+      JSON.stringify(defaultSiteContent.newsPosts),
+      JSON.stringify(defaultSiteContent.status),
+      JSON.stringify(defaultSiteContent.announcement),
+      JSON.stringify(defaultSiteContent.maintenance),
+      JSON.stringify(defaultSiteContent.reviews),
+    ]
   );
 }
 
 async function getSiteContent({ includeDrafts = false } = {}) {
   const result = await pool.query(
-    `SELECT news_posts, status, updated_at
+    `SELECT news_posts, status, announcement, maintenance, reviews, updated_at
      FROM site_content
      WHERE id = 'default'
      LIMIT 1`
@@ -119,6 +167,15 @@ async function getSiteContent({ includeDrafts = false } = {}) {
     ? {
         newsPosts: Array.isArray(row.news_posts) ? row.news_posts : defaultSiteContent.newsPosts,
         status: row.status && typeof row.status === "object" ? row.status : defaultSiteContent.status,
+        announcement:
+          row.announcement && typeof row.announcement === "object"
+            ? { ...defaultSiteContent.announcement, ...row.announcement }
+            : defaultSiteContent.announcement,
+        maintenance:
+          row.maintenance && typeof row.maintenance === "object"
+            ? { ...defaultSiteContent.maintenance, ...row.maintenance }
+            : defaultSiteContent.maintenance,
+        reviews: Array.isArray(row.reviews) ? row.reviews : defaultSiteContent.reviews,
         updatedAt: row.updated_at,
       }
     : { ...defaultSiteContent, updatedAt: null };
@@ -128,32 +185,113 @@ async function getSiteContent({ includeDrafts = false } = {}) {
   return {
     ...content,
     newsPosts: content.newsPosts.filter((post) => post.published !== false),
+    reviews: content.reviews.filter((review) => review.published !== false),
   };
 }
 
-async function updateSiteContent({ newsPosts, status, userId }) {
+async function updateSiteContent({ newsPosts, status, announcement, maintenance, reviews, userId }) {
   const result = await pool.query(
     `UPDATE site_content
      SET news_posts = $1::jsonb,
          status = $2::jsonb,
-         updated_by = $3,
+         announcement = $3::jsonb,
+         maintenance = $4::jsonb,
+         reviews = $5::jsonb,
+         updated_by = $6,
          updated_at = CURRENT_TIMESTAMP
      WHERE id = 'default'
-     RETURNING news_posts, status, updated_at`,
-    [JSON.stringify(newsPosts), JSON.stringify(status), userId]
+     RETURNING news_posts, status, announcement, maintenance, reviews, updated_at`,
+    [
+      JSON.stringify(newsPosts),
+      JSON.stringify(status),
+      JSON.stringify(announcement),
+      JSON.stringify(maintenance),
+      JSON.stringify(reviews),
+      userId,
+    ]
   );
 
   const row = result.rows[0];
   return {
     newsPosts: row.news_posts,
     status: row.status,
+    announcement: row.announcement,
+    maintenance: row.maintenance,
+    reviews: row.reviews,
     updatedAt: row.updated_at,
   };
+}
+
+async function logAdminActivity({ userId, action, details = {} }) {
+  await pool.query(
+    `INSERT INTO admin_activity_log (user_id, action, details)
+     VALUES ($1, $2, $3::jsonb)`,
+    [userId, action, JSON.stringify(details)]
+  );
+}
+
+async function getAdminActivity({ limit = 30 } = {}) {
+  const result = await pool.query(
+    `SELECT aal.id,
+            aal.action,
+            aal.details,
+            aal.created_at,
+            u.name,
+            u.email,
+            u.clerk_user_id
+     FROM admin_activity_log aal
+     LEFT JOIN users u ON u.id = aal.user_id
+     ORDER BY aal.created_at DESC
+     LIMIT $1`,
+    [Math.max(1, Math.min(Number.parseInt(limit, 10) || 30, 100))]
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    action: row.action,
+    details: row.details || {},
+    createdAt: row.created_at,
+    actor: {
+      name: row.name || row.email || row.clerk_user_id || "Unknown admin",
+      email: row.email || "",
+      clerkUserId: row.clerk_user_id || "",
+    },
+  }));
+}
+
+async function getSiteMedia({ limit = 60 } = {}) {
+  const result = await pool.query(
+    `SELECT sm.id,
+            sm.filename,
+            sm.mime_type,
+            OCTET_LENGTH(sm.data) AS size,
+            sm.created_at,
+            u.name,
+            u.email
+     FROM site_media sm
+     LEFT JOIN users u ON u.id = sm.uploaded_by
+     ORDER BY sm.created_at DESC
+     LIMIT $1`,
+    [Math.max(1, Math.min(Number.parseInt(limit, 10) || 60, 120))]
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    filename: row.filename || `site-image-${row.id}`,
+    mimeType: row.mime_type,
+    size: Number(row.size) || 0,
+    url: `/api/site-content/media/${row.id}`,
+    createdAt: row.created_at,
+    uploadedBy: row.name || row.email || "Unknown admin",
+  }));
 }
 
 module.exports = {
   defaultSiteContent,
   ensureSiteContentSchema,
   getSiteContent,
+  getAdminActivity,
+  getSiteMedia,
+  logAdminActivity,
   updateSiteContent,
 };

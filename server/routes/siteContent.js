@@ -4,7 +4,10 @@ const authMiddleware = require("../middleware/authMiddleware");
 const pool = require("../data-source");
 const {
   defaultSiteContent,
+  getAdminActivity,
+  getSiteMedia,
   getSiteContent,
+  logAdminActivity,
   updateSiteContent,
 } = require("../services/siteContent");
 
@@ -87,6 +90,33 @@ function sanitizeNewsPosts(newsPosts) {
   });
 }
 
+function sanitizeReviews(reviews = []) {
+  if (!Array.isArray(reviews)) {
+    throw new Error("Reviews must be a list.");
+  }
+
+  return reviews.map((review, index) => {
+    const name = asTrimmedString(review.name);
+    const text = asTrimmedString(review.text);
+    const rating = Math.max(1, Math.min(Number.parseFloat(review.rating) || 5, 5));
+    const published = review.published !== false;
+
+    if (published && !name) throw new Error(`Published review ${index + 1} needs a name.`);
+    if (published && !text) throw new Error(`Published review ${index + 1} needs review text.`);
+
+    return {
+      id: asTrimmedString(review.id) || slugify(`${name || "draft"}-${review.date || Date.now()}`) || `review-${Date.now()}-${index}`,
+      name,
+      role: asTrimmedString(review.role, "BarnBuddy user"),
+      rating,
+      date: asTrimmedString(review.date, new Date().toLocaleString("en-US", { month: "short", year: "numeric" })),
+      tag: asTrimmedString(review.tag, "Verified user"),
+      text,
+      published,
+    };
+  });
+}
+
 function sanitizeStatus(status = {}) {
   const services = Array.isArray(status.services) ? status.services : defaultSiteContent.status.services;
 
@@ -102,6 +132,26 @@ function sanitizeStatus(status = {}) {
     })),
     recentUpdateTitle: asTrimmedString(status.recentUpdateTitle, "Recent updates"),
     recentUpdateBody: asTrimmedString(status.recentUpdateBody, "No incidents reported."),
+  };
+}
+
+function sanitizeAnnouncement(announcement = {}) {
+  return {
+    enabled: announcement.enabled === true,
+    tone: validTones.has(announcement.tone) ? announcement.tone : "blue",
+    title: asTrimmedString(announcement.title),
+    message: asTrimmedString(announcement.message),
+    linkText: asTrimmedString(announcement.linkText),
+    linkUrl: asTrimmedString(announcement.linkUrl),
+  };
+}
+
+function sanitizeMaintenance(maintenance = {}) {
+  return {
+    enabled: maintenance.enabled === true,
+    title: asTrimmedString(maintenance.title, defaultSiteContent.maintenance.title),
+    message: asTrimmedString(maintenance.message, defaultSiteContent.maintenance.message),
+    estimatedReturn: asTrimmedString(maintenance.estimatedReturn),
   };
 }
 
@@ -147,11 +197,110 @@ router.get("/admin", authMiddleware, requireAdmin, async (req, res) => {
   }
 });
 
+router.get("/admin/activity", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const activity = await getAdminActivity({ limit: req.query.limit });
+    res.json({ activity });
+  } catch (err) {
+    console.error("Failed to load admin activity:", err);
+    res.status(500).json({ error: "Failed to load admin activity" });
+  }
+});
+
+router.get("/admin/media", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const media = await getSiteMedia({ limit: req.query.limit });
+    res.json({ media });
+  } catch (err) {
+    console.error("Failed to load site media library:", err);
+    res.status(500).json({ error: "Failed to load media library" });
+  }
+});
+
+router.get("/admin/support", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const [messagesResult, subscribersResult] = await Promise.all([
+      pool.query(
+        `SELECT id, name, email, topic, message, status, created_at, updated_at
+         FROM contact_messages
+         ORDER BY created_at DESC
+         LIMIT 80`
+      ),
+      pool.query(
+        `SELECT id, email, status, source, subscribed_at, unsubscribed_at, updated_at
+         FROM newsletter_subscribers
+         ORDER BY updated_at DESC
+         LIMIT 80`
+      ).catch((err) => {
+        if (err.code === "42P01") return { rows: [] };
+        throw err;
+      }),
+    ]);
+
+    res.json({
+      messages: messagesResult.rows,
+      newsletterSubscribers: subscribersResult.rows,
+    });
+  } catch (err) {
+    console.error("Failed to load support inbox:", err);
+    res.status(500).json({ error: "Failed to load support inbox" });
+  }
+});
+
+router.patch("/admin/support/:id", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const status = ["new", "open", "closed"].includes(req.body.status) ? req.body.status : "open";
+    const result = await pool.query(
+      `UPDATE contact_messages
+       SET status = $1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING id, name, email, topic, message, status, created_at, updated_at`,
+      [status, req.params.id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: "Support message not found" });
+    }
+
+    await logAdminActivity({
+      userId: req.user.id,
+      action: "support_message_updated",
+      details: {
+        messageId: result.rows[0].id,
+        status,
+      },
+    });
+
+    res.json({ message: result.rows[0] });
+  } catch (err) {
+    console.error("Failed to update support message:", err);
+    res.status(500).json({ error: "Failed to update support message" });
+  }
+});
+
 router.put("/admin", authMiddleware, requireAdmin, async (req, res) => {
   try {
     const newsPosts = sanitizeNewsPosts(req.body.newsPosts);
     const status = sanitizeStatus(req.body.status);
-    const content = await updateSiteContent({ newsPosts, status, userId: req.user.id });
+    const announcement = sanitizeAnnouncement(req.body.announcement);
+    const maintenance = sanitizeMaintenance(req.body.maintenance);
+    const reviews = sanitizeReviews(req.body.reviews);
+    const content = await updateSiteContent({ newsPosts, status, announcement, maintenance, reviews, userId: req.user.id });
+    await logAdminActivity({
+      userId: req.user.id,
+      action: "website_content_updated",
+      details: {
+        newsPostCount: newsPosts.length,
+        publishedPostCount: newsPosts.filter((post) => post.published !== false).length,
+        overallStatus: status.overallStatus,
+        serviceCount: status.services.length,
+        announcementEnabled: announcement.enabled,
+        maintenanceEnabled: maintenance.enabled,
+        reviewCount: reviews.length,
+        publishedReviewCount: reviews.filter((review) => review.published !== false).length,
+      },
+    });
     res.json(content);
   } catch (err) {
     const statusCode = err.message.includes("needs") || err.message.includes("must") ? 400 : 500;
@@ -173,6 +322,16 @@ router.post("/admin/media", authMiddleware, requireAdmin, upload.single("image")
       [req.file.originalname || "", req.file.mimetype, req.file.buffer, req.user.id]
     );
     const id = result.rows[0].id;
+    await logAdminActivity({
+      userId: req.user.id,
+      action: "site_media_uploaded",
+      details: {
+        mediaId: id,
+        filename: req.file.originalname || "",
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+      },
+    });
 
     res.status(201).json({
       id,

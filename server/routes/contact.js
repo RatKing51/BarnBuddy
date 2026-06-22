@@ -1,5 +1,6 @@
 const express = require("express");
 const { sendContactEmail } = require("../services/emailService");
+const pool = require("../data-source");
 
 const router = express.Router();
 
@@ -26,6 +27,11 @@ router.post("/", async (req, res) => {
   }
 
   try {
+    await pool.query(
+      `INSERT INTO contact_messages (name, email, topic, message)
+       VALUES ($1, $2, $3, $4)`,
+      [name, email, topic, message]
+    );
     const result = await sendContactEmail({ name, email, topic, message });
     return res.status(202).json({ ok: true, email: result });
   } catch (err) {
