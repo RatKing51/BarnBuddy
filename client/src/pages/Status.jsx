@@ -5,7 +5,7 @@ const systems = [
   ['Web app', 'Operational', 'green'],
   ['Login and accounts', 'Operational', 'green'],
   ['Animal records', 'Operational', 'green'],
-  ['Notifications', 'Planned', 'blue'],
+  ['Notifications', 'Operational', 'green'],
 ]
 
 const toneClasses = {
