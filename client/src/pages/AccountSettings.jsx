@@ -8,6 +8,22 @@ import { usePreferences } from "../context/PreferencesContext";
 import { API_BASE_URL } from "../config/env";
 import { PREMIUM_FEATURES, PLANS, PLAN_IDS } from "../config/subscription";
 
+function reminderBadgeClass(urgency) {
+  if (urgency === "critical" || urgency === "overdue") {
+    return "bg-red-500/15 text-red-200 ring-1 ring-red-400/30";
+  }
+
+  if (urgency === "today") {
+    return "bg-amber-400/15 text-amber-100 ring-1 ring-amber-300/30";
+  }
+
+  if (urgency === "soon") {
+    return "bg-blue-500/15 text-blue-200 ring-1 ring-blue-400/30";
+  }
+
+  return "bg-emerald-400/15 text-emerald-200 ring-1 ring-emerald-300/30";
+}
+
 export default function AccountSettings() {
   const navigate = useNavigate();
   const { user } = useUser();
@@ -516,7 +532,7 @@ export default function AccountSettings() {
                             </p>
                             <p className="text-gray-400">{item.title}</p>
                           </div>
-                          <span className="w-fit rounded-full bg-blue-500/15 px-2 py-1 text-xs font-semibold text-blue-200">
+                          <span className={`w-fit rounded-full px-2 py-1 text-xs font-semibold ${reminderBadgeClass(item.urgency)}`}>
                             {item.status}
                           </span>
                         </div>

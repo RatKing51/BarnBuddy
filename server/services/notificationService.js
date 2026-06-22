@@ -81,15 +81,46 @@ function asDateString(value) {
 }
 
 function statusForDate(value) {
+  return timingForDate(value).label;
+}
+
+function timingForDate(value) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const due = new Date(asDateString(value));
   due.setHours(0, 0, 0, 0);
   const diffDays = Math.round((due - today) / 86400000);
 
-  if (diffDays < 0) return `${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? "" : "s"} overdue`;
-  if (diffDays === 0) return "due today";
-  return `due in ${diffDays} day${diffDays === 1 ? "" : "s"}`;
+  if (diffDays < 0) {
+    return {
+      diffDays,
+      urgency: diffDays <= -7 ? "critical" : "overdue",
+      label: `${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? "" : "s"} overdue`,
+      headline: diffDays <= -7 ? "Critical" : "Overdue",
+    };
+  }
+
+  if (diffDays === 0) {
+    return { diffDays, urgency: "today", label: "due today", headline: "Due today" };
+  }
+
+  return {
+    diffDays,
+    urgency: diffDays <= 2 ? "soon" : "upcoming",
+    label: `due in ${diffDays} day${diffDays === 1 ? "" : "s"}`,
+    headline: diffDays <= 2 ? "Coming up" : "Upcoming",
+  };
+}
+
+function reminderForDate(value) {
+  const timing = timingForDate(value);
+  return {
+    dueDate: asDateString(value),
+    status: timing.label,
+    urgency: timing.urgency,
+    urgencyLabel: timing.headline,
+    diffDays: timing.diffDays,
+  };
 }
 
 function reminderKey(parts) {
@@ -130,8 +161,7 @@ async function collectVaccinationReminders(userId, windowDays) {
     type: "Vaccination",
     title: row.vaccine_name || "Vaccination due",
     subject: row.animal_name || row.tag_id || "Animal",
-    dueDate: asDateString(row.next_due_date),
-    status: statusForDate(row.next_due_date),
+    ...reminderForDate(row.next_due_date),
   }));
 }
 
@@ -173,8 +203,7 @@ async function collectVetVisitReminders(userId, windowDays) {
         type: "Vet",
         title,
         subject,
-        dueDate: asDateString(row.visit_date),
-        status: statusForDate(row.visit_date),
+        ...reminderForDate(row.visit_date),
       });
     }
 
@@ -184,8 +213,7 @@ async function collectVetVisitReminders(userId, windowDays) {
         type: "Vet follow-up",
         title,
         subject,
-        dueDate: asDateString(row.follow_up_date),
-        status: statusForDate(row.follow_up_date),
+        ...reminderForDate(row.follow_up_date),
       });
     }
 
@@ -228,8 +256,7 @@ async function collectReproductionReminders(userId, windowDays) {
         type: "Reproduction",
         title: "Pregnancy check",
         subject,
-        dueDate: asDateString(row.pregnancy_check_date),
-        status: statusForDate(row.pregnancy_check_date),
+        ...reminderForDate(row.pregnancy_check_date),
       });
     }
 
@@ -239,8 +266,7 @@ async function collectReproductionReminders(userId, windowDays) {
         type: "Reproduction",
         title: "Expected birth window",
         subject,
-        dueDate: asDateString(row.due_date),
-        status: statusForDate(row.due_date),
+        ...reminderForDate(row.due_date),
       });
     }
 
@@ -270,8 +296,7 @@ async function collectFeedReminders(userId, windowDays) {
     type: "Feed",
     title: row.feed_type ? `Buy ${row.feed_type}` : "Feed purchase",
     subject: row.herd_name || row.animal_name || "Farm",
-    dueDate: asDateString(row.next_purchase_date),
-    status: statusForDate(row.next_purchase_date),
+    ...reminderForDate(row.next_purchase_date),
   }));
 }
 
@@ -299,23 +324,129 @@ async function previewUserReminders(userId) {
   };
 }
 
+function formatEmailDate(value) {
+  if (!value) return "No date";
+  const date = new Date(`${asDateString(value)}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return asDateString(value);
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function urgencyTheme(urgency) {
+  if (urgency === "critical") {
+    return {
+      label: "Critical",
+      color: "#991b1b",
+      text: "#7f1d1d",
+      soft: "#fef2f2",
+      border: "#fecaca",
+      accent: "#dc2626",
+    };
+  }
+
+  if (urgency === "overdue") {
+    return {
+      label: "Overdue",
+      color: "#b91c1c",
+      text: "#7f1d1d",
+      soft: "#fff1f2",
+      border: "#fecdd3",
+      accent: "#ef4444",
+    };
+  }
+
+  if (urgency === "today") {
+    return {
+      label: "Due today",
+      color: "#92400e",
+      text: "#78350f",
+      soft: "#fffbeb",
+      border: "#fde68a",
+      accent: "#f59e0b",
+    };
+  }
+
+  if (urgency === "soon") {
+    return {
+      label: "Soon",
+      color: "#1d4ed8",
+      text: "#1e3a8a",
+      soft: "#eff6ff",
+      border: "#bfdbfe",
+      accent: "#3b82f6",
+    };
+  }
+
+  return {
+    label: "Upcoming",
+    color: "#047857",
+    text: "#065f46",
+    soft: "#ecfdf5",
+    border: "#a7f3d0",
+    accent: "#10b981",
+  };
+}
+
+function typeLabel(type) {
+  const labels = {
+    Vaccination: "Vaccine",
+    Vet: "Vet",
+    "Vet follow-up": "Follow-up",
+    Reproduction: "Repro",
+    Feed: "Feed",
+  };
+
+  return labels[type] || type || "Reminder";
+}
+
 function buildReminderEmail({ name, items, windowDays }) {
   const safeName = escapeHtml(name || "there");
   const dashboardUrl = `${env.clientUrls[0].replace(/\/$/, "")}/dashboard`;
-  const rows = items
+  const urgentItems = items.filter((item) => item.urgency === "critical" || item.urgency === "overdue");
+  const todayItems = items.filter((item) => item.urgency === "today");
+  const soonItems = items.filter((item) => item.urgency === "soon" || item.urgency === "upcoming");
+  const leadItem = urgentItems[0] || todayItems[0] || soonItems[0] || items[0];
+  const leadTheme = urgencyTheme(leadItem?.urgency);
+  const preheader = urgentItems.length
+    ? `${urgentItems.length} overdue care item${urgentItems.length === 1 ? "" : "s"} need attention.`
+    : todayItems.length
+    ? `${todayItems.length} care item${todayItems.length === 1 ? "" : "s"} due today.`
+    : `${items.length} care reminder${items.length === 1 ? "" : "s"} inside your ${windowDays}-day window.`;
+  const summaryCards = [
+    { label: "Overdue", value: urgentItems.length, color: "#dc2626", bg: "#fef2f2" },
+    { label: "Due today", value: todayItems.length, color: "#f59e0b", bg: "#fffbeb" },
+    { label: "Upcoming", value: soonItems.length, color: "#2563eb", bg: "#eff6ff" },
+  ]
     .map(
-      (item) => `
-        <tr>
-          <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(item.type)}</td>
-          <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb;"><strong>${escapeHtml(item.subject)}</strong><br />${escapeHtml(item.title)}</td>
-          <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(item.status)}<br /><span style="color: #64748b;">${escapeHtml(item.dueDate)}</span></td>
-        </tr>`
+      (card) => `
+        <td style="width: 33.333%; padding: 0 4px;">
+          <div style="background: ${card.bg}; border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px;">
+            <div style="color: #64748b; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;">${card.label}</div>
+            <div style="color: ${card.color}; font-size: 28px; font-weight: 800; line-height: 1.1; margin-top: 8px;">${card.value}</div>
+          </div>
+        </td>`
     )
+    .join("");
+  const cards = items
+    .map((item) => {
+      const theme = urgencyTheme(item.urgency);
+      return `
+        <div style="background: #ffffff; border: 1px solid ${theme.border}; border-left: 6px solid ${theme.accent}; border-radius: 16px; margin: 0 0 12px; overflow: hidden;">
+          <div style="padding: 16px 18px;">
+            <div style="margin-bottom: 10px;">
+              <span style="background: ${theme.soft}; color: ${theme.text}; border: 1px solid ${theme.border}; border-radius: 999px; display: inline-block; font-size: 12px; font-weight: 800; padding: 5px 9px;">${escapeHtml(theme.label)}</span>
+              <span style="background: #f1f5f9; color: #475569; border-radius: 999px; display: inline-block; font-size: 12px; font-weight: 700; margin-left: 6px; padding: 5px 9px;">${escapeHtml(typeLabel(item.type))}</span>
+            </div>
+            <div style="color: #0f172a; font-size: 18px; font-weight: 800; line-height: 1.25;">${escapeHtml(item.subject)}</div>
+            <div style="color: #334155; font-size: 14px; margin-top: 4px;">${escapeHtml(item.title)}</div>
+            <div style="color: ${theme.color}; font-size: 14px; font-weight: 800; margin-top: 12px;">${escapeHtml(item.status)} · ${escapeHtml(formatEmailDate(item.dueDate))}</div>
+          </div>
+        </div>`;
+    })
     .join("");
 
   const text = [
     `BarnBuddy reminders for ${name || "your farm"}`,
-    `These are due or overdue within your ${windowDays}-day care window:`,
+    preheader,
     "",
     ...items.map((item) => `- ${item.type}: ${item.subject} - ${item.title} (${item.status}, ${item.dueDate})`),
     "",
@@ -323,29 +454,53 @@ function buildReminderEmail({ name, items, windowDays }) {
   ].join("\n");
 
   const html = `
-    <div style="font-family: Arial, sans-serif; color: #172033; line-height: 1.6;">
-      <h1 style="margin: 0 0 12px;">BarnBuddy reminders for ${safeName}</h1>
-      <p>These items are due or overdue inside your ${windowDays}-day care window.</p>
-      <table style="width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14px;">
-        <thead>
-          <tr style="background: #f1f5f9; text-align: left;">
-            <th style="padding: 10px 12px;">Type</th>
-            <th style="padding: 10px 12px;">Record</th>
-            <th style="padding: 10px 12px;">Due</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <p>
-        <a href="${dashboardUrl}" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 10px 16px; border-radius: 8px; text-decoration: none;">
-          Open BarnBuddy
-        </a>
-      </p>
-      <p style="color: #64748b; font-size: 13px;">You can turn automatic reminders off in BarnBuddy account settings.</p>
+    <div style="display: none; max-height: 0; overflow: hidden; opacity: 0;">${escapeHtml(preheader)}</div>
+    <div style="background: #f6f8fb; font-family: Arial, sans-serif; padding: 28px 12px;">
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 24px; box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08); color: #172033; line-height: 1.6; margin: 0 auto; max-width: 640px; overflow: hidden;">
+        <div style="background: #0f1f44; color: #ffffff; padding: 28px 28px 24px;">
+          <div style="font-size: 14px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;"><span style="color: #60a5fa;">Barn</span>Buddy</div>
+          <h1 style="font-size: 28px; line-height: 1.15; margin: 18px 0 10px;">${escapeHtml(leadTheme.label)} care reminder</h1>
+          <p style="color: #dbeafe; font-size: 15px; margin: 0;">Hi ${safeName}, ${escapeHtml(preheader)}</p>
+        </div>
+        <div style="padding: 24px 24px 10px;">
+          <table role="presentation" style="border-collapse: collapse; margin: 0 0 22px; width: 100%;">
+            <tr>${summaryCards}</tr>
+          </table>
+          ${cards}
+          <div style="padding: 12px 0 8px;">
+            <a href="${dashboardUrl}" style="background: #2563eb; border-radius: 12px; color: #ffffff; display: inline-block; font-weight: 800; padding: 12px 18px; text-decoration: none;">
+              Open BarnBuddy
+            </a>
+          </div>
+          <p style="color: #64748b; font-size: 13px; margin: 18px 0 4px;">Your reminder window is ${windowDays} day${windowDays === 1 ? "" : "s"}. You can turn automatic reminders off in BarnBuddy account settings.</p>
+        </div>
+      </div>
     </div>
   `;
 
   return { html, text };
+}
+
+function buildReminderSubject(items = []) {
+  const criticalCount = items.filter((item) => item.urgency === "critical").length;
+  const overdueCount = items.filter((item) => item.urgency === "overdue").length;
+  const todayCount = items.filter((item) => item.urgency === "today").length;
+  const count = items.length;
+  const plural = count === 1 ? "" : "s";
+
+  if (criticalCount > 0) {
+    return `Urgent BarnBuddy reminder: ${criticalCount} critical item${criticalCount === 1 ? "" : "s"}`;
+  }
+
+  if (overdueCount > 0) {
+    return `BarnBuddy reminder: ${overdueCount} overdue item${overdueCount === 1 ? "" : "s"}`;
+  }
+
+  if (todayCount > 0) {
+    return `BarnBuddy reminder: ${todayCount} item${todayCount === 1 ? "" : "s"} due today`;
+  }
+
+  return `BarnBuddy reminders: ${count} upcoming item${plural}`;
 }
 
 async function sendUserReminderEmail(userId, { force = false } = {}) {
@@ -390,7 +545,7 @@ async function sendUserReminderEmail(userId, { force = false } = {}) {
   const result = await sendEmail({
     to: preview.user.email,
     from: env.email.notificationsFrom,
-    subject: `BarnBuddy reminders: ${preview.items.length} item${preview.items.length === 1 ? "" : "s"} need attention`,
+    subject: buildReminderSubject(preview.items),
     ...email,
   });
 
