@@ -499,10 +499,10 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+    <div className="flex flex-col gap-5 xl:gap-6">
 
       {/* HEALTH EVENTS */}
-      <div className="lg:col-span-2 bg-gray-800 border border-gray-700 rounded-xl p-5">
+      <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 sm:p-5">
 
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold text-gray-200">Health Events</h2>
@@ -510,46 +510,46 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           <button
             onClick={handleAddEvent}
             disabled={addingEvent}
-            className="cursor-pointer bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium disabled:cursor-wait disabled:opacity-60"
+            className="w-full cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
           >
             {addingEvent ? "Adding..." : "+ Add Event"}
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(15rem,20rem)_minmax(0,1fr)] xl:gap-6">
 
           {/* EVENT LIST */}
-          <div className="space-y-2 max-h-[360px] overflow-y-auto md:col-span-1">
+          <div className="max-h-[22rem] space-y-2 overflow-y-auto pr-1">
 
             {healthEvents.length === 0 && (
-              <div className="text-gray-400 text-sm">
+              <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">
                 No health events recorded
               </div>
             )}
 
             {healthEvents.map((event, idx) => (
-              <div key={idx} className="flex gap-2 items-start">
+              <div key={idx} className="flex items-start gap-2">
                 <button
                   onClick={() => setSelectedEventIndex(selectedEventIndex === idx ? null : idx)}
-                  className={`cursor-pointer flex-1 text-left p-3 rounded-lg border transition ${
+                  className={`min-w-0 flex-1 cursor-pointer rounded-lg border p-3 text-left transition ${
                     selectedEventIndex === idx
                       ? "bg-blue-600 border-blue-500"
                       : "bg-gray-700 border-gray-600 hover:bg-gray-650"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 text-sm font-semibold leading-5">
                       {event.type || "Health Event"}
                     </span>
-                    <span className={`text-[10px] px-2 py-1 rounded-full ${getSeverityClasses(event.severity)}`}>
+                    <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] leading-none ${getSeverityClasses(event.severity)}`}>
                       {event.severity || "Low"}
                     </span>
                   </div>
 
-                  <div className="mt-1 text-xs text-gray-300 flex items-center justify-between gap-2">
-                    <span>{event.date || "No date"}</span>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-300">
+                    <span className="shrink-0">{event.date || "No date"}</span>
                     {event.resolved && (
-                      <span className="text-[10px] rounded-full bg-emerald-500 px-2 py-1 text-white uppercase tracking-[0.15em]">
+                      <span className="rounded-full bg-emerald-500 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-white">
                         Resolved
                       </span>
                     )}
@@ -561,15 +561,15 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           </div>
 
           {/* EVENT FORM */}
-          <div className="space-y-4 md:col-span-2">
+          <div className="min-w-0 space-y-4">
             {selectedEventIndex === null ? (
-              <div className="text-gray-400 text-sm">
+              <div className="rounded-xl border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400">
                 Select or add a health event to edit
               </div>
             ) : (
-              <div className="bg-gray-900 border border-gray-700 rounded-2xl p-4 space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
+              <div className="space-y-4 rounded-xl border border-gray-700 bg-gray-900 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
                     <h3 className="text-gray-100 font-semibold">Event Details</h3>
                     <p className="text-xs text-gray-500">
                       {savingEvent === selectedEventIndex || eventSaveStatus === "saving"
@@ -583,64 +583,66 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
                     type="button"
                     onClick={() => deleteHealthEventAPI(selectedEventIndex)}
                     disabled={deletingEvent === selectedEventIndex}
-                    className="cursor-pointer rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-60"
+                    className="w-full cursor-pointer rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
                   >
                     {deletingEvent === selectedEventIndex ? "Deleting..." : "Delete"}
                   </button>
                 </div>
 
-                <div>
-                  <label className="text-xs text-gray-400">Date</label>
-                  <input
-                    type="date"
-                    value={healthEvents[selectedEventIndex].date}
-                    onChange={(e) => {
-                      const updated = [...healthEvents];
-                      updated[selectedEventIndex].date = e.target.value;
-                      setHealthEvents(updated);
-                    }}
-                    onBlur={() => saveHealthEvent(selectedEventIndex)}
-                    className="cursor-text mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  <div>
+                    <label className="text-xs text-gray-400">Date</label>
+                    <input
+                      type="date"
+                      value={healthEvents[selectedEventIndex].date}
+                      onChange={(e) => {
+                        const updated = [...healthEvents];
+                        updated[selectedEventIndex].date = e.target.value;
+                        setHealthEvents(updated);
+                      }}
+                      onBlur={() => saveHealthEvent(selectedEventIndex)}
+                      className="mt-1 w-full cursor-text rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm"
+                    />
+                  </div>
 
-                <div>
-                  <label className="text-xs text-gray-400">Type</label>
-                  <select
-                    value={healthEvents[selectedEventIndex].type}
-                    onChange={(e) => {
-                      const updated = [...healthEvents];
-                      updated[selectedEventIndex].type = e.target.value;
-                      setHealthEvents(updated);
-                    }}
-                    onBlur={() => saveHealthEvent(selectedEventIndex)}
-                    className="cursor-pointer mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
-                  >
-                    <option value="">Select</option>
-                    <option>Illness</option>
-                    <option>Injury</option>
-                    <option>Checkup</option>
-                    <option>Treatment</option>
-                  </select>
-                </div>
+                  <div>
+                    <label className="text-xs text-gray-400">Type</label>
+                    <select
+                      value={healthEvents[selectedEventIndex].type}
+                      onChange={(e) => {
+                        const updated = [...healthEvents];
+                        updated[selectedEventIndex].type = e.target.value;
+                        setHealthEvents(updated);
+                      }}
+                      onBlur={() => saveHealthEvent(selectedEventIndex)}
+                      className="mt-1 w-full cursor-pointer rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm"
+                    >
+                      <option value="">Select</option>
+                      <option>Illness</option>
+                      <option>Injury</option>
+                      <option>Checkup</option>
+                      <option>Treatment</option>
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="text-xs text-gray-400">Severity</label>
-                  <select
-                    value={healthEvents[selectedEventIndex].severity}
-                    onChange={(e) => {
-                      const updated = [...healthEvents];
-                      updated[selectedEventIndex].severity = e.target.value;
-                      setHealthEvents(updated);
-                    }}
-                    onBlur={() => saveHealthEvent(selectedEventIndex)}
-                    className="cursor-pointer mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
-                  >
-                    <option value="">Select</option>
-                    <option>Low</option>
-                    <option>Medium</option>
-                    <option>High</option>
-                  </select>
+                  <div>
+                    <label className="text-xs text-gray-400">Severity</label>
+                    <select
+                      value={healthEvents[selectedEventIndex].severity}
+                      onChange={(e) => {
+                        const updated = [...healthEvents];
+                        updated[selectedEventIndex].severity = e.target.value;
+                        setHealthEvents(updated);
+                      }}
+                      onBlur={() => saveHealthEvent(selectedEventIndex)}
+                      className="mt-1 w-full cursor-pointer rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm"
+                    >
+                      <option value="">Select</option>
+                      <option>Low</option>
+                      <option>Medium</option>
+                      <option>High</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div>
@@ -653,7 +655,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
                       setHealthEvents(updated);
                     }}
                     onBlur={() => saveHealthEvent(selectedEventIndex)}
-                    className="cursor-text mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                    className="mt-1 w-full cursor-text rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm"
                   />
                 </div>
 
@@ -668,7 +670,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
                       setHealthEvents(updated);
                     }}
                     onBlur={() => saveHealthEvent(selectedEventIndex)}
-                    className="cursor-text mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                    className="mt-1 w-full cursor-text rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm"
                   />
                 </div>
 
@@ -693,8 +695,9 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)] xl:gap-6">
       {/* VACCINATIONS */}
-      <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
+      <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 sm:p-5">
 
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold text-gray-200">Vaccinations</h2>
@@ -702,45 +705,45 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           <button
             onClick={handleAddVaccine}
             disabled={addingVaccine}
-            className="cursor-pointer bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium disabled:cursor-wait disabled:opacity-60"
+            className="w-full cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
           >
             {addingVaccine ? "Adding..." : "+ Add Vaccination"}
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
+        <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(14rem,18rem)_minmax(0,1fr)] 2xl:gap-6">
 
           {/* VACCINE LIST */}
-          <div className="space-y-2 max-h-[360px] overflow-y-auto md:col-span-1">
+          <div className="max-h-[22rem] space-y-2 overflow-y-auto pr-1">
 
             {vaccinations.length === 0 && (
-              <div className="text-gray-400 text-sm">
+              <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">
                 No vaccinations recorded
               </div>
             )}
 
             {vaccinations.map((vaccine, idx) => (
-              <div key={idx} className="flex gap-2 items-start">
+              <div key={idx} className="flex items-start gap-2">
                 <button
                   onClick={() => setSelectedVaccineIndex(selectedVaccineIndex === idx ? null : idx)}
-                  className={`cursor-pointer flex-1 text-left p-3 rounded-lg border transition ${
+                  className={`min-w-0 flex-1 cursor-pointer rounded-lg border p-3 text-left transition ${
                     selectedVaccineIndex === idx
                       ? "bg-blue-600 border-blue-500"
                       : "bg-gray-700 border-gray-600 hover:bg-gray-650"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 text-sm font-semibold leading-5">
                       {vaccine.type || "Vaccination"}
                     </span>
-                    <span className={`text-[10px] rounded-full px-2 py-1 ${vaccine.completed ? "bg-emerald-500 text-white" : "bg-yellow-500 text-black"}`}>
+                    <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] leading-none ${vaccine.completed ? "bg-emerald-500 text-white" : "bg-yellow-500 text-black"}`}>
                       {vaccine.completed ? "Completed" : "Pending"}
                     </span>
                   </div>
 
-                  <div className="mt-1 text-xs text-gray-300 flex items-center justify-between gap-2">
-                    <span>{vaccine.date || "No date"}</span>
-                    <span>{vaccine.next_due_date ? `Next: ${vaccine.next_due_date}` : "No follow-up"}</span>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-300">
+                    <span className="shrink-0">{vaccine.date || "No date"}</span>
+                    <span className="min-w-0">{vaccine.next_due_date ? `Next: ${vaccine.next_due_date}` : "No follow-up"}</span>
                   </div>
                 </button>
               </div>
@@ -749,15 +752,15 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           </div>
 
           {/* VACCINE FORM */}
-          <div className="space-y-4 md:col-span-2">
+          <div className="min-w-0 space-y-4">
             {selectedVaccineIndex === null ? (
-              <div className="text-gray-400 text-sm">
+              <div className="rounded-xl border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400">
                 Select or add a vaccination to edit
               </div>
             ) : (
-              <div className="bg-gray-900 border border-gray-700 rounded-2xl p-4 space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
+              <div className="space-y-4 rounded-xl border border-gray-700 bg-gray-900 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
                     <h3 className="text-gray-100 font-semibold">Vaccination Details</h3>
                     <p className="text-xs text-gray-500">
                       {savingVaccine === selectedVaccineIndex || vaccineSaveStatus === "saving"
@@ -771,72 +774,74 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
                     type="button"
                     onClick={() => deleteVaccinationAPI(selectedVaccineIndex)}
                     disabled={deletingVaccine === selectedVaccineIndex}
-                    className="cursor-pointer rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-60"
+                    className="w-full cursor-pointer rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
                   >
                     {deletingVaccine === selectedVaccineIndex ? "Deleting..." : "Delete"}
                   </button>
                 </div>
 
-                <div>
-                  <label className="text-xs text-gray-400">Vaccination Date</label>
-                  <input
-                    type="date"
-                    value={vaccinations[selectedVaccineIndex].date}
-                    onChange={(e) => {
-                      const updated = [...vaccinations];
-                      updated[selectedVaccineIndex].date = e.target.value;
-                      setVaccinations(updated);
-                    }}
-                    onBlur={() => saveVaccination(selectedVaccineIndex)}
-                    className="cursor-text mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="text-xs text-gray-400">Vaccination Date</label>
+                    <input
+                      type="date"
+                      value={vaccinations[selectedVaccineIndex].date}
+                      onChange={(e) => {
+                        const updated = [...vaccinations];
+                        updated[selectedVaccineIndex].date = e.target.value;
+                        setVaccinations(updated);
+                      }}
+                      onBlur={() => saveVaccination(selectedVaccineIndex)}
+                      className="mt-1 w-full cursor-text rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm"
+                    />
+                  </div>
 
-                <div>
-                  <label className="text-xs text-gray-400">Vaccine Type</label>
-                  <input
-                    placeholder="Vaccine Type"
-                    value={vaccinations[selectedVaccineIndex].type}
-                    onChange={(e) => {
-                      const updated = [...vaccinations];
-                      updated[selectedVaccineIndex].type = e.target.value;
-                      setVaccinations(updated);
-                    }}
-                    onBlur={() => saveVaccination(selectedVaccineIndex)}
-                    className="cursor-text mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
+                  <div>
+                    <label className="text-xs text-gray-400">Vaccine Type</label>
+                    <input
+                      placeholder="Vaccine Type"
+                      value={vaccinations[selectedVaccineIndex].type}
+                      onChange={(e) => {
+                        const updated = [...vaccinations];
+                        updated[selectedVaccineIndex].type = e.target.value;
+                        setVaccinations(updated);
+                      }}
+                      onBlur={() => saveVaccination(selectedVaccineIndex)}
+                      className="mt-1 w-full cursor-text rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm"
+                    />
+                  </div>
 
-                <div>
-                  <label className="text-xs text-gray-400">Next Due Date</label>
-                  <input
-                    type="date"
-                    value={vaccinations[selectedVaccineIndex].next_due_date || ""}
-                    onChange={(e) => {
-                      const updated = [...vaccinations];
-                      updated[selectedVaccineIndex].next_due_date = e.target.value;
-                      updated[selectedVaccineIndex].completed = e.target.value === "" ? updated[selectedVaccineIndex].completed : false;
-                      setVaccinations(updated);
-                    }}
-                    onBlur={() => saveVaccination(selectedVaccineIndex)}
-                    disabled={vaccinations[selectedVaccineIndex].completed}
-                    className="cursor-text mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
-                  />
-                </div>
+                  <div>
+                    <label className="text-xs text-gray-400">Next Due Date</label>
+                    <input
+                      type="date"
+                      value={vaccinations[selectedVaccineIndex].next_due_date || ""}
+                      onChange={(e) => {
+                        const updated = [...vaccinations];
+                        updated[selectedVaccineIndex].next_due_date = e.target.value;
+                        updated[selectedVaccineIndex].completed = e.target.value === "" ? updated[selectedVaccineIndex].completed : false;
+                        setVaccinations(updated);
+                      }}
+                      onBlur={() => saveVaccination(selectedVaccineIndex)}
+                      disabled={vaccinations[selectedVaccineIndex].completed}
+                      className="mt-1 w-full cursor-text rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm disabled:opacity-50"
+                    />
+                  </div>
 
-                <div>
-                  <label className="text-xs text-gray-400">Dosage</label>
-                  <input
-                    placeholder="Dosage"
-                    value={vaccinations[selectedVaccineIndex].dosage || ""}
-                    onChange={(e) => {
-                      const updated = [...vaccinations];
-                      updated[selectedVaccineIndex].dosage = e.target.value;
-                      setVaccinations(updated);
-                    }}
-                    onBlur={() => saveVaccination(selectedVaccineIndex)}
-                    className="cursor-text mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
-                  />
+                  <div>
+                    <label className="text-xs text-gray-400">Dosage</label>
+                    <input
+                      placeholder="Dosage"
+                      value={vaccinations[selectedVaccineIndex].dosage || ""}
+                      onChange={(e) => {
+                        const updated = [...vaccinations];
+                        updated[selectedVaccineIndex].dosage = e.target.value;
+                        setVaccinations(updated);
+                      }}
+                      onBlur={() => saveVaccination(selectedVaccineIndex)}
+                      className="mt-1 w-full cursor-text rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm"
+                    />
+                  </div>
                 </div>
 
                 <label className="flex items-center gap-2 text-sm">
@@ -868,7 +873,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
                       setVaccinations(updated);
                     }}
                     onBlur={() => saveVaccination(selectedVaccineIndex)}
-                    className="cursor-text mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                    className="mt-1 w-full cursor-text rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm"
                   />
                 </div>
               </div>
@@ -879,7 +884,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
       </div>
 
       {/* BIRTH INFO */}
-      <div className="bg-gray-800 border border-gray-700 rounded-xl p-5 space-y-4">
+      <div className="space-y-4 rounded-xl border border-gray-700 bg-gray-800 p-4 sm:p-5">
 
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-gray-200 font-semibold">Birth Information</h2>
@@ -896,7 +901,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
             type="date"
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
-            className="cursor-text mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+            className="mt-1 w-full cursor-text rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm"
             disabled
           />
         </div>
@@ -907,7 +912,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
             value={birthWeight}
             onChange={(e) => setBirthWeight(e.target.value)}
             onBlur={saveBirthData}
-            className="cursor-text mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+            className="mt-1 w-full cursor-text rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm"
           />
         </div>
 
@@ -918,10 +923,11 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
             value={birthNotes}
             onChange={(e) => setBirthNotes(e.target.value)}
             onBlur={saveBirthData}
-            className="cursor-text mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+            className="mt-1 w-full cursor-text rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm"
           />
         </div>
 
+      </div>
       </div>
       <ToastContainer autoClose="1000" />
     </div>
