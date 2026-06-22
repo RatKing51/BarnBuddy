@@ -1,32 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
+import { landingCarouselSlides } from '../data/carouselSlides'
 import '../index.css'
 
-const previewSlides = [
-  {
-    eyebrow: 'Dashboard',
-    title: 'See herd priorities at a glance',
-    image: '/dashboard.png',
-    alt: 'BarnBuddy dashboard overview showing animals, vaccinations due, vet visits, and herd risk',
-  },
-  {
-    eyebrow: 'Animal Profiles',
-    title: 'Edit core animal details in one place',
-    image: '/generaldata.png',
-    alt: 'BarnBuddy animal profile screen with general data fields',
-  },
-  {
-    eyebrow: 'Vet Visits',
-    title: 'Track vet visits',
-    image: '/vetvisits.png',
-    alt: 'BarnBuddy health records screen showing vet visits',
-  },
-]
-
-export default function LargeLandingCard() {
+export default function LargeLandingCard({ slides = landingCarouselSlides }) {
   const [activeSlide, setActiveSlide] = useState(0)
   const { isLoaded, isSignedIn } = useAuth()
   const showSignUp = isLoaded && !isSignedIn
+  const previewSlides = slides.length ? slides : landingCarouselSlides
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -34,7 +15,11 @@ export default function LargeLandingCard() {
     }, 4500)
 
     return () => window.clearInterval(timer)
-  }, [])
+  }, [previewSlides.length])
+
+  useEffect(() => {
+    if (activeSlide > previewSlides.length - 1) setActiveSlide(0)
+  }, [activeSlide, previewSlides.length])
 
   const goToSlide = (index) => setActiveSlide(index)
   const showPrevious = () => setActiveSlide((current) => (current === 0 ? previewSlides.length - 1 : current - 1))

@@ -117,6 +117,31 @@ function sanitizeReviews(reviews = []) {
   });
 }
 
+function sanitizeCarouselSlides(slides = []) {
+  if (!Array.isArray(slides)) {
+    throw new Error("Carousel slides must be a list.");
+  }
+
+  return slides.map((slide, index) => {
+    const eyebrow = asTrimmedString(slide.eyebrow);
+    const title = asTrimmedString(slide.title);
+    const image = asTrimmedString(slide.image);
+    const published = slide.published !== false;
+
+    if (published && !title) throw new Error(`Published carousel slide ${index + 1} needs a title.`);
+    if (published && !image) throw new Error(`Published carousel slide ${index + 1} needs an image.`);
+
+    return {
+      id: asTrimmedString(slide.id) || slugify(`${eyebrow || title || "slide"}-${index + 1}`) || `slide-${Date.now()}-${index}`,
+      eyebrow,
+      title,
+      image,
+      alt: asTrimmedString(slide.alt, title || "BarnBuddy screenshot"),
+      published,
+    };
+  });
+}
+
 function sanitizeStatus(status = {}) {
   const services = Array.isArray(status.services) ? status.services : defaultSiteContent.status.services;
 
@@ -286,7 +311,8 @@ router.put("/admin", authMiddleware, requireAdmin, async (req, res) => {
     const announcement = sanitizeAnnouncement(req.body.announcement);
     const maintenance = sanitizeMaintenance(req.body.maintenance);
     const reviews = sanitizeReviews(req.body.reviews);
-    const content = await updateSiteContent({ newsPosts, status, announcement, maintenance, reviews, userId: req.user.id });
+    const carouselSlides = sanitizeCarouselSlides(req.body.carouselSlides);
+    const content = await updateSiteContent({ newsPosts, status, announcement, maintenance, reviews, carouselSlides, userId: req.user.id });
     await logAdminActivity({
       userId: req.user.id,
       action: "website_content_updated",
@@ -299,6 +325,8 @@ router.put("/admin", authMiddleware, requireAdmin, async (req, res) => {
         maintenanceEnabled: maintenance.enabled,
         reviewCount: reviews.length,
         publishedReviewCount: reviews.filter((review) => review.published !== false).length,
+        carouselSlideCount: carouselSlides.length,
+        publishedCarouselSlideCount: carouselSlides.filter((slide) => slide.published !== false).length,
       },
     });
     res.json(content);

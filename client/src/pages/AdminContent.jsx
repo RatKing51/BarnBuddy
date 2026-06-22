@@ -29,6 +29,14 @@ const blankReview = {
   published: false,
 }
 
+const blankCarouselSlide = {
+  eyebrow: '',
+  title: '',
+  image: '',
+  alt: '',
+  published: false,
+}
+
 const blankService = {
   name: '',
   status: 'Operational',
@@ -163,9 +171,11 @@ export default function AdminContent() {
   const [lastSavedContent, setLastSavedContent] = useState(defaultSiteContent)
   const [selectedPostIndex, setSelectedPostIndex] = useState(0)
   const [selectedReviewIndex, setSelectedReviewIndex] = useState(0)
+  const [selectedCarouselIndex, setSelectedCarouselIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [uploadingCarouselImage, setUploadingCarouselImage] = useState(false)
   const [activity, setActivity] = useState([])
   const [activityLoading, setActivityLoading] = useState(false)
   const [mediaLibrary, setMediaLibrary] = useState([])
@@ -239,6 +249,7 @@ export default function AdminContent() {
             announcement: { ...defaultSiteContent.announcement, ...(data.announcement || {}) },
             maintenance: { ...defaultSiteContent.maintenance, ...(data.maintenance || {}) },
             reviews: Array.isArray(data.reviews) ? data.reviews : defaultSiteContent.reviews,
+            carouselSlides: Array.isArray(data.carouselSlides) ? data.carouselSlides : defaultSiteContent.carouselSlides,
           }
           setContent(loadedContent)
           setLastSavedContent(loadedContent)
@@ -278,10 +289,17 @@ export default function AdminContent() {
     }
   }, [content.reviews, selectedReviewIndex])
 
+  useEffect(() => {
+    if (selectedCarouselIndex > (content.carouselSlides || []).length - 1) {
+      setSelectedCarouselIndex(Math.max((content.carouselSlides || []).length - 1, 0))
+    }
+  }, [content.carouselSlides, selectedCarouselIndex])
+
   const dashboardStats = useMemo(() => {
     const publishedPosts = content.newsPosts.filter((post) => post.published !== false).length
     const draftPosts = content.newsPosts.length - publishedPosts
     const publishedReviews = (content.reviews || []).filter((review) => review.published !== false).length
+    const publishedCarouselSlides = (content.carouselSlides || []).filter((slide) => slide.published !== false).length
     const flaggedServices = (content.status.services || []).filter((service) =>
       ['yellow', 'red'].includes(service.tone)
     ).length
@@ -290,6 +308,7 @@ export default function AdminContent() {
       { label: 'Published posts', value: publishedPosts },
       { label: 'Draft posts', value: draftPosts },
       { label: 'Reviews', value: publishedReviews },
+      { label: 'Carousel', value: publishedCarouselSlides },
       { label: 'Services', value: content.status.services?.length || 0 },
       { label: 'Support', value: supportMessages.length },
       { label: 'Activity items', value: activity.length },
@@ -299,6 +318,7 @@ export default function AdminContent() {
 
   const selectedPost = content.newsPosts[selectedPostIndex] || null
   const selectedReview = (content.reviews || [])[selectedReviewIndex] || null
+  const selectedCarouselSlide = (content.carouselSlides || [])[selectedCarouselIndex] || null
   const featuredPostId = content.newsPosts.find((post) => post.featured)?.id || ''
   const hasUnsavedChanges = useMemo(
     () => JSON.stringify(content) !== JSON.stringify(lastSavedContent),
@@ -359,6 +379,32 @@ export default function AdminContent() {
       reviews: (current.reviews || []).filter((_, reviewIndex) => reviewIndex !== index),
     }))
     setSelectedReviewIndex((current) => Math.max(current - 1, 0))
+  }
+
+  function updateCarouselSlide(index, changes) {
+    setContent((current) => ({
+      ...current,
+      carouselSlides: (current.carouselSlides || []).map((slide, slideIndex) =>
+        slideIndex === index ? { ...slide, ...changes } : slide
+      ),
+    }))
+  }
+
+  function addCarouselSlide() {
+    setContent((current) => ({
+      ...current,
+      carouselSlides: [{ ...blankCarouselSlide }, ...(current.carouselSlides || [])],
+    }))
+    setSelectedCarouselIndex(0)
+    setActiveTab('carousel')
+  }
+
+  function removeCarouselSlide(index) {
+    setContent((current) => ({
+      ...current,
+      carouselSlides: (current.carouselSlides || []).filter((_, slideIndex) => slideIndex !== index),
+    }))
+    setSelectedCarouselIndex((current) => Math.max(current - 1, 0))
   }
 
   function setFeaturedPost(index) {
@@ -443,6 +489,7 @@ export default function AdminContent() {
         announcement: { ...content.announcement, ...(data.announcement || {}) },
         maintenance: { ...content.maintenance, ...(data.maintenance || {}) },
         reviews: Array.isArray(data.reviews) ? data.reviews : content.reviews,
+        carouselSlides: Array.isArray(data.carouselSlides) ? data.carouselSlides : content.carouselSlides,
       })
       setLastSavedContent({
         newsPosts: Array.isArray(data.newsPosts) ? data.newsPosts : content.newsPosts,
@@ -450,6 +497,7 @@ export default function AdminContent() {
         announcement: { ...content.announcement, ...(data.announcement || {}) },
         maintenance: { ...content.maintenance, ...(data.maintenance || {}) },
         reviews: Array.isArray(data.reviews) ? data.reviews : content.reviews,
+        carouselSlides: Array.isArray(data.carouselSlides) ? data.carouselSlides : content.carouselSlides,
       })
       broadcastAnnouncement({ ...content.announcement, ...(data.announcement || {}) })
       broadcastMaintenance({ ...content.maintenance, ...(data.maintenance || {}) })
@@ -511,6 +559,51 @@ export default function AdminContent() {
       toast.error(err.message || 'Failed to upload image.')
     } finally {
       setUploadingImage(false)
+    }
+  }
+
+  async function uploadCarouselImage(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!file || !selectedCarouselSlide) return
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Upload a JPG, PNG, WebP, or another image file.')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image is too large. Max size is 5MB.')
+      return
+    }
+
+    try {
+      setUploadingCarouselImage(true)
+      const formData = new FormData()
+      formData.append('image', file)
+
+      const res = await authFetch(`${API_BASE_URL}/site-content/admin/media`, {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Failed to upload image.')
+      }
+
+      updateCarouselSlide(selectedCarouselIndex, {
+        image: data.url?.startsWith('/api/') ? `${API_URL}${data.url}` : data.url,
+        alt: selectedCarouselSlide.alt || selectedCarouselSlide.title || file.name,
+      })
+      toast.success('Carousel image uploaded. Save changes to publish it.')
+      await loadActivity()
+      await loadAdminTools()
+    } catch (err) {
+      toast.error(err.message || 'Failed to upload image.')
+    } finally {
+      setUploadingCarouselImage(false)
     }
   }
 
@@ -619,6 +712,7 @@ export default function AdminContent() {
               ['overview', 'Overview'],
               ['announcement', 'Banner'],
               ['maintenance', 'Maintenance'],
+              ['carousel', 'Carousel'],
               ['news', 'News'],
               ['reviews', 'Reviews'],
               ['status', 'Status'],
@@ -700,7 +794,7 @@ export default function AdminContent() {
 
           {activeTab === 'overview' && (
             <div className="mt-6 space-y-6">
-              <div className="grid grid-cols-2 gap-3 xl:grid-cols-7">
+              <div className="grid grid-cols-2 gap-3 xl:grid-cols-8">
                 {dashboardStats.map((stat) => (
                   <div key={stat.label} className="rounded-lg border border-slate-800 bg-slate-900 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{stat.label}</p>
@@ -933,6 +1027,168 @@ export default function AdminContent() {
                   Admin stays accessible while this is on. Login remains available so you can get back into admin if your session expires.
                 </p>
               </aside>
+            </div>
+          )}
+
+          {activeTab === 'carousel' && (
+            <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[24rem_1fr]">
+              <section className="rounded-lg border border-slate-800 bg-slate-900">
+                <div className="flex items-center justify-between border-b border-slate-800 px-4 py-4">
+                  <div>
+                    <h3 className="font-semibold">Landing carousel</h3>
+                    <p className="mt-1 text-sm text-slate-400">{(content.carouselSlides || []).length} total slides</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addCarouselSlide}
+                    className="rounded-md bg-sky-500 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-600"
+                  >
+                    Add slide
+                  </button>
+                </div>
+
+                <div className="max-h-[calc(100vh-15rem)] overflow-y-auto p-3">
+                  {(content.carouselSlides || []).length ? (
+                    (content.carouselSlides || []).map((slide, index) => (
+                      <button
+                        key={slide.id || `${slide.title || 'slide'}-${index}`}
+                        type="button"
+                        onClick={() => setSelectedCarouselIndex(index)}
+                        className={`mb-2 w-full rounded-md border p-3 text-left transition ${
+                          selectedCarouselIndex === index
+                            ? 'border-sky-300 bg-sky-500/12'
+                            : 'border-slate-800 bg-slate-950/35 hover:bg-slate-800/60'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-white">{slide.title || 'Untitled slide'}</p>
+                            <p className="mt-1 text-xs text-slate-400">{slide.eyebrow || 'No eyebrow'}</p>
+                          </div>
+                          <span className={`rounded-full px-2 py-1 text-xs font-semibold ${slide.published === false ? 'bg-amber-400/10 text-amber-100' : 'bg-emerald-400/10 text-emerald-100'}`}>
+                            {slide.published === false ? 'Draft' : 'Live'}
+                          </span>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <EmptyState
+                      title="No carousel slides"
+                      text="Add screenshots or feature images for the landing page carousel."
+                      action={
+                        <button type="button" onClick={addCarouselSlide} className="mt-5 rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600">
+                          Add slide
+                        </button>
+                      }
+                    />
+                  )}
+                </div>
+              </section>
+
+              <section className="rounded-lg border border-slate-800 bg-slate-900">
+                {selectedCarouselSlide ? (
+                  <>
+                    <div className="flex flex-col gap-4 border-b border-slate-800 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-xl font-semibold">{selectedCarouselSlide.title || 'Untitled slide'}</h3>
+                        <p className="mt-1 text-sm text-slate-400">{selectedCarouselSlide.eyebrow || 'No eyebrow'}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => updateCarouselSlide(selectedCarouselIndex, { published: selectedCarouselSlide.published === false })}
+                          className={`rounded-md border px-3 py-2 text-sm font-semibold ${
+                            selectedCarouselSlide.published === false
+                              ? 'border-amber-300/25 bg-amber-400/10 text-amber-100'
+                              : 'border-emerald-300/25 bg-emerald-400/10 text-emerald-100'
+                          }`}
+                        >
+                          {selectedCarouselSlide.published === false ? 'Draft' : 'Published'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeCarouselSlide(selectedCarouselIndex)}
+                          className="rounded-md border border-red-300/20 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-100"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-5 p-5 2xl:grid-cols-[1fr_24rem]">
+                      <div className="space-y-5">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <Field label="Eyebrow">
+                            <input className={inputClass()} value={selectedCarouselSlide.eyebrow || ''} onChange={(event) => updateCarouselSlide(selectedCarouselIndex, { eyebrow: event.target.value })} placeholder="Example: Dashboard" />
+                          </Field>
+                          <Field label="Title">
+                            <input className={inputClass()} value={selectedCarouselSlide.title || ''} onChange={(event) => updateCarouselSlide(selectedCarouselIndex, { title: event.target.value })} />
+                          </Field>
+                          <Field label="Image URL" span="md:col-span-2">
+                            <input className={inputClass()} value={selectedCarouselSlide.image || ''} onChange={(event) => updateCarouselSlide(selectedCarouselIndex, { image: event.target.value })} placeholder="/dashboard.png or uploaded image URL" />
+                          </Field>
+                          <Field label="Alt text" span="md:col-span-2">
+                            <textarea className={inputClass('min-h-28 resize-y')} value={selectedCarouselSlide.alt || ''} onChange={(event) => updateCarouselSlide(selectedCarouselIndex, { alt: event.target.value })} />
+                          </Field>
+                        </div>
+
+                        <div>
+                          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Upload slide image</span>
+                          <label className="mt-2 flex cursor-pointer items-center justify-center rounded-md border border-dashed border-slate-700 bg-slate-950/55 px-3 py-5 text-center text-sm font-semibold text-slate-200 transition hover:border-sky-300 hover:text-white">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={uploadCarouselImage}
+                              disabled={uploadingCarouselImage}
+                            />
+                            {uploadingCarouselImage ? 'Uploading...' : 'Choose image'}
+                          </label>
+                          <p className="mt-2 text-xs text-slate-500">Max 5MB. Uploading fills the image URL for this slide.</p>
+                        </div>
+                      </div>
+
+                      <aside className="rounded-lg border border-slate-800 bg-slate-950/45 p-4">
+                        <h4 className="font-semibold">Carousel preview</h4>
+                        <div className="mt-4 overflow-hidden rounded-md border border-slate-800 bg-[#07102a]">
+                          <div className="aspect-[16/10] bg-slate-950">
+                            {selectedCarouselSlide.image ? (
+                              <img
+                                src={selectedCarouselSlide.image}
+                                alt={selectedCarouselSlide.alt || selectedCarouselSlide.title || 'Carousel slide'}
+                                className="h-full w-full object-cover object-left-top"
+                              />
+                            ) : (
+                              <div className="grid h-full place-items-center px-6 text-center text-sm text-slate-500">
+                                Add an image URL or upload a slide image.
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-200">{selectedCarouselSlide.eyebrow || 'Eyebrow'}</p>
+                            <p className="mt-1 text-xl font-semibold text-white">{selectedCarouselSlide.title || 'Slide title'}</p>
+                          </div>
+                        </div>
+                        <p className="mt-3 text-xs leading-relaxed text-slate-500">
+                          Draft slides stay saved in admin but do not show on the public landing carousel.
+                        </p>
+                      </aside>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-5">
+                    <EmptyState
+                      title="Select or add a slide"
+                      text="Choose a carousel slide from the list or add a new one to start editing."
+                      action={
+                        <button type="button" onClick={addCarouselSlide} className="mt-5 rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600">
+                          Add slide
+                        </button>
+                      }
+                    />
+                  </div>
+                )}
+              </section>
             </div>
           )}
 

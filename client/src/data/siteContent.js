@@ -1,5 +1,6 @@
 import { newsPosts } from './newsPosts'
 import { landingReviews } from './reviews'
+import { landingCarouselSlides } from './carouselSlides'
 
 export const defaultStatus = {
   headline: 'All systems normal',
@@ -19,6 +20,7 @@ export const defaultStatus = {
 export const defaultSiteContent = {
   newsPosts,
   reviews: landingReviews,
+  carouselSlides: landingCarouselSlides,
   status: defaultStatus,
   announcement: {
     enabled: false,
