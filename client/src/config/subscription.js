@@ -40,7 +40,6 @@ export const PREMIUM_FEATURES = [
   "PDF and scheduled exports",
   "Automatic reminders",
   "Breeding, finance, and feed planning tools",
-  "Shared farm account access",
 ];
 
 export const PRICING_FEATURES = [
@@ -50,7 +49,6 @@ export const PRICING_FEATURES = [
   { label: "Exports", free: "Simple records", premium: "PDF and scheduled exports" },
   { label: "Automatic reminders", free: "Manual review", premium: "Included" },
   { label: "Breeding, finance, and feed tools", free: "Not included", premium: "Included" },
-  { label: "Shared farm access", free: "Single account", premium: "Multi-user ready" },
 ];
 
 const premiumPlanValues = new Set(["premium", "pro", "paid", "active"]);
