@@ -5,6 +5,7 @@ import { ClerkProvider } from '@clerk/clerk-react';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { PreferencesProvider } from './context/PreferencesContext';
+import { registerServiceWorker } from './registerServiceWorker';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -36,3 +37,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </AuthProvider>
   </ClerkProvider>
 );
+
+registerServiceWorker();

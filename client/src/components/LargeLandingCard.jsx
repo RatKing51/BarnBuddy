@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import { landingCarouselSlides } from '../data/carouselSlides'
+import PwaInstallButton from './PwaInstallButton'
 import '../index.css'
 
 export default function LargeLandingCard({ slides = landingCarouselSlides }) {
@@ -39,17 +40,18 @@ export default function LargeLandingCard({ slides = landingCarouselSlides }) {
             Get clear herd histories, automated reminders, and simple reporting so you can spend less time on paperwork and more time with your animals.
           </p>
 
-          {showSignUp && (
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            {showSignUp && (
               <a
                 href="/signup"
-                className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 sm:py-4 sm:px-8 rounded-lg shadow-md transition-colors text-base sm:text-lg"
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-blue-500 px-6 py-3 text-base font-medium text-white shadow-md transition-colors hover:bg-blue-600 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
                 aria-label="Sign up for BarnBuddy"
               >
                 Sign Up
               </a>
-            </div>
-          )}
+            )}
+            <PwaInstallButton />
+          </div>
 
         </div>
 
