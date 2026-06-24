@@ -91,6 +91,12 @@ const defaultSiteContent = {
     message: "We are making a few updates and will be back soon.",
     estimatedReturn: "",
   },
+  branding: {
+    favicon: "/api/site-content/assets/favicon.png",
+    appleTouchIcon: "/api/site-content/assets/pwa-192x192.png",
+    pwaIcon: "/api/site-content/assets/pwa-512x512.png",
+    siteLogo: "/api/site-content/assets/bblogo.png",
+  },
   reviews: [],
   carouselSlides: [
     {
@@ -125,6 +131,7 @@ async function ensureSiteContentSchema() {
       status JSONB NOT NULL DEFAULT '{}'::jsonb,
       announcement JSONB NOT NULL DEFAULT '{}'::jsonb,
       maintenance JSONB NOT NULL DEFAULT '{}'::jsonb,
+      branding JSONB NOT NULL DEFAULT '{}'::jsonb,
       reviews JSONB NOT NULL DEFAULT '[]'::jsonb,
       carousel_slides JSONB NOT NULL DEFAULT '[]'::jsonb,
       updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -134,6 +141,7 @@ async function ensureSiteContentSchema() {
     ALTER TABLE site_content
       ADD COLUMN IF NOT EXISTS announcement JSONB NOT NULL DEFAULT '{}'::jsonb,
       ADD COLUMN IF NOT EXISTS maintenance JSONB NOT NULL DEFAULT '{}'::jsonb,
+      ADD COLUMN IF NOT EXISTS branding JSONB NOT NULL DEFAULT '{}'::jsonb,
       ADD COLUMN IF NOT EXISTS reviews JSONB NOT NULL DEFAULT '[]'::jsonb,
       ADD COLUMN IF NOT EXISTS carousel_slides JSONB NOT NULL DEFAULT '[]'::jsonb;
 
@@ -180,14 +188,15 @@ async function ensureSiteContentSchema() {
   `);
 
   await pool.query(
-    `INSERT INTO site_content (id, news_posts, status, announcement, maintenance, reviews, carousel_slides)
-     VALUES ('default', $1::jsonb, $2::jsonb, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb)
+    `INSERT INTO site_content (id, news_posts, status, announcement, maintenance, branding, reviews, carousel_slides)
+     VALUES ('default', $1::jsonb, $2::jsonb, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb)
      ON CONFLICT (id) DO NOTHING`,
     [
       JSON.stringify(defaultSiteContent.newsPosts),
       JSON.stringify(defaultSiteContent.status),
       JSON.stringify(defaultSiteContent.announcement),
       JSON.stringify(defaultSiteContent.maintenance),
+      JSON.stringify(defaultSiteContent.branding),
       JSON.stringify(defaultSiteContent.reviews),
       JSON.stringify(defaultSiteContent.carouselSlides),
     ]
@@ -196,7 +205,7 @@ async function ensureSiteContentSchema() {
 
 async function getSiteContent({ includeDrafts = false } = {}) {
   const result = await pool.query(
-    `SELECT news_posts, status, announcement, maintenance, reviews, carousel_slides, updated_at
+    `SELECT news_posts, status, announcement, maintenance, branding, reviews, carousel_slides, updated_at
      FROM site_content
      WHERE id = 'default'
      LIMIT 1`
@@ -214,6 +223,10 @@ async function getSiteContent({ includeDrafts = false } = {}) {
           row.maintenance && typeof row.maintenance === "object"
             ? { ...defaultSiteContent.maintenance, ...row.maintenance }
             : defaultSiteContent.maintenance,
+        branding:
+          row.branding && typeof row.branding === "object"
+            ? { ...defaultSiteContent.branding, ...row.branding }
+            : defaultSiteContent.branding,
         reviews: Array.isArray(row.reviews) ? row.reviews : defaultSiteContent.reviews,
         carouselSlides: Array.isArray(row.carousel_slides) && row.carousel_slides.length ? row.carousel_slides : defaultSiteContent.carouselSlides,
         updatedAt: row.updated_at,
@@ -230,24 +243,26 @@ async function getSiteContent({ includeDrafts = false } = {}) {
   };
 }
 
-async function updateSiteContent({ newsPosts, status, announcement, maintenance, reviews, carouselSlides, userId }) {
+async function updateSiteContent({ newsPosts, status, announcement, maintenance, branding, reviews, carouselSlides, userId }) {
   const result = await pool.query(
     `UPDATE site_content
      SET news_posts = $1::jsonb,
          status = $2::jsonb,
          announcement = $3::jsonb,
          maintenance = $4::jsonb,
-         reviews = $5::jsonb,
-         carousel_slides = $6::jsonb,
-         updated_by = $7,
+         branding = $5::jsonb,
+         reviews = $6::jsonb,
+         carousel_slides = $7::jsonb,
+         updated_by = $8,
          updated_at = CURRENT_TIMESTAMP
      WHERE id = 'default'
-     RETURNING news_posts, status, announcement, maintenance, reviews, carousel_slides, updated_at`,
+     RETURNING news_posts, status, announcement, maintenance, branding, reviews, carousel_slides, updated_at`,
     [
       JSON.stringify(newsPosts),
       JSON.stringify(status),
       JSON.stringify(announcement),
       JSON.stringify(maintenance),
+      JSON.stringify(branding),
       JSON.stringify(reviews),
       JSON.stringify(carouselSlides),
       userId,
@@ -260,6 +275,7 @@ async function updateSiteContent({ newsPosts, status, announcement, maintenance,
     status: row.status,
     announcement: row.announcement,
     maintenance: row.maintenance,
+    branding: row.branding,
     reviews: row.reviews,
     carouselSlides: row.carousel_slides,
     updatedAt: row.updated_at,

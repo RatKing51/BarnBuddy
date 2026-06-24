@@ -13,6 +13,7 @@ export default function Landing() {
   const [reviews, setReviews] = useState(landingReviews)
   const [posts, setPosts] = useState(newsPosts)
   const [carouselSlides, setCarouselSlides] = useState(defaultSiteContent.carouselSlides)
+  const [branding, setBranding] = useState(defaultSiteContent.branding)
   const recentPosts = posts.slice(0, 2)
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export default function Landing() {
           setReviews(Array.isArray(content.reviews) ? content.reviews : defaultSiteContent.reviews)
           setPosts(Array.isArray(content.newsPosts) ? content.newsPosts : defaultSiteContent.newsPosts)
           setCarouselSlides(Array.isArray(content.carouselSlides) ? content.carouselSlides : defaultSiteContent.carouselSlides)
+          setBranding({ ...defaultSiteContent.branding, ...(content.branding || {}) })
         }
       } catch (err) {
         console.warn('Using bundled landing content:', err.message)
@@ -40,7 +42,7 @@ export default function Landing() {
 
   return (
     <div className='bg-[#101D42]'>
-        <LargeLandingCard slides={carouselSlides} />
+        <LargeLandingCard slides={carouselSlides} branding={branding} />
         <section className="bg-[#101D42] px-4 sm:px-6 lg:px-8 py-12">
           <div className="max-w-7xl mx-auto">
             <div className="mb-7 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">

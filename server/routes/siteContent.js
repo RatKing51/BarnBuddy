@@ -197,6 +197,15 @@ function sanitizeMaintenance(maintenance = {}) {
   };
 }
 
+function sanitizeBranding(branding = {}) {
+  return {
+    favicon: asTrimmedString(branding.favicon, defaultSiteContent.branding.favicon),
+    appleTouchIcon: asTrimmedString(branding.appleTouchIcon, defaultSiteContent.branding.appleTouchIcon),
+    pwaIcon: asTrimmedString(branding.pwaIcon, defaultSiteContent.branding.pwaIcon),
+    siteLogo: asTrimmedString(branding.siteLogo, defaultSiteContent.branding.siteLogo),
+  };
+}
+
 router.get("/", async (req, res) => {
   try {
     const content = await getSiteContent();
@@ -207,13 +216,13 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/manifest.webmanifest", (req, res) => {
-  const assetUrl = (filename) => {
-    const key = createSiteAssetKey(filename);
-    return getPublicObjectUrl(key) || `${req.protocol}://${req.get("host")}/api/site-content/assets/${filename}`;
-  };
+router.get("/manifest.webmanifest", async (req, res) => {
+  const content = await getSiteContent();
+  const absoluteUrl = (value) => /^https?:\/\//i.test(value)
+    ? value
+    : `${req.protocol}://${req.get("host")}${value}`;
 
-  res.type("application/manifest+json").set("Cache-Control", "public, max-age=3600").json({
+  res.type("application/manifest+json").set("Cache-Control", "no-cache").json({
     name: "BarnBuddy",
     short_name: "BarnBuddy",
     description: "Track herds, health records, reminders, and farm operations from anywhere.",
@@ -226,13 +235,13 @@ router.get("/manifest.webmanifest", (req, res) => {
     categories: ["business", "productivity", "utilities"],
     icons: [
       {
-        src: assetUrl("pwa-192x192.png"),
+        src: absoluteUrl(content.branding.appleTouchIcon),
         sizes: "192x192",
         type: "image/png",
         purpose: "any maskable",
       },
       {
-        src: assetUrl("pwa-512x512.png"),
+        src: absoluteUrl(content.branding.pwaIcon),
         sizes: "512x512",
         type: "image/png",
         purpose: "any maskable",
@@ -244,10 +253,30 @@ router.get("/manifest.webmanifest", (req, res) => {
         short_name: "Dashboard",
         description: "Open your BarnBuddy dashboard.",
         url: "/dashboard",
-        icons: [{ src: assetUrl("pwa-192x192.png"), sizes: "192x192" }],
+        icons: [{ src: absoluteUrl(content.branding.appleTouchIcon), sizes: "192x192" }],
       },
     ],
   });
+});
+
+router.get("/branding/:type", async (req, res) => {
+  const fieldByType = {
+    favicon: "favicon",
+    "apple-touch-icon": "appleTouchIcon",
+    "pwa-icon": "pwaIcon",
+    logo: "siteLogo",
+  };
+  const field = fieldByType[req.params.type];
+  if (!field) return res.status(404).json({ error: "Brand image not found" });
+
+  try {
+    const content = await getSiteContent();
+    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    return res.redirect(302, content.branding[field]);
+  } catch (err) {
+    console.error("Failed to load branding image:", err);
+    return res.status(500).json({ error: "Failed to load branding image" });
+  }
 });
 
 router.get("/media/:id", async (req, res) => {
@@ -393,9 +422,10 @@ router.put("/admin", authMiddleware, requireAdmin, async (req, res) => {
     const status = sanitizeStatus(req.body.status);
     const announcement = sanitizeAnnouncement(req.body.announcement);
     const maintenance = sanitizeMaintenance(req.body.maintenance);
+    const branding = sanitizeBranding(req.body.branding);
     const reviews = sanitizeReviews(req.body.reviews);
     const carouselSlides = sanitizeCarouselSlides(req.body.carouselSlides);
-    const content = await updateSiteContent({ newsPosts, status, announcement, maintenance, reviews, carouselSlides, userId: req.user.id });
+    const content = await updateSiteContent({ newsPosts, status, announcement, maintenance, branding, reviews, carouselSlides, userId: req.user.id });
     await logAdminActivity({
       userId: req.user.id,
       action: "website_content_updated",
@@ -406,6 +436,7 @@ router.put("/admin", authMiddleware, requireAdmin, async (req, res) => {
         serviceCount: status.services.length,
         announcementEnabled: announcement.enabled,
         maintenanceEnabled: maintenance.enabled,
+        brandingUpdated: true,
         reviewCount: reviews.length,
         publishedReviewCount: reviews.filter((review) => review.published !== false).length,
         carouselSlideCount: carouselSlides.length,

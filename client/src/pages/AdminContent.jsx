@@ -177,6 +177,7 @@ export default function AdminContent() {
   const [saving, setSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [uploadingCarouselImage, setUploadingCarouselImage] = useState(false)
+  const [uploadingBrandingField, setUploadingBrandingField] = useState('')
   const [activity, setActivity] = useState([])
   const [activityLoading, setActivityLoading] = useState(false)
   const [mediaLibrary, setMediaLibrary] = useState([])
@@ -249,6 +250,7 @@ export default function AdminContent() {
             status: { ...defaultSiteContent.status, ...(data.status || {}) },
             announcement: { ...defaultSiteContent.announcement, ...(data.announcement || {}) },
             maintenance: { ...defaultSiteContent.maintenance, ...(data.maintenance || {}) },
+            branding: { ...defaultSiteContent.branding, ...(data.branding || {}) },
             reviews: Array.isArray(data.reviews) ? data.reviews : defaultSiteContent.reviews,
             carouselSlides: Array.isArray(data.carouselSlides) ? data.carouselSlides : defaultSiteContent.carouselSlides,
           }
@@ -439,6 +441,13 @@ export default function AdminContent() {
     }))
   }
 
+  function updateBranding(changes) {
+    setContent((current) => ({
+      ...current,
+      branding: { ...defaultSiteContent.branding, ...current.branding, ...changes },
+    }))
+  }
+
   function updateService(index, changes) {
     setContent((current) => ({
       ...current,
@@ -489,6 +498,7 @@ export default function AdminContent() {
         status: { ...content.status, ...(data.status || {}) },
         announcement: { ...content.announcement, ...(data.announcement || {}) },
         maintenance: { ...content.maintenance, ...(data.maintenance || {}) },
+        branding: { ...content.branding, ...(data.branding || {}) },
         reviews: Array.isArray(data.reviews) ? data.reviews : content.reviews,
         carouselSlides: Array.isArray(data.carouselSlides) ? data.carouselSlides : content.carouselSlides,
       })
@@ -497,11 +507,20 @@ export default function AdminContent() {
         status: { ...content.status, ...(data.status || {}) },
         announcement: { ...content.announcement, ...(data.announcement || {}) },
         maintenance: { ...content.maintenance, ...(data.maintenance || {}) },
+        branding: { ...content.branding, ...(data.branding || {}) },
         reviews: Array.isArray(data.reviews) ? data.reviews : content.reviews,
         carouselSlides: Array.isArray(data.carouselSlides) ? data.carouselSlides : content.carouselSlides,
       })
       broadcastAnnouncement({ ...content.announcement, ...(data.announcement || {}) })
       broadcastMaintenance({ ...content.maintenance, ...(data.maintenance || {}) })
+      const brandingRefreshKey = Date.now()
+      document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach((link) => {
+        link.href = `${API_BASE_URL}/site-content/branding/favicon?t=${brandingRefreshKey}`
+      })
+      const appleTouchIcon = document.querySelector('link[rel="apple-touch-icon"]')
+      if (appleTouchIcon) {
+        appleTouchIcon.href = `${API_BASE_URL}/site-content/branding/apple-touch-icon?t=${brandingRefreshKey}`
+      }
       toast.success('Website content saved.')
       await loadActivity()
       await loadAdminTools()
@@ -605,6 +624,35 @@ export default function AdminContent() {
       toast.error(err.message || 'Failed to upload image.')
     } finally {
       setUploadingCarouselImage(false)
+    }
+  }
+
+  async function uploadBrandingImage(event, field) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+      toast.error('Choose an image up to 5MB.')
+      return
+    }
+
+    try {
+      setUploadingBrandingField(field)
+      const formData = new FormData()
+      formData.append('image', file)
+      const res = await authFetch(`${API_BASE_URL}/site-content/admin/media`, {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || data.message || 'Failed to upload image.')
+      updateBranding({ [field]: data.url?.startsWith('/api/') ? `${API_URL}${data.url}` : data.url })
+      toast.success('Brand image uploaded. Save changes to publish it.')
+      await loadAdminTools()
+    } catch (err) {
+      toast.error(err.message || 'Failed to upload image.')
+    } finally {
+      setUploadingBrandingField('')
     }
   }
 
@@ -713,6 +761,7 @@ export default function AdminContent() {
               ['overview', 'Overview'],
               ['announcement', 'Banner'],
               ['maintenance', 'Maintenance'],
+              ['branding', 'Branding'],
               ['carousel', 'Carousel'],
               ['news', 'News'],
               ['reviews', 'Reviews'],
@@ -1028,6 +1077,56 @@ export default function AdminContent() {
                   Admin stays accessible while this is on. Login remains available so you can get back into admin if your session expires.
                 </p>
               </aside>
+            </div>
+          )}
+
+          {activeTab === 'branding' && (
+            <div className="mt-6">
+              <section className="rounded-lg border border-slate-800 bg-slate-900">
+                <div className="border-b border-slate-800 px-5 py-4">
+                  <h3 className="text-xl font-semibold">Brand images</h3>
+                  <p className="mt-1 text-sm text-slate-400">Change browser, installed-app, and website logo images without redeploying.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-5 p-5 md:grid-cols-2 xl:grid-cols-4">
+                  {[
+                    ['favicon', 'Browser favicon', 'Square PNG, ideally 512×512'],
+                    ['appleTouchIcon', 'Apple touch icon', 'Square PNG, ideally 192×192'],
+                    ['pwaIcon', 'Installed app icon', 'Square PNG, ideally 512×512'],
+                    ['siteLogo', 'Website logo', 'PNG or WebP with a transparent background'],
+                  ].map(([field, label, help]) => (
+                    <article key={field} className="rounded-lg border border-slate-800 bg-slate-950/45 p-4">
+                      <div className="grid aspect-square place-items-center overflow-hidden rounded-lg border border-slate-800 bg-white p-5">
+                        <img
+                          src={resolveSiteImageUrl(content.branding?.[field] || defaultSiteContent.branding[field])}
+                          alt={`${label} preview`}
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </div>
+                      <h4 className="mt-4 font-semibold text-white">{label}</h4>
+                      <p className="mt-1 min-h-10 text-xs leading-relaxed text-slate-500">{help}</p>
+                      <input
+                        className={inputClass('mt-3 text-xs')}
+                        value={content.branding?.[field] || ''}
+                        onChange={(event) => updateBranding({ [field]: event.target.value })}
+                        aria-label={`${label} URL`}
+                      />
+                      <label className="mt-3 flex min-h-11 cursor-pointer items-center justify-center rounded-md border border-dashed border-slate-700 px-3 text-sm font-semibold text-slate-200 hover:border-sky-300 hover:text-white">
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/avif"
+                          className="hidden"
+                          onChange={(event) => uploadBrandingImage(event, field)}
+                          disabled={Boolean(uploadingBrandingField)}
+                        />
+                        {uploadingBrandingField === field ? 'Uploading...' : 'Choose image'}
+                      </label>
+                    </article>
+                  ))}
+                </div>
+                <div className="border-t border-slate-800 px-5 py-4 text-sm text-slate-400">
+                  Uploads go directly to R2. Click <strong className="text-slate-200">Save changes</strong> to make the new branding live.
+                </div>
+              </section>
             </div>
           )}
 

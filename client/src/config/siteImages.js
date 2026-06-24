@@ -34,5 +34,10 @@ export function normalizeSiteContentImages(content) {
     carouselSlides: Array.isArray(content?.carouselSlides)
       ? content.carouselSlides.map((slide) => ({ ...slide, image: resolveSiteImageUrl(slide.image) }))
       : content?.carouselSlides,
+    branding: content?.branding
+      ? Object.fromEntries(
+          Object.entries(content.branding).map(([key, value]) => [key, resolveSiteImageUrl(value)])
+        )
+      : content?.branding,
   };
 }

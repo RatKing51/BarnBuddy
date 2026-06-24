@@ -5,7 +5,7 @@ import PwaInstallButton from './PwaInstallButton'
 import '../index.css'
 import { getSiteAssetUrl, resolveSiteImageUrl } from '../config/siteImages'
 
-export default function LargeLandingCard({ slides = landingCarouselSlides }) {
+export default function LargeLandingCard({ slides = landingCarouselSlides, branding = {} }) {
   const [activeSlide, setActiveSlide] = useState(0)
   const { isLoaded, isSignedIn } = useAuth()
   const showSignUp = isLoaded && !isSignedIn
@@ -61,7 +61,7 @@ export default function LargeLandingCard({ slides = landingCarouselSlides }) {
             <div className="absolute -inset-5 rounded-[2rem] bg-blue-500/14 blur-2xl" aria-hidden="true" />
             <div className="relative overflow-hidden rounded-2xl border border-white/12 bg-[#07102a] shadow-2xl shadow-black/35">
               <div className="flex items-center justify-between gap-4 border-b border-white/10 bg-white px-5 py-4">
-                <img src={getSiteAssetUrl("bblogo.png")} alt="BarnBuddy logo" className="h-10 w-auto object-contain" />
+                <img src={resolveSiteImageUrl(branding.siteLogo || getSiteAssetUrl("bblogo.png"))} alt="BarnBuddy logo" className="h-10 w-auto object-contain" />
                 <div className="flex items-center gap-2">
                   <button
                     type="button"

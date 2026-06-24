@@ -36,4 +36,10 @@ export const defaultSiteContent = {
     message: 'We are making a few updates and will be back soon.',
     estimatedReturn: '',
   },
+  branding: {
+    favicon: '/api/site-content/assets/favicon.png',
+    appleTouchIcon: '/api/site-content/assets/pwa-192x192.png',
+    pwaIcon: '/api/site-content/assets/pwa-512x512.png',
+    siteLogo: '/api/site-content/assets/bblogo.png',
+  },
 }
