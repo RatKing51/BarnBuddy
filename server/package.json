@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "reminders:send": "node scripts/sendReminderCron.js",
+    "images:migrate:r2": "node scripts/migrateAnimalImagesToR2.js",
+    "images:cleanup:database": "node scripts/migrateAnimalImagesToR2.js --cleanup-only",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js"
   },
@@ -14,6 +16,8 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1075.0",
+    "@aws-sdk/s3-request-presigner": "^3.1075.0",
     "@clerk/express": "^2.1.21",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",

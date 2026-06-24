@@ -54,6 +54,16 @@ const env = {
   notifications: {
     cronSecret: process.env.NOTIFICATION_CRON_SECRET || "",
   },
+  r2: {
+    accountId: process.env.R2_ACCOUNT_ID || "",
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+    bucket: process.env.R2_BUCKET_NAME || "",
+    signedUrlTtlSeconds: Math.max(
+      60,
+      Math.min(Number(process.env.R2_SIGNED_URL_TTL_SECONDS) || 900, 604800)
+    ),
+  },
 };
 
 if (env.nodeEnv === "production") {

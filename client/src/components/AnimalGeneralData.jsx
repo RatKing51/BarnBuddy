@@ -99,6 +99,19 @@ function AnimalGeneralDataSkeleton() {
   );
 }
 
+const animalImageCache = new Map();
+const MAX_CACHED_ANIMAL_IMAGES = 20;
+
+function cacheAnimalImage(animalId, blob) {
+  animalImageCache.delete(animalId);
+  animalImageCache.set(animalId, blob);
+
+  while (animalImageCache.size > MAX_CACHED_ANIMAL_IMAGES) {
+    const oldestAnimalId = animalImageCache.keys().next().value;
+    animalImageCache.delete(oldestAnimalId);
+  }
+}
+
 export default function AnimalGeneralData({
   animal,
   setSelectedAnimal,
@@ -138,6 +151,7 @@ export default function AnimalGeneralData({
   const saveStatusTimer = useRef(null);
   const hydratedAnimalIdRef = useRef(null);
   const currentAnimalIdRef = useRef(null);
+  const optimisticImageUrlRef = useRef("");
   const { authFetch } = useAuth();
   const { preferences } = usePreferences();
   const selectedAnimalRecordId = animal?.id;
@@ -151,6 +165,13 @@ export default function AnimalGeneralData({
   };
 
   const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB limit
+  const SUPPORTED_IMAGE_TYPES = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "image/avif",
+  ]);
 
   function getReadableFileSize(size) {
     return `${(size / (1024 * 1024)).toFixed(1)}MB`;
@@ -220,12 +241,15 @@ export default function AnimalGeneralData({
     };
     lastSavedAnimalData.current = savedAnimalData;
     lastSavedAnimalSignature.current = JSON.stringify(savedAnimalData);
-    // Image is now retrieved from database, use animal.id as a flag
-    setImageUrl(animal.id ? `stored` : "");
+    setImageUrl(animal.has_image ? "stored" : "");
   }, [animal]);
 
   useEffect(() => () => {
     if (saveStatusTimer.current) clearTimeout(saveStatusTimer.current);
+    if (optimisticImageUrlRef.current) {
+      URL.revokeObjectURL(optimisticImageUrlRef.current);
+      optimisticImageUrlRef.current = "";
+    }
   }, []);
 
   const markSaved = () => {
@@ -237,6 +261,7 @@ export default function AnimalGeneralData({
   // Load image from database when animal changes or after a new upload.
   useEffect(() => {
     let objectUrl = "";
+    const abortController = new AbortController();
 
     const loadImage = async () => {
       if (!animal?.id || !imageUrl) {
@@ -245,16 +270,49 @@ export default function AnimalGeneralData({
       }
 
       try {
-        const response = await authFetch(`${API_URL}/api/animals/${animal.id}/image?refresh=${imageRefreshKey}`);
+        const cachedBlob = animalImageCache.get(animal.id);
+        if (cachedBlob) {
+          objectUrl = URL.createObjectURL(cachedBlob);
+          setImageBlobUrl(objectUrl);
+          if (optimisticImageUrlRef.current) {
+            URL.revokeObjectURL(optimisticImageUrlRef.current);
+            optimisticImageUrlRef.current = "";
+          }
+          return;
+        }
+
+        const signedUrlResponse = await authFetch(
+          `${API_URL}/api/animals/${animal.id}/image-url?refresh=${imageRefreshKey}`,
+          { signal: abortController.signal }
+        );
+
+        let response;
+        if (signedUrlResponse.ok) {
+          const { url } = await signedUrlResponse.json();
+          response = await fetch(url, { signal: abortController.signal });
+        } else if ([404, 503].includes(signedUrlResponse.status)) {
+          response = await authFetch(
+            `${API_URL}/api/animals/${animal.id}/image?refresh=${imageRefreshKey}`,
+            { signal: abortController.signal }
+          );
+        } else {
+          throw new Error("Failed to create image download URL");
+        }
         
         if (!response.ok) {
           throw new Error('Failed to load image');
         }
 
         const blob = await response.blob();
+        cacheAnimalImage(animal.id, blob);
         objectUrl = URL.createObjectURL(blob);
         setImageBlobUrl(objectUrl);
+        if (optimisticImageUrlRef.current) {
+          URL.revokeObjectURL(optimisticImageUrlRef.current);
+          optimisticImageUrlRef.current = "";
+        }
       } catch (err) {
+        if (err.name === "AbortError") return;
         console.error('Error loading image:', err);
         setImageBlobUrl("");
       }
@@ -264,6 +322,7 @@ export default function AnimalGeneralData({
 
     // Cleanup blob URL on unmount
     return () => {
+      abortController.abort();
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
       }
@@ -513,8 +572,8 @@ export default function AnimalGeneralData({
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload a valid image file (JPG, PNG, etc.).");
+    if (!SUPPORTED_IMAGE_TYPES.has(file.type)) {
+      toast.error("Please use a JPG, PNG, GIF, WebP, or AVIF image.");
       e.target.value = "";
       return;
     }
@@ -525,18 +584,30 @@ export default function AnimalGeneralData({
       return;
     }
 
+    const uploadAnimalId = animal.id;
+    const previousImageUrl = imageBlobUrl;
+
     try {
       setIsUploadingImage(true);
       const previewUrl = URL.createObjectURL(file);
-      setImageBlobUrl((current) => {
-        if (current) URL.revokeObjectURL(current);
-        return previewUrl;
-      });
-      await uploadAnimalImage(animal.id, file);
-      setImageUrl("stored"); // Set flag to indicate image is stored
-      setImageRefreshKey((current) => current + 1);
+      optimisticImageUrlRef.current = previewUrl;
+      setImageBlobUrl(previewUrl);
+
+      await uploadAnimalImage(uploadAnimalId, file);
+      cacheAnimalImage(uploadAnimalId, file);
+      if (currentAnimalIdRef.current === uploadAnimalId) {
+        setImageUrl("stored");
+        setImageRefreshKey((current) => current + 1);
+      }
       toast.success("Image uploaded successfully!");
     } catch (err) {
+      if (optimisticImageUrlRef.current) {
+        URL.revokeObjectURL(optimisticImageUrlRef.current);
+        optimisticImageUrlRef.current = "";
+      }
+      if (currentAnimalIdRef.current === uploadAnimalId) {
+        setImageBlobUrl(previousImageUrl);
+      }
       console.error("Image upload failed:", err.response?.data || err.message);
       const message = err.response?.data?.error || err.message || "Failed to upload image.";
       toast.error(message);
@@ -557,6 +628,7 @@ export default function AnimalGeneralData({
     try {
       setIsRemovingImage(true);
       await removeAnimalImage(animal.id);
+      animalImageCache.delete(animal.id);
       setImageUrl("");
       setImageBlobUrl((current) => {
         if (current) URL.revokeObjectURL(current);
@@ -697,7 +769,7 @@ export default function AnimalGeneralData({
           />
           <input
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/gif,image/webp,image/avif"
             className="hidden"
             onChange={handleImageUpload}
             disabled={isUploadingImage}

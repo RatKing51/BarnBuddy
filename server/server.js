@@ -72,6 +72,12 @@ app.use((err, req, res, next) => {
       return res.status(400).json({ error: "Only image files are allowed." });
     }
 
+    if (err.message === "Unsupported image type") {
+      return res.status(400).json({
+        error: "Unsupported image format. Please use JPG, PNG, GIF, WebP, or AVIF.",
+      });
+    }
+
     if (err.message === "Not allowed by CORS") {
       return res.status(403).json({ error: "Not allowed by CORS" });
     }

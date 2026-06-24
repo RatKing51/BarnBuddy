@@ -2,8 +2,23 @@ const express = require("express");
 const multer = require("multer");
 const pool = require("../data-source");
 const authMiddleware = require("../middleware/authMiddleware");
+const {
+  createAnimalImageKey,
+  deleteObject,
+  getSignedDownloadUrl,
+  isR2Configured,
+  uploadObject,
+} = require("../services/r2Storage");
 
 const router = express.Router();
+
+const animalResponseColumns = `
+  id, user_id, herd_id, name, species, sex, birthdate, age, comments,
+  weight, behavior, tag_id, image_url, birth_weight, birth_notes,
+  tracking_years, dam_id, sire_id, status, deceased_date, deceased_notes,
+  created_at, image_mime_type,
+  (image_key IS NOT NULL OR image_data IS NOT NULL) AS has_image
+`;
 
 const normalizeAnimalStatus = (status) => {
     if (status === "deceased") return "deceased";
@@ -177,7 +192,10 @@ async function syncAnimalCurrentWeight(animalId, userId) {
 
     const latestWeight = latest.rows[0]?.weight || null;
     const result = await pool.query(
-        "UPDATE animals SET weight = $1 WHERE id = $2 AND user_id = $3 RETURNING *",
+        `UPDATE animals
+         SET weight = $1
+         WHERE id = $2 AND user_id = $3
+         RETURNING ${animalResponseColumns}`,
         [latestWeight, animalId, userId]
     );
 
@@ -188,7 +206,7 @@ async function syncAnimalCurrentWeight(animalId, userId) {
 router.get("/unassigned", authMiddleware, async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT * FROM animals WHERE herd_id IS NULL AND user_id=$1`,
+            `SELECT ${animalResponseColumns} FROM animals WHERE herd_id IS NULL AND user_id=$1`,
             [req.user.id]
         );
 
@@ -227,8 +245,8 @@ router.get("/dashboard/bootstrap", authMiddleware, async (req, res) => {
         }
 
         const animalsResult = selectedHerd.id === "unassigned"
-            ? await pool.query("SELECT * FROM animals WHERE herd_id IS NULL AND user_id = $1 ORDER BY name ASC", [req.user.id])
-            : await pool.query("SELECT * FROM animals WHERE herd_id = $1 AND user_id = $2 ORDER BY name ASC", [selectedHerd.id, req.user.id]);
+            ? await pool.query(`SELECT ${animalResponseColumns} FROM animals WHERE herd_id IS NULL AND user_id = $1 ORDER BY name ASC`, [req.user.id])
+            : await pool.query(`SELECT ${animalResponseColumns} FROM animals WHERE herd_id = $1 AND user_id = $2 ORDER BY name ASC`, [selectedHerd.id, req.user.id]);
         const careSummary = await getHerdCareSummaryData(req.user.id, selectedHerd.id, careWindowDays);
 
         res.json({
@@ -252,12 +270,12 @@ router.get("/herd/:herdId", authMiddleware, async (req, res) => {
         let result;
         if (herdId === "unassigned") {
             result = await pool.query(
-                `SELECT * FROM animals WHERE herd_id IS NULL AND user_id=$1 ORDER BY name ASC`,
+                `SELECT ${animalResponseColumns} FROM animals WHERE herd_id IS NULL AND user_id=$1 ORDER BY name ASC`,
                 [req.user.id]
             );
         } else {
             result = await pool.query(
-                `SELECT * FROM animals WHERE herd_id=$1 AND user_id=$2 ORDER BY name ASC`,
+                `SELECT ${animalResponseColumns} FROM animals WHERE herd_id=$1 AND user_id=$2 ORDER BY name ASC`,
                 [herdId, req.user.id]
             );
         }
@@ -397,7 +415,7 @@ router.delete("/:id/weight-records/:recordId", authMiddleware, async (req, res) 
 router.get("/", authMiddleware, async (req, res) => {
     try {
         const result = await pool.query(
-            "SELECT * FROM animals WHERE user_id = $1 ORDER BY id ASC",
+            `SELECT ${animalResponseColumns} FROM animals WHERE user_id = $1 ORDER BY id ASC`,
             [req.user.id]
         );
         res.json(result.rows);
@@ -409,19 +427,60 @@ router.get("/", authMiddleware, async (req, res) => {
 
 // Multer storage configuration - store in memory as buffer
 const storage = multer.memoryStorage();
+const supportedImageTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/avif",
+]);
+
+function detectImageMimeType(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 12) return null;
+
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "image/jpeg";
+  }
+
+  if (
+    buffer.subarray(0, 8).equals(
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    )
+  ) {
+    return "image/png";
+  }
+
+  const header = buffer.subarray(0, 12).toString("ascii");
+  if (header.startsWith("GIF87a") || header.startsWith("GIF89a")) {
+    return "image/gif";
+  }
+  if (header.startsWith("RIFF") && header.endsWith("WEBP")) {
+    return "image/webp";
+  }
+
+  const boxType = buffer.subarray(4, 8).toString("ascii");
+  const brand = buffer.subarray(8, 12).toString("ascii");
+  if (boxType === "ftyp" && ["avif", "avis"].includes(brand)) {
+    return "image/avif";
+  }
+
+  return null;
+}
+
 const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: function (req, file, cb) {
-    if (file.mimetype.startsWith("image/")) {
+    if (supportedImageTypes.has(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error("Only images allowed"), false);
+      cb(new Error("Unsupported image type"), false);
     }
   }
 });
 
-// Upload image and store in database
+// Upload an image to R2. Database storage remains as a temporary fallback
+// for installations that have not configured R2 yet.
 router.post(
   "/:id/upload",
   authMiddleware,
@@ -433,9 +492,16 @@ router.post(
         return res.status(400).json({ error: "No image uploaded" });
       }
 
+      const imageMimeType = detectImageMimeType(req.file.buffer);
+      if (!imageMimeType || !supportedImageTypes.has(imageMimeType)) {
+        return res.status(400).json({
+          error: "Unsupported image format. Please use JPG, PNG, GIF, WebP, or AVIF.",
+        });
+      }
+
       // Check if animal exists
       const animalCheck = await pool.query(
-        "SELECT id FROM animals WHERE id = $1 AND user_id = $2",
+        "SELECT id, image_key FROM animals WHERE id = $1 AND user_id = $2",
         [animalId, req.user.id]
       );
 
@@ -443,11 +509,45 @@ router.post(
         return res.status(404).json({ error: "Animal not found" });
       }
 
-      // Store image buffer in database
-      const updateResult = await pool.query(
-        "UPDATE animals SET image_data = $1 WHERE id = $2 AND user_id = $3 RETURNING id",
-        [req.file.buffer, animalId, req.user.id]
-      );
+      if (isR2Configured()) {
+        const oldImageKey = animalCheck.rows[0].image_key;
+        const imageKey = createAnimalImageKey(req.user.id, animalId, imageMimeType);
+
+        await uploadObject({
+          key: imageKey,
+          body: req.file.buffer,
+          contentType: imageMimeType,
+        });
+
+        try {
+          await pool.query(
+            `UPDATE animals
+             SET image_key = $1,
+                 image_mime_type = $2,
+                 image_data = NULL
+             WHERE id = $3 AND user_id = $4`,
+            [imageKey, imageMimeType, animalId, req.user.id]
+          );
+        } catch (err) {
+          await deleteObject(imageKey).catch(() => {});
+          throw err;
+        }
+
+        if (oldImageKey && oldImageKey !== imageKey) {
+          await deleteObject(oldImageKey).catch((err) => {
+            console.error("Failed to delete replaced R2 image:", err);
+          });
+        }
+      } else {
+        await pool.query(
+          `UPDATE animals
+           SET image_data = $1,
+               image_mime_type = $2,
+               image_key = NULL
+           WHERE id = $3 AND user_id = $4`,
+          [req.file.buffer, imageMimeType, animalId, req.user.id]
+        );
+      }
 
       res.json({ message: "Image uploaded successfully", animal_id: animalId });
 
@@ -458,6 +558,36 @@ router.post(
   }
 );
 
+router.get("/:id/image-url", authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT image_key FROM animals WHERE id = $1 AND user_id = $2",
+      [req.params.id, req.user.id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: "Animal not found" });
+    }
+
+    const imageKey = result.rows[0].image_key;
+    if (!imageKey) {
+      return res.status(404).json({ error: "No R2 image found for this animal" });
+    }
+    if (!isR2Configured()) {
+      return res.status(503).json({ error: "R2 is not configured" });
+    }
+
+    res.set("Cache-Control", "private, no-store");
+    res.json({
+      url: await getSignedDownloadUrl(imageKey),
+      expiresIn: require("../config/env").r2.signedUrlTtlSeconds,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to create image URL" });
+  }
+});
+
 // Get image from database
 router.get(
   "/:id/image",
@@ -467,7 +597,7 @@ router.get(
       const animalId = req.params.id;
 
       const result = await pool.query(
-        "SELECT image_data FROM animals WHERE id = $1 AND user_id = $2",
+        "SELECT image_data, image_mime_type, image_key FROM animals WHERE id = $1 AND user_id = $2",
         [animalId, req.user.id]
       );
 
@@ -475,12 +605,27 @@ router.get(
         return res.status(404).json({ error: "Animal not found" });
       }
 
+      if (result.rows[0].image_key && isR2Configured()) {
+        return res.redirect(302, await getSignedDownloadUrl(result.rows[0].image_key));
+      }
+
       const imageData = result.rows[0].image_data;
       if (!imageData) {
         return res.status(404).json({ error: "No image found for this animal" });
       }
 
-      res.set("Content-Type", "image/jpeg");
+      const imageMimeType =
+        result.rows[0].image_mime_type || detectImageMimeType(imageData);
+
+      if (!imageMimeType) {
+        return res.status(415).json({ error: "Unsupported stored image format" });
+      }
+
+      res.set({
+        "Content-Type": imageMimeType,
+        "Cache-Control": "private, max-age=300",
+        "X-Content-Type-Options": "nosniff",
+      });
       res.send(imageData);
 
     } catch (err) {
@@ -499,7 +644,7 @@ router.delete(
       const animalId = req.params.id;
 
       const animalResult = await pool.query(
-        "SELECT id FROM animals WHERE id = $1 AND user_id = $2",
+        "SELECT id, image_key FROM animals WHERE id = $1 AND user_id = $2",
         [animalId, req.user.id]
       );
 
@@ -507,9 +652,13 @@ router.delete(
         return res.status(404).json({ error: "Animal not found" });
       }
 
-      // Clear image data from database
+      const imageKey = animalResult.rows[0].image_key;
+      if (imageKey) {
+        await deleteObject(imageKey);
+      }
+
       await pool.query(
-        "UPDATE animals SET image_data = NULL WHERE id = $1 AND user_id = $2",
+        "UPDATE animals SET image_data = NULL, image_mime_type = NULL, image_key = NULL WHERE id = $1 AND user_id = $2",
         [animalId, req.user.id]
       );
 
@@ -526,7 +675,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
     const { id } = req.params;
     try {
         const result = await pool.query(
-            "SELECT * FROM animals WHERE id = $1 AND user_id = $2",
+            `SELECT ${animalResponseColumns} FROM animals WHERE id = $1 AND user_id = $2`,
             [id, req.user.id]
         );
         if (result.rows.length === 0) return res.status(404).json({ error: "Animal not found" });
@@ -573,7 +722,7 @@ router.post("/", authMiddleware, async (req, res) => {
             `INSERT INTO animals
             (user_id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url, birth_weight, birth_notes, status, deceased_date, deceased_notes, dam_id, sire_id)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) 
-            RETURNING *`,
+            RETURNING ${animalResponseColumns}`,
             [req.user.id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url, birth_weight || null, birth_notes || null, status, deceased_date || null, deceased_notes || null, dam_id || null, sire_id || null]
         );
         res.status(201).json(result.rows[0]);
@@ -633,7 +782,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
                  dam_id=$17,
                  sire_id=$18
              WHERE id=$11 AND user_id=$12
-             RETURNING *`,
+             RETURNING ${animalResponseColumns}`,
             [herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, id, req.user.id, image_url, status, deceased_date || null, deceased_notes || null, dam_id || null, sire_id || null]
         );
 
@@ -654,7 +803,7 @@ router.put("/:id/birth-data", authMiddleware, async (req, res) => {
         const result = await pool.query(
             `UPDATE animals SET birth_weight=$1, birth_notes=$2
              WHERE id=$3 AND user_id=$4
-             RETURNING *`,
+             RETURNING ${animalResponseColumns}`,
             [birth_weight, birth_notes, id, req.user.id]
         );
 
@@ -671,6 +820,11 @@ router.delete("/:id", authMiddleware, async (req, res) => {
     const { id } = req.params;
 
     try {
+        const animalImageResult = await pool.query(
+            "SELECT image_key FROM animals WHERE id=$1 AND user_id=$2",
+            [id, req.user.id]
+        );
+
         const linkedBirths = await pool.query(
             "SELECT reproduction_id FROM births WHERE offspring_id=$1 AND user_id=$2",
             [id, req.user.id]
@@ -682,11 +836,17 @@ router.delete("/:id", authMiddleware, async (req, res) => {
         );
 
         const result = await pool.query(
-            "DELETE FROM animals WHERE id=$1 AND user_id=$2 RETURNING *",
+            "DELETE FROM animals WHERE id=$1 AND user_id=$2 RETURNING id",
             [id, req.user.id]
         );
 
         if (result.rows.length === 0) return res.status(404).json({ error: "Animal not found" });
+        const imageKey = animalImageResult.rows[0]?.image_key;
+        if (imageKey) {
+            await deleteObject(imageKey).catch((err) => {
+                console.error("Failed to delete animal image from R2:", err);
+            });
+        }
         await Promise.all(
             linkedBirths.rows
                 .filter((birth) => birth.reproduction_id)
