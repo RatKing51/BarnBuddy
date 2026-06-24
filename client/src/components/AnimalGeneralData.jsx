@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext";
 import { usePreferences } from "../context/PreferencesContext";
 import { API_URL } from "../config/env";
 import { SkeletonBlock } from "./LoadingSpinner";
+import ImageCropModal from "./ImageCropModal";
 
 function AnimalGeneralDataSkeleton() {
   const cardClass = "rounded-2xl border border-gray-700 bg-gray-800 p-6 shadow-md";
@@ -139,6 +140,7 @@ export default function AnimalGeneralData({
   const [imageUrl, setImageUrl] = useState("");
   const [imageBlobUrl, setImageBlobUrl] = useState("");
   const [imageRefreshKey, setImageRefreshKey] = useState(0);
+  const [imageToCrop, setImageToCrop] = useState(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isRemovingImage, setIsRemovingImage] = useState(false);
   const [isDeletingAnimal, setIsDeletingAnimal] = useState(false);
@@ -165,7 +167,7 @@ export default function AnimalGeneralData({
     Swine: ["Gilt", "Sow", "Boar", "Barrow", "Stag"],
   };
 
-  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB limit
+  const MAX_SOURCE_IMAGE_SIZE = 25 * 1024 * 1024;
   const SUPPORTED_IMAGE_TYPES = new Set([
     "image/jpeg",
     "image/png",
@@ -571,10 +573,11 @@ export default function AnimalGeneralData({
     </div>
   );
 
-  async function handleImageUpload(e) {
+  function handleImageSelection(e) {
     const file = e.target.files?.[0];
     if (!file || !animal?.id) {
       if (!animal?.id) toast.error("Save the animal first, then upload an image.");
+      e.target.value = "";
       return;
     }
 
@@ -584,12 +587,17 @@ export default function AnimalGeneralData({
       return;
     }
 
-    if (file.size > MAX_IMAGE_SIZE) {
-      toast.error(`Image is too large. Max file size is ${getReadableFileSize(MAX_IMAGE_SIZE)}.`);
+    if (file.size > MAX_SOURCE_IMAGE_SIZE) {
+      toast.error(`Image is too large. Max file size is ${getReadableFileSize(MAX_SOURCE_IMAGE_SIZE)}.`);
       e.target.value = "";
       return;
     }
 
+    setImageToCrop(file);
+    e.target.value = "";
+  }
+
+  async function handleImageUpload(file) {
     const uploadAnimalId = animal.id;
     const previousImageUrl = imageBlobUrl;
 
@@ -607,6 +615,7 @@ export default function AnimalGeneralData({
         setImageRefreshKey((current) => current + 1);
       }
       toast.success("Image uploaded successfully!");
+      setImageToCrop(null);
     } catch (err) {
       if (optimisticImageUrlRef.current) {
         URL.revokeObjectURL(optimisticImageUrlRef.current);
@@ -620,7 +629,6 @@ export default function AnimalGeneralData({
       toast.error(message);
     } finally {
       setIsUploadingImage(false);
-      e.target.value = "";
     }
   }
 
@@ -697,7 +705,16 @@ export default function AnimalGeneralData({
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+    <>
+      {imageToCrop && (
+        <ImageCropModal
+          file={imageToCrop}
+          animalName={name || tag}
+          onCancel={() => setImageToCrop(null)}
+          onConfirm={handleImageUpload}
+        />
+      )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
       {/* Top Left - Basic Info */}
       <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-4">
         <div className="mb-2 flex items-center justify-between gap-3">
@@ -779,11 +796,11 @@ export default function AnimalGeneralData({
             type="file"
             accept="image/jpeg,image/png,image/gif,image/webp,image/avif"
             className="hidden"
-            onChange={handleImageUpload}
+            onChange={handleImageSelection}
             disabled={isUploadingImage}
           />
           <div className="absolute left-4 top-4 rounded-full border border-white/10 bg-black/55 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur">
-            Max 5MB · JPG/PNG only
+            Photos are cropped and optimized before upload
           </div>
           <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 bg-gradient-to-t from-black/85 via-black/55 to-transparent p-5 text-white transition duration-300 sm:opacity-0 sm:group-hover:opacity-100">
             <span className="text-lg font-semibold">{isUploadingImage ? "Uploading..." : hasAnimalImage ? "Change photo" : "Upload photo"}</span>
@@ -1012,6 +1029,7 @@ export default function AnimalGeneralData({
         </div>
       </div>
       <ToastContainer autoClose="1000" />
-    </div>
+      </div>
+    </>
   );
 }
