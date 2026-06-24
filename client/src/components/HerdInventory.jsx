@@ -30,6 +30,8 @@ function inventoryPayload(item, selectedHerd) {
     cost_per_unit: item.cost_per_unit || 0,
     supplier: item.supplier || "",
     expiration_date: item.expiration_date || null,
+    use_for_vaccinations: Boolean(item.use_for_vaccinations),
+    use_for_health_events: Boolean(item.use_for_health_events),
     notes: item.notes || "",
   };
 }
@@ -155,6 +157,8 @@ export default function HerdInventory({ selectedHerd, isPremium = false }) {
         cost_per_unit: 0,
         supplier: "",
         expiration_date: null,
+        use_for_vaccinations: false,
+        use_for_health_events: false,
         notes: "",
       });
       const item = response.data;
@@ -406,6 +410,38 @@ export default function HerdInventory({ selectedHerd, isPremium = false }) {
                 <label className="text-xs text-gray-400">Cost per unit<input type="number" min="0" step="0.01" value={selectedItem.cost_per_unit || ""} onChange={(e) => setSelectedItem({ ...selectedItem, cost_per_unit: e.target.value })} onBlur={saveItem} className={fieldClass} /></label>
                 <label className="text-xs text-gray-400">Supplier<input value={selectedItem.supplier || ""} onChange={(e) => setSelectedItem({ ...selectedItem, supplier: e.target.value })} onBlur={saveItem} className={fieldClass} /></label>
                 <label className="text-xs text-gray-400">Expiration date<input type="date" value={dateValue(selectedItem.expiration_date)} onChange={(e) => setSelectedItem({ ...selectedItem, expiration_date: e.target.value })} onBlur={saveItem} className={fieldClass} /></label>
+                <div className="rounded-xl border border-gray-700 bg-gray-900 p-3 md:col-span-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">Use this item in records</p>
+                  <p className="mt-1 text-xs text-gray-400">Selected record types can automatically subtract this item from stock.</p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(selectedItem.use_for_vaccinations)}
+                        onChange={(event) => {
+                          const next = { ...selectedItem, use_for_vaccinations: event.target.checked };
+                          setSelectedItem(next);
+                          saveItem(next);
+                        }}
+                        className="h-4 w-4 accent-blue-500"
+                      />
+                      Vaccinations
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(selectedItem.use_for_health_events)}
+                        onChange={(event) => {
+                          const next = { ...selectedItem, use_for_health_events: event.target.checked };
+                          setSelectedItem(next);
+                          saveItem(next);
+                        }}
+                        className="h-4 w-4 accent-blue-500"
+                      />
+                      Health treatments
+                    </label>
+                  </div>
+                </div>
                 <label className="text-xs text-gray-400 md:col-span-2">Notes<textarea rows="4" value={selectedItem.notes || ""} onChange={(e) => setSelectedItem({ ...selectedItem, notes: e.target.value })} onBlur={saveItem} className={fieldClass} /></label>
               </div>
               <div className="mt-4 flex items-center justify-between gap-3">

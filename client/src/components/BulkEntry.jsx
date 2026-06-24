@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import * as healthEventsAPI from "../api/healthEvents";
+import * as premiumRecordsAPI from "../api/premiumRecords";
 import * as vaccinationsAPI from "../api/vaccinations";
 
 function today() {
@@ -12,6 +13,8 @@ const initialVaccination = () => ({
   date_given: today(),
   next_due_date: "",
   dosage: "",
+  inventory_item_id: "",
+  inventory_quantity_used: "",
   notes: "",
 });
 
@@ -21,6 +24,8 @@ const initialHealthEvent = () => ({
   description: "",
   severity: "Low",
   resolved: false,
+  inventory_item_id: "",
+  inventory_quantity_used: "",
   notes: "",
 });
 
@@ -28,6 +33,7 @@ export default function BulkEntry({
   animals = [],
   selectedHerd,
   primaryAnimalIdentifier = "name",
+  isPremium = false,
   onSaved,
 }) {
   const availableAnimals = useMemo(
@@ -39,7 +45,29 @@ export default function BulkEntry({
   const [search, setSearch] = useState("");
   const [vaccination, setVaccination] = useState(initialVaccination);
   const [healthEvent, setHealthEvent] = useState(initialHealthEvent);
+  const [inventoryItems, setInventoryItems] = useState([]);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadInventory() {
+      if (!isPremium || !selectedHerd) {
+        setInventoryItems([]);
+        return;
+      }
+      try {
+        const response = await premiumRecordsAPI.getHerdInventory(selectedHerd.id);
+        if (!cancelled) setInventoryItems(Array.isArray(response.data) ? response.data : []);
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) setInventoryItems([]);
+      }
+    }
+    loadInventory();
+    return () => {
+      cancelled = true;
+    };
+  }, [isPremium, selectedHerd]);
 
   const filteredAnimals = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -75,6 +103,14 @@ export default function BulkEntry({
   };
 
   const clearSelection = () => setSelectedIds([]);
+  const eligibleInventory = inventoryItems.filter((item) =>
+    recordType === "vaccination" ? item.use_for_vaccinations : item.use_for_health_events
+  );
+  const activeRecord = recordType === "vaccination" ? vaccination : healthEvent;
+  const selectedInventory = inventoryItems.find(
+    (item) => String(item.id) === String(activeRecord.inventory_item_id)
+  );
+  const totalInventoryUsage = Number.parseFloat(activeRecord.inventory_quantity_used) * selectedIds.length;
 
   const submit = async (event) => {
     event.preventDefault();
@@ -97,6 +133,13 @@ export default function BulkEntry({
             });
 
       const count = response.data?.count || selectedIds.length;
+      if (activeRecord.inventory_item_id && Number.isFinite(totalInventoryUsage) && totalInventoryUsage > 0) {
+        setInventoryItems((current) => current.map((item) =>
+          String(item.id) === String(activeRecord.inventory_item_id)
+            ? { ...item, quantity: Math.max(0, Number(item.quantity) - totalInventoryUsage) }
+            : item
+        ));
+      }
       toast.success(`${recordType === "vaccination" ? "Vaccination" : "Health event"} added to ${count} animal${count === 1 ? "" : "s"}.`);
       if (recordType === "vaccination") setVaccination(initialVaccination());
       else setHealthEvent(initialHealthEvent());
@@ -218,6 +261,23 @@ export default function BulkEntry({
                 Dosage
                 <input value={vaccination.dosage} onChange={(e) => setVaccination({ ...vaccination, dosage: e.target.value })} placeholder="Example: 2 mL" className={inputClass} />
               </label>
+              {isPremium && (
+                <>
+                  <label className="text-xs text-gray-400">
+                    Use inventory item
+                    <select value={vaccination.inventory_item_id} onChange={(e) => setVaccination({ ...vaccination, inventory_item_id: e.target.value })} className={inputClass}>
+                      <option value="">Do not subtract inventory</option>
+                      {eligibleInventory.map((item) => (
+                        <option key={item.id} value={item.id}>{item.item_name} ({item.quantity} {item.unit})</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-xs text-gray-400">
+                    Amount used per animal
+                    <input type="number" min="0.01" step="0.01" disabled={!vaccination.inventory_item_id} value={vaccination.inventory_quantity_used} onChange={(e) => setVaccination({ ...vaccination, inventory_quantity_used: e.target.value })} placeholder={selectedInventory ? selectedInventory.unit : "Amount"} className={inputClass} />
+                  </label>
+                </>
+              )}
               <label className="text-xs text-gray-400 md:col-span-2">
                 Notes
                 <textarea rows="3" value={vaccination.notes} onChange={(e) => setVaccination({ ...vaccination, notes: e.target.value })} placeholder="Lot number, injection location, or other notes" className={inputClass} />
@@ -257,6 +317,23 @@ export default function BulkEntry({
                 Description
                 <input value={healthEvent.description} onChange={(e) => setHealthEvent({ ...healthEvent, description: e.target.value })} placeholder="What was observed or performed?" className={inputClass} />
               </label>
+              {isPremium && (
+                <>
+                  <label className="text-xs text-gray-400">
+                    Use inventory item
+                    <select value={healthEvent.inventory_item_id} onChange={(e) => setHealthEvent({ ...healthEvent, inventory_item_id: e.target.value })} className={inputClass}>
+                      <option value="">Do not subtract inventory</option>
+                      {eligibleInventory.map((item) => (
+                        <option key={item.id} value={item.id}>{item.item_name} ({item.quantity} {item.unit})</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-xs text-gray-400">
+                    Amount used per animal
+                    <input type="number" min="0.01" step="0.01" disabled={!healthEvent.inventory_item_id} value={healthEvent.inventory_quantity_used} onChange={(e) => setHealthEvent({ ...healthEvent, inventory_quantity_used: e.target.value })} placeholder={selectedInventory ? selectedInventory.unit : "Amount"} className={inputClass} />
+                  </label>
+                </>
+              )}
               <label className="text-xs text-gray-400 md:col-span-2">
                 Notes
                 <textarea rows="3" value={healthEvent.notes} onChange={(e) => setHealthEvent({ ...healthEvent, notes: e.target.value })} placeholder="Medication, dosage, follow-up, or other details" className={inputClass} />
@@ -267,6 +344,9 @@ export default function BulkEntry({
           <div className="mt-4 flex flex-col gap-2 rounded-xl border border-gray-700 bg-gray-900 p-3 sm:mt-6 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-4">
             <p className="text-xs text-gray-400 sm:text-sm">
               This will create {selectedIds.length} separate record{selectedIds.length === 1 ? "" : "s"}.
+              {selectedInventory && Number.isFinite(totalInventoryUsage) && totalInventoryUsage > 0
+                ? ` Inventory will use ${totalInventoryUsage} ${selectedInventory.unit} total.`
+                : ""}
             </p>
             <button
               type="submit"

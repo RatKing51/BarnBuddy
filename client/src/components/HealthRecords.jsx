@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import * as healthEventsAPI from "../api/healthEvents";
+import * as premiumRecordsAPI from "../api/premiumRecords";
 import * as vaccinationsAPI from "../api/vaccinations";
 import * as birthDataAPI from "../api/birthData";
 import { SkeletonBlock } from "./LoadingSpinner";
@@ -117,12 +118,13 @@ function HealthRecordsSkeleton() {
   );
 }
 
-export default function HealthRecords({ animal, onVaccinationUpdate }) {
+export default function HealthRecords({ animal, onVaccinationUpdate, selectedHerd, isPremium = false }) {
 
   const [healthEvents, setHealthEvents] = useState([]);
   const [selectedEventIndex, setSelectedEventIndex] = useState(null);
 
   const [vaccinations, setVaccinations] = useState([]);
+  const [inventoryItems, setInventoryItems] = useState([]);
   const [selectedVaccineIndex, setSelectedVaccineIndex] = useState(null);
 
   const [birthDate, setBirthDate] = useState("");
@@ -175,18 +177,15 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
       severity: "Low",
       description: "",
       notes: "",
-      resolved: false
+      resolved: false,
+      inventory_item_id: "",
+      inventory_quantity_used: "",
     };
 
     const updatedEvents = [...healthEvents, newEvent];
     setHealthEvents(updatedEvents);
     setSelectedEventIndex(updatedEvents.length - 1);
-    setAddingEvent(true);
-    try {
-      await saveHealthEvent(updatedEvents.length - 1, newEvent);
-    } finally {
-      setAddingEvent(false);
-    }
+    setAddingEvent(false);
   };
 
   const handleAddVaccine = async () => {
@@ -198,18 +197,15 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
       notes: "",
       next_due_date: "",
       dosage: "",
-      completed: false
+      completed: false,
+      inventory_item_id: "",
+      inventory_quantity_used: "",
     };
 
     const updatedVaccinations = [...vaccinations, newVaccine];
     setVaccinations(updatedVaccinations);
     setSelectedVaccineIndex(updatedVaccinations.length - 1);
-    setAddingVaccine(true);
-    try {
-      await saveVaccination(updatedVaccinations.length - 1, newVaccine);
-    } finally {
-      setAddingVaccine(false);
-    }
+    setAddingVaccine(false);
   };
 
   const handleDeleteEvent = (idx) => {
@@ -248,7 +244,9 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           severity: event.severity || "",
           description: event.description || "",
           resolved: event.resolved || false,
-          notes: event.notes || ""
+          notes: event.notes || "",
+          inventory_item_id: event.inventory_item_id || "",
+          inventory_quantity_used: event.inventory_quantity_used || "",
         }));
         
         const transformedVaccinations = (Array.isArray(vaccinationsRes.data) ? vaccinationsRes.data : []).map(vac => ({
@@ -258,7 +256,9 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           notes: vac.notes || "",
           next_due_date: vac.next_due_date ? vac.next_due_date.slice(0, 10) : "",
           dosage: vac.dosage || "",
-          completed: !vac.next_due_date
+          completed: !vac.next_due_date,
+          inventory_item_id: vac.inventory_item_id || "",
+          inventory_quantity_used: vac.inventory_quantity_used || "",
         }));
         
         setHealthEvents(transformedEvents);
@@ -283,6 +283,27 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
     fetchData();
   }, [animal]);
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadInventory() {
+      if (!isPremium || !selectedHerd) {
+        setInventoryItems([]);
+        return;
+      }
+      try {
+        const response = await premiumRecordsAPI.getHerdInventory(selectedHerd.id);
+        if (!cancelled) setInventoryItems(Array.isArray(response.data) ? response.data : []);
+      } catch (err) {
+        console.error("Error loading inventory options:", err);
+        if (!cancelled) setInventoryItems([]);
+      }
+    }
+    loadInventory();
+    return () => {
+      cancelled = true;
+    };
+  }, [isPremium, selectedHerd]);
+
   if (loading) return <HealthRecordsSkeleton />;
 
   function getHealthEventPayload(event) {
@@ -292,7 +313,9 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
       description: event.description,
       severity: event.severity,
       resolved: event.resolved,
-      notes: event.notes
+      notes: event.notes,
+      inventory_item_id: event.inventory_item_id || null,
+      inventory_quantity_used: event.inventory_quantity_used || 0,
     };
   }
 
@@ -302,7 +325,9 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
       date_given: vaccine.date || null,
       next_due_date: vaccine.completed ? null : vaccine.next_due_date || null,
       dosage: vaccine.dosage || null,
-      notes: vaccine.notes
+      notes: vaccine.notes,
+      inventory_item_id: vaccine.inventory_item_id || null,
+      inventory_quantity_used: vaccine.inventory_quantity_used || 0,
     };
   }
 
@@ -326,6 +351,16 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
       console.error("Error saving birth data:", err);
       toast.error("Failed to save birth data");
     }
+  };
+
+  const subtractLocalInventory = (record) => {
+    const used = Number.parseFloat(record.inventory_quantity_used);
+    if (!record.inventory_item_id || !Number.isFinite(used) || used <= 0) return;
+    setInventoryItems((current) => current.map((item) =>
+      String(item.id) === String(record.inventory_item_id)
+        ? { ...item, quantity: Math.max(0, Number(item.quantity) - used) }
+        : item
+    ));
   };
 
   const saveHealthEvent = async (idx, eventData = null) => {
@@ -352,7 +387,9 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           severity: res.data.severity || "",
           description: res.data.description || "",
           resolved: res.data.resolved || false,
-          notes: res.data.notes || ""
+          notes: res.data.notes || "",
+          inventory_item_id: res.data.inventory_item_id || "",
+          inventory_quantity_used: res.data.inventory_quantity_used || "",
         };
         setHealthEvents((current) =>
           current.map((item) =>
@@ -375,6 +412,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
         setHealthEvents((current) =>
           current.map((item, itemIndex) => (itemIndex === idx && !item.id ? { ...item, id: res.data.id } : item))
         );
+        subtractLocalInventory(event);
         toast.success("Health event created");
       }
       markSaved("event", setEventSaveStatus);
@@ -434,6 +472,9 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
           next_due_date: res.data.next_due_date ? res.data.next_due_date.slice(0, 10) : "",
           dosage: res.data.dosage || "",
           completed: !res.data.next_due_date
+          ,
+          inventory_item_id: res.data.inventory_item_id || "",
+          inventory_quantity_used: res.data.inventory_quantity_used || ""
         };
         lastVaccineSignatures.current.set(res.data.id, JSON.stringify(getVaccinationPayload(savedVaccine)));
         setVaccinations((current) =>
@@ -459,6 +500,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
         setVaccinations((current) =>
           current.map((item, itemIndex) => (itemIndex === idx && !item.id ? { ...item, id: res.data.id } : item))
         );
+        subtractLocalInventory(vaccine);
         toast.success("Vaccination created");
         onVaccinationUpdate?.();
       }
@@ -588,6 +630,52 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
                     {deletingEvent === selectedEventIndex ? "Deleting..." : "Delete"}
                   </button>
                 </div>
+
+                {isPremium && (
+                  <div className="grid grid-cols-1 gap-4 rounded-xl border border-blue-400/20 bg-blue-500/5 p-3 sm:grid-cols-2">
+                    <div>
+                      <label className="text-xs text-gray-400">Use inventory item</label>
+                      <select
+                        value={healthEvents[selectedEventIndex].inventory_item_id || ""}
+                        disabled={Boolean(healthEvents[selectedEventIndex].id)}
+                        onChange={(e) => {
+                          const updated = [...healthEvents];
+                          updated[selectedEventIndex].inventory_item_id = e.target.value;
+                          updated[selectedEventIndex].inventory_quantity_used = "";
+                          setHealthEvents(updated);
+                        }}
+                        className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm disabled:opacity-60"
+                      >
+                        <option value="">Do not subtract inventory</option>
+                        {inventoryItems.filter((item) => item.use_for_health_events).map((item) => (
+                          <option key={item.id} value={item.id}>{item.item_name} ({item.quantity} {item.unit})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400">
+                        {healthEvents[selectedEventIndex].id ? "Inventory used" : "Amount used"}
+                      </label>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        disabled={Boolean(healthEvents[selectedEventIndex].id) || !healthEvents[selectedEventIndex].inventory_item_id}
+                        value={healthEvents[selectedEventIndex].inventory_quantity_used || ""}
+                        onChange={(e) => {
+                          const updated = [...healthEvents];
+                          updated[selectedEventIndex].inventory_quantity_used = e.target.value;
+                          setHealthEvents(updated);
+                        }}
+                        onBlur={() => saveHealthEvent(selectedEventIndex)}
+                        className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm disabled:opacity-60"
+                      />
+                    </div>
+                    {healthEvents[selectedEventIndex].id && healthEvents[selectedEventIndex].inventory_item_id && (
+                      <p className="text-xs text-gray-500 sm:col-span-2">Inventory was deducted when this record was created.</p>
+                    )}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   <div>
@@ -779,6 +867,52 @@ export default function HealthRecords({ animal, onVaccinationUpdate }) {
                     {deletingVaccine === selectedVaccineIndex ? "Deleting..." : "Delete"}
                   </button>
                 </div>
+
+                {isPremium && (
+                  <div className="grid grid-cols-1 gap-4 rounded-xl border border-blue-400/20 bg-blue-500/5 p-3 sm:grid-cols-2">
+                    <div>
+                      <label className="text-xs text-gray-400">Use inventory item</label>
+                      <select
+                        value={vaccinations[selectedVaccineIndex].inventory_item_id || ""}
+                        disabled={Boolean(vaccinations[selectedVaccineIndex].id)}
+                        onChange={(e) => {
+                          const updated = [...vaccinations];
+                          updated[selectedVaccineIndex].inventory_item_id = e.target.value;
+                          updated[selectedVaccineIndex].inventory_quantity_used = "";
+                          setVaccinations(updated);
+                        }}
+                        className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm disabled:opacity-60"
+                      >
+                        <option value="">Do not subtract inventory</option>
+                        {inventoryItems.filter((item) => item.use_for_vaccinations).map((item) => (
+                          <option key={item.id} value={item.id}>{item.item_name} ({item.quantity} {item.unit})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400">
+                        {vaccinations[selectedVaccineIndex].id ? "Inventory used" : "Amount used"}
+                      </label>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        disabled={Boolean(vaccinations[selectedVaccineIndex].id) || !vaccinations[selectedVaccineIndex].inventory_item_id}
+                        value={vaccinations[selectedVaccineIndex].inventory_quantity_used || ""}
+                        onChange={(e) => {
+                          const updated = [...vaccinations];
+                          updated[selectedVaccineIndex].inventory_quantity_used = e.target.value;
+                          setVaccinations(updated);
+                        }}
+                        onBlur={() => saveVaccination(selectedVaccineIndex)}
+                        className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm disabled:opacity-60"
+                      />
+                    </div>
+                    {vaccinations[selectedVaccineIndex].id && vaccinations[selectedVaccineIndex].inventory_item_id && (
+                      <p className="text-xs text-gray-500 sm:col-span-2">Inventory was deducted when this record was created.</p>
+                    )}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>

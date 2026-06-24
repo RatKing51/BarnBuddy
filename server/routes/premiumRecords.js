@@ -401,6 +401,8 @@ router.post("/inventory", authMiddleware, async (req, res) => {
       cost_per_unit,
       supplier,
       expiration_date,
+      use_for_vaccinations,
+      use_for_health_events,
       notes,
     } = req.body;
     const normalizedHerdId = herd_id || null;
@@ -414,8 +416,8 @@ router.post("/inventory", authMiddleware, async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO inventory_records
-       (user_id, herd_id, item_name, category, quantity, unit, reorder_level, cost_per_unit, supplier, expiration_date, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       (user_id, herd_id, item_name, category, quantity, unit, reorder_level, cost_per_unit, supplier, expiration_date, use_for_vaccinations, use_for_health_events, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
       [
         req.user.id,
@@ -428,6 +430,8 @@ router.post("/inventory", authMiddleware, async (req, res) => {
         cost_per_unit || 0,
         supplier || "",
         expiration_date || null,
+        Boolean(use_for_vaccinations),
+        Boolean(use_for_health_events),
         notes || "",
       ]
     );
@@ -453,6 +457,8 @@ router.put("/inventory/:id", authMiddleware, async (req, res) => {
       cost_per_unit,
       supplier,
       expiration_date,
+      use_for_vaccinations,
+      use_for_health_events,
       notes,
     } = req.body;
     const normalizedHerdId = herd_id || null;
@@ -475,9 +481,11 @@ router.put("/inventory/:id", authMiddleware, async (req, res) => {
            cost_per_unit = $7,
            supplier = $8,
            expiration_date = $9,
-           notes = $10,
+           use_for_vaccinations = $10,
+           use_for_health_events = $11,
+           notes = $12,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $11 AND user_id = $12
+       WHERE id = $13 AND user_id = $14
        RETURNING *`,
       [
         normalizedHerdId,
@@ -489,6 +497,8 @@ router.put("/inventory/:id", authMiddleware, async (req, res) => {
         cost_per_unit || 0,
         supplier || "",
         expiration_date || null,
+        Boolean(use_for_vaccinations),
+        Boolean(use_for_health_events),
         notes || "",
         req.params.id,
         req.user.id,

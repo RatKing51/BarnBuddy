@@ -59,6 +59,8 @@ function ensurePremiumRecordSchema() {
       cost_per_unit DECIMAL(10,2) DEFAULT 0,
       supplier TEXT DEFAULT '',
       expiration_date DATE,
+      use_for_vaccinations BOOLEAN DEFAULT false,
+      use_for_health_events BOOLEAN DEFAULT false,
       notes TEXT DEFAULT '',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -74,9 +76,19 @@ function ensurePremiumRecordSchema() {
       ADD COLUMN IF NOT EXISTS cost_per_unit DECIMAL(10,2) DEFAULT 0,
       ADD COLUMN IF NOT EXISTS supplier TEXT DEFAULT '',
       ADD COLUMN IF NOT EXISTS expiration_date DATE,
+      ADD COLUMN IF NOT EXISTS use_for_vaccinations BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS use_for_health_events BOOLEAN DEFAULT false,
       ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '',
       ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+    ALTER TABLE vaccinations
+      ADD COLUMN IF NOT EXISTS inventory_item_id INTEGER REFERENCES inventory_records(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS inventory_quantity_used DECIMAL(10,2) DEFAULT 0;
+
+    ALTER TABLE health_events
+      ADD COLUMN IF NOT EXISTS inventory_item_id INTEGER REFERENCES inventory_records(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS inventory_quantity_used DECIMAL(10,2) DEFAULT 0;
   `);
 }
 

@@ -1030,6 +1030,7 @@ export default function Dashboard() {
                 animals={animals}
                 selectedHerd={selectedHerd}
                 primaryAnimalIdentifier={primaryAnimalIdentifier}
+                isPremium={subscription.isPremium}
                 onSaved={() => setVaccinationRefresh((current) => current + 1)}
               />
             </div>
@@ -1091,7 +1092,14 @@ export default function Dashboard() {
                     selectedHerd={selectedHerd}
                   />
                 )}
-                {activeTab === "health" && <HealthRecords animal={selectedAnimal} onVaccinationUpdate={() => setVaccinationRefresh(prev => prev + 1)} />}
+                {activeTab === "health" && (
+                  <HealthRecords
+                    animal={selectedAnimal}
+                    selectedHerd={selectedHerd}
+                    isPremium={subscription.isPremium}
+                    onVaccinationUpdate={() => setVaccinationRefresh(prev => prev + 1)}
+                  />
+                )}
                 {activeTab === "weight" && (
                   <WeightRecords
                     animal={selectedAnimal}
