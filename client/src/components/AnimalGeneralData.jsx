@@ -100,6 +100,7 @@ function AnimalGeneralDataSkeleton() {
 }
 
 const animalImageCache = new Map();
+const animalsWithRemovedImages = new Set();
 const MAX_CACHED_ANIMAL_IMAGES = 20;
 
 function cacheAnimalImage(animalId, blob) {
@@ -241,7 +242,12 @@ export default function AnimalGeneralData({
     };
     lastSavedAnimalData.current = savedAnimalData;
     lastSavedAnimalSignature.current = JSON.stringify(savedAnimalData);
-    setImageUrl(animal.has_image ? "stored" : "");
+    setImageUrl(
+      !animalsWithRemovedImages.has(animal.id) &&
+        (animal.has_image || animalImageCache.has(animal.id))
+        ? "stored"
+        : ""
+    );
   }, [animal]);
 
   useEffect(() => () => {
@@ -594,6 +600,7 @@ export default function AnimalGeneralData({
       setImageBlobUrl(previewUrl);
 
       await uploadAnimalImage(uploadAnimalId, file);
+      animalsWithRemovedImages.delete(uploadAnimalId);
       cacheAnimalImage(uploadAnimalId, file);
       if (currentAnimalIdRef.current === uploadAnimalId) {
         setImageUrl("stored");
@@ -629,6 +636,7 @@ export default function AnimalGeneralData({
       setIsRemovingImage(true);
       await removeAnimalImage(animal.id);
       animalImageCache.delete(animal.id);
+      animalsWithRemovedImages.add(animal.id);
       setImageUrl("");
       setImageBlobUrl((current) => {
         if (current) URL.revokeObjectURL(current);
