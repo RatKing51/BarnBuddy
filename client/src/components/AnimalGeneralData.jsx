@@ -10,6 +10,7 @@ import { API_URL } from "../config/env";
 import { ANIMAL_TYPES, SEX_OPTIONS_BY_SPECIES } from "../config/animalTypes";
 import { SkeletonBlock } from "./LoadingSpinner";
 import ImageCropModal from "./ImageCropModal";
+import { QRCodeSVG } from "qrcode.react";
 
 function AnimalGeneralDataSkeleton() {
   const cardClass = "rounded-2xl border border-gray-700 bg-gray-800 p-6 shadow-md";
@@ -142,6 +143,7 @@ export default function AnimalGeneralData({
   const [imageBlobUrl, setImageBlobUrl] = useState("");
   const [imageRefreshKey, setImageRefreshKey] = useState(0);
   const [imageToCrop, setImageToCrop] = useState(null);
+  const [showQrTag, setShowQrTag] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isRemovingImage, setIsRemovingImage] = useState(false);
   const [isDeletingAnimal, setIsDeletingAnimal] = useState(false);
@@ -694,6 +696,79 @@ export default function AnimalGeneralData({
     }
   }
 
+  const animalProfileUrl = animal?.id
+    ? `${window.location.origin}/dashboard/animal/${animal.id}`
+    : "";
+  const qrAnimalLabel = name || tag || "Animal";
+
+  const copyQrLink = async () => {
+    try {
+      await navigator.clipboard.writeText(animalProfileUrl);
+      toast.success("Animal profile link copied.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Could not copy the profile link.");
+    }
+  };
+
+  const downloadQrTag = () => {
+    const svg = document.getElementById("animal-qr-code");
+    if (!svg) return;
+    const serialized = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([serialized], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${String(tag || name || `animal-${animal.id}`).replace(/[^a-z0-9_-]+/gi, "-")}-qr.svg`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const printQrTag = () => {
+    const svg = document.getElementById("animal-qr-code");
+    if (!svg) return;
+    const printWindow = window.open("", "_blank", "width=640,height=720");
+    if (!printWindow) {
+      toast.error("Allow pop-ups to print the QR tag.");
+      return;
+    }
+
+    const serialized = new XMLSerializer().serializeToString(svg);
+    const safe = (value) => String(value || "").replace(/[&<>"']/g, (character) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+    })[character]);
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>${safe(qrAnimalLabel)} QR Tag</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 32px; color: #111827; }
+            .tag { width: 320px; margin: 0 auto; border: 2px solid #111827; border-radius: 18px; padding: 24px; text-align: center; }
+            h1 { margin: 0; font-size: 28px; }
+            p { margin: 8px 0 18px; color: #4b5563; }
+            svg { width: 260px; height: 260px; }
+            .footer { margin-top: 16px; font-size: 13px; color: #6b7280; }
+          </style>
+        </head>
+        <body>
+          <div class="tag">
+            <h1>${safe(qrAnimalLabel)}</h1>
+            <p>${safe(tag ? `Tag ${tag}` : species || "BarnBuddy animal")}</p>
+            ${serialized}
+            <div class="footer">Scan to open this animal in BarnBuddy</div>
+          </div>
+          <script>window.onload = () => { window.print(); window.close(); };</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   if (!animal || (animal?.id && String(animalId) !== String(animal.id))) {
     return <AnimalGeneralDataSkeleton />;
   }
@@ -708,16 +783,63 @@ export default function AnimalGeneralData({
           onConfirm={handleImageUpload}
         />
       )}
+      {showQrTag && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4 backdrop-blur-sm">
+          <section className="w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-300">Animal QR tag</p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">{qrAnimalLabel}</h2>
+                <p className="mt-1 text-sm text-gray-400">{tag ? `Tag ${tag}` : species}</p>
+              </div>
+              <button type="button" onClick={() => setShowQrTag(false)} className="rounded-full border border-gray-700 px-3 py-1.5 text-sm font-semibold text-gray-300 hover:bg-gray-800">
+                Close
+              </button>
+            </div>
+
+            <div className="mx-auto mt-5 w-fit rounded-2xl bg-white p-4">
+              <QRCodeSVG
+                id="animal-qr-code"
+                value={animalProfileUrl}
+                size={240}
+                level="H"
+                marginSize={1}
+                title={`${qrAnimalLabel} BarnBuddy profile`}
+              />
+            </div>
+            <p className="mt-4 text-center text-sm text-gray-400">
+              Scanning opens this animal after the user signs into BarnBuddy.
+            </p>
+
+            <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <button type="button" onClick={copyQrLink} className="rounded-lg border border-gray-600 px-3 py-2.5 text-sm font-semibold text-gray-200 hover:bg-gray-800">
+                Copy link
+              </button>
+              <button type="button" onClick={downloadQrTag} className="rounded-lg border border-gray-600 px-3 py-2.5 text-sm font-semibold text-gray-200 hover:bg-gray-800">
+                Download SVG
+              </button>
+              <button type="button" onClick={printQrTag} className="rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-blue-500">
+                Print tag
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
       {/* Top Left - Basic Info */}
       <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-4">
         <div className="mb-2 flex items-center justify-between gap-3">
           <h3 className="text-gray-400 font-semibold">Basic Info</h3>
-          <span className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-            saveStatus === "saved" ? "bg-emerald-500/15 text-emerald-200" : "bg-gray-700 text-gray-300"
-          }`}>
-            {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Auto-saves"}
-          </span>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setShowQrTag(true)} className="rounded-lg border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-100 hover:bg-blue-500/20">
+              QR tag
+            </button>
+            <span className={`rounded-lg px-3 py-1 text-xs font-semibold ${
+              saveStatus === "saved" ? "bg-emerald-500/15 text-emerald-200" : "bg-gray-700 text-gray-300"
+            }`}>
+              {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Auto-saves"}
+            </span>
+          </div>
         </div>
         {primaryAnimalIdentifier === "tag" ? tagField : nameField}
 

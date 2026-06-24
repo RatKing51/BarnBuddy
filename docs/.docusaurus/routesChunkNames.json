@@ -1,15 +1,15 @@
 {
-  "/-93a": {
+  "/-7e1": {
     "__comp": "5e95c892",
     "__context": {
       "plugin": "aba21aa0"
     }
   },
-  "/-d84": {
+  "/-056": {
     "__comp": "a7bd4aaa",
     "__props": "22dd74f7"
   },
-  "/-911": {
+  "/-536": {
     "__comp": "a94703ab"
   },
   "/account/billing-f79": {
@@ -55,6 +55,10 @@
   "/premium/finance-35e": {
     "__comp": "17896441",
     "content": "1a9bfcd4"
+  },
+  "/premium/inventory-df6": {
+    "__comp": "17896441",
+    "content": "35359770"
   },
   "/premium/overview-03a": {
     "__comp": "17896441",

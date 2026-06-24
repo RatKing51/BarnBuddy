@@ -1,5 +1,6 @@
 import React from "react";
 import { SignIn } from "@clerk/clerk-react";
+import { useLocation } from "react-router-dom";
 
 const authAppearance = {
   variables: {
@@ -61,6 +62,12 @@ const authAppearance = {
 };
 
 export default function Login() {
+  const location = useLocation();
+  const requestedReturnTo = location.state?.returnTo;
+  const returnTo = typeof requestedReturnTo === "string" && requestedReturnTo.startsWith("/")
+    ? requestedReturnTo
+    : "/dashboard";
+
   return (
     <div className="signup-page min-h-screen bg-[#0b1730] text-white">
       <main>
@@ -83,7 +90,8 @@ export default function Login() {
                 <SignIn
                   routing="hash"
                   signUpUrl="/signup"
-                  fallbackRedirectUrl="/dashboard"
+                  fallbackRedirectUrl={returnTo}
+                  forceRedirectUrl={returnTo}
                   appearance={authAppearance}
                 />
               </div>

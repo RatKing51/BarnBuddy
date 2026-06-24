@@ -71,6 +71,10 @@
               "sidebar": "tutorialSidebar"
             },
             {
+              "id": "premium/inventory",
+              "path": "/premium/inventory"
+            },
+            {
               "id": "premium/overview",
               "path": "/premium/overview",
               "sidebar": "tutorialSidebar"

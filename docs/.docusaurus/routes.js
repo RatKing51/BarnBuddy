@@ -4,15 +4,15 @@ import ComponentCreator from '@docusaurus/ComponentCreator';
 export default [
   {
     path: '/',
-    component: ComponentCreator('/', '93a'),
+    component: ComponentCreator('/', '7e1'),
     routes: [
       {
         path: '/',
-        component: ComponentCreator('/', 'd84'),
+        component: ComponentCreator('/', '056'),
         routes: [
           {
             path: '/',
-            component: ComponentCreator('/', '911'),
+            component: ComponentCreator('/', '536'),
             routes: [
               {
                 path: '/account/billing',
@@ -79,6 +79,11 @@ export default [
                 component: ComponentCreator('/premium/finance', '35e'),
                 exact: true,
                 sidebar: "tutorialSidebar"
+              },
+              {
+                path: '/premium/inventory',
+                component: ComponentCreator('/premium/inventory', 'df6'),
+                exact: true
               },
               {
                 path: '/premium/overview',

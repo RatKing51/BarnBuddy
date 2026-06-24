@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from "react";
 import AnimalGeneralData from "../components/AnimalGeneralData";
+import BulkEntry from "../components/BulkEntry";
 import DashboardOverview from "../components/DashboardOverview";
 import HealthRecords from "../components/HealthRecords";
 import HerdFeedRecords from "../components/HerdFeedRecords";
 import HerdFinanceRecords from "../components/HerdFinanceRecords";
+import HerdInventory from "../components/HerdInventory";
 import PremiumRecords from "../components/PremiumRecords";
 import VetVisits from "../components/VetVisits";
 import WeightRecords from "../components/WeightRecords";
 import { SkeletonBlock } from "../components/LoadingSpinner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   createAnimal,
+  getAnimalByID,
   getDashboardBootstrap,
   getAnimalsForHerd,
   getAnimalsUnassigned,
@@ -35,6 +38,7 @@ const getCareSummaryKey = (herd, items, careWindow, refreshKey) =>
   `${herd?.id || "none"}:${careWindow}:${refreshKey}:${getAnimalCareSignature(items)}`;
 
 export default function Dashboard() {
+  const { animalId: linkedAnimalId } = useParams();
   const [activeTab, setActiveTab] = useState("general");
   const [dateTime, setDateTime] = useState("");
   const [selectedHerd, setSelectedHerd] = useState(null);
@@ -70,11 +74,22 @@ export default function Dashboard() {
     setSelectedAnimal(null);
   };
 
+  const handleBulkEntryClick = () => {
+    setActiveTab("bulk-entry");
+    setSelectedAnimal(null);
+  };
+
+  const handleInventoryClick = () => {
+    setActiveTab("inventory");
+    setSelectedAnimal(null);
+  };
+
   const { user } = useUser();
   const { preferences } = usePreferences();
   const { subscription } = useBarnBuddyAuth();
   const loadedHerdIdRef = React.useRef(null);
   const loadedCareSummaryKeyRef = React.useRef("");
+  const loadedLinkedAnimalRef = React.useRef(null);
   const navigate = useNavigate();
   const isCompact = preferences.dashboardDensity === "compact";
   const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
@@ -208,8 +223,45 @@ export default function Dashboard() {
   }, [selectedHerd]);
 
   useEffect(() => {
-    setSelectedAnimal(null);
-  }, [selectedHerd]);
+    if (!linkedAnimalId) setSelectedAnimal(null);
+  }, [selectedHerd, linkedAnimalId]);
+
+  useEffect(() => {
+    if (!linkedAnimalId || loadingHerds || loadedLinkedAnimalRef.current === linkedAnimalId) return;
+
+    let cancelled = false;
+    async function openLinkedAnimal() {
+      try {
+        const response = await getAnimalByID(linkedAnimalId);
+        if (cancelled) return;
+        const linkedAnimal = response.data;
+        const linkedHerd = linkedAnimal.herd_id
+          ? herds.find((herd) => String(herd.id) === String(linkedAnimal.herd_id))
+          : { id: "unassigned", name: "Unassigned" };
+
+        if (!linkedHerd) {
+          toast.error("This animal's herd is no longer available.");
+          navigate("/dashboard", { replace: true });
+          return;
+        }
+
+        loadedLinkedAnimalRef.current = linkedAnimalId;
+        loadedHerdIdRef.current = null;
+        setSelectedHerd(linkedHerd);
+        setSelectedAnimal(linkedAnimal);
+        setActiveTab("general");
+      } catch (err) {
+        console.error(err);
+        toast.error(err.response?.status === 404 ? "Animal not found or unavailable." : "Failed to open animal profile.");
+        navigate("/dashboard", { replace: true });
+      }
+    }
+
+    openLinkedAnimal();
+    return () => {
+      cancelled = true;
+    };
+  }, [herds, linkedAnimalId, loadingHerds, navigate]);
 
   const animalCareSignature = getAnimalCareSignature(animals);
 
@@ -455,6 +507,9 @@ export default function Dashboard() {
   const handleAnimalDeleted = (animalId) => {
     setAnimals((current) => current.filter((animal) => animal.id !== animalId));
     setSelectedAnimal((current) => (current?.id === animalId ? null : current));
+    if (linkedAnimalId && String(linkedAnimalId) === String(animalId)) {
+      navigate("/dashboard", { replace: true });
+    }
   };
 
   // Add new animal
@@ -495,10 +550,18 @@ export default function Dashboard() {
   };
 
   const handleSelectAnimal = (animal) => {
-    if (activeTab === "feed" || activeTab === "herd-finance") setActiveTab("general");
+    if (["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab)) setActiveTab("general");
+    if (selectedAnimal?.id === animal.id && linkedAnimalId) {
+      navigate("/dashboard", { replace: true });
+    }
     setSelectedAnimal((current) =>
       current?.id === animal.id ? null : animal
     );
+  };
+
+  const handleCloseAnimal = () => {
+    setSelectedAnimal(null);
+    if (linkedAnimalId) navigate("/dashboard", { replace: true });
   };
 
   useEffect(() => {
@@ -578,6 +641,10 @@ export default function Dashboard() {
     ? "Herd Feed"
     : activeTab === "herd-finance"
     ? "Herd Finances"
+    : activeTab === "bulk-entry"
+    ? "Bulk Entry"
+    : activeTab === "inventory"
+    ? "Inventory"
     : "Farm Overview";
 
   const currentViewSubtitle = selectedAnimal
@@ -625,8 +692,7 @@ export default function Dashboard() {
             type="button"
             onClick={handleFarmOverviewClick}
             className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition border cursor-pointer ${
-              !selectedAnimal && activeTab !== "feed"
-                && activeTab !== "herd-finance"
+              !selectedAnimal && !["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab)
                 ? "bg-blue-600 border-blue-500 text-white shadow"
                 : "border-gray-600 hover:bg-gray-700 text-gray-200"
             }`}
@@ -656,6 +722,30 @@ export default function Dashboard() {
             }`}
           >
             Herd Finances
+          </button>
+
+          <button
+            type="button"
+            onClick={handleBulkEntryClick}
+            className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition border cursor-pointer ${
+              !selectedAnimal && activeTab === "bulk-entry"
+                ? "bg-blue-600 border-blue-500 text-white shadow"
+                : "border-gray-600 hover:bg-gray-700 text-gray-200"
+            }`}
+          >
+            Bulk Entry
+          </button>
+
+          <button
+            type="button"
+            onClick={handleInventoryClick}
+            className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition border cursor-pointer ${
+              !selectedAnimal && activeTab === "inventory"
+                ? "bg-blue-600 border-blue-500 text-white shadow"
+                : "border-gray-600 hover:bg-gray-700 text-gray-200"
+            }`}
+          >
+            Inventory
           </button>
 
           <div className="mt-4 px-4 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
@@ -737,6 +827,13 @@ export default function Dashboard() {
               >
                 {exportLoading ? "..." : "Export"}
               </button>
+              <button
+                type="button"
+                onClick={() => navigate("/settings/account")}
+                className="rounded-full border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white"
+              >
+                Settings
+              </button>
               <div className="rounded-full border border-gray-700 bg-gray-900 p-1">
                 <UserButton afterSignOutUrl="/" />
               </div>
@@ -752,7 +849,7 @@ export default function Dashboard() {
               {selectedAnimal ? (
                 <button
                   type="button"
-                  onClick={() => setSelectedAnimal(null)}
+                  onClick={handleCloseAnimal}
                   className="shrink-0 rounded-full bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-200"
                 >
                   Close
@@ -783,52 +880,20 @@ export default function Dashboard() {
         </section>
 
         {!selectedAnimal && (
-        <section className="border-b border-gray-800 bg-gray-950 px-3 py-2 md:hidden">
-          <div className="grid grid-cols-4 gap-2">
-            <button
-              type="button"
-              onClick={handleFarmOverviewClick}
-              className={`rounded-xl px-2 py-2 text-xs font-semibold ${
-                !selectedAnimal && activeTab !== "feed" && activeTab !== "herd-finance"
-                  ? "bg-blue-600 text-white"
-                  : "border border-gray-700 bg-gray-900 text-gray-300"
-              }`}
-            >
-              Overview
-            </button>
-            <button
-              type="button"
-              onClick={handleHerdFeedClick}
-              className={`rounded-xl px-2 py-2 text-xs font-semibold ${
-                !selectedAnimal && activeTab === "feed"
-                  ? "bg-blue-600 text-white"
-                  : "border border-gray-700 bg-gray-900 text-gray-300"
-              }`}
-            >
-              Feed
-            </button>
-            <button
-              type="button"
-              onClick={handleHerdFinanceClick}
-              className={`rounded-xl px-2 py-2 text-xs font-semibold ${
-                !selectedAnimal && activeTab === "herd-finance"
-                  ? "bg-blue-600 text-white"
-                  : "border border-gray-700 bg-gray-900 text-gray-300"
-              }`}
-            >
-              Finances
-            </button>
+        <section className="border-b border-gray-800 bg-gray-950 px-3 py-2.5 md:hidden">
+          <div>
             <button
               type="button"
               onClick={handleAddAnimal}
               disabled={!selectedHerd || addingAnimal}
-              className="rounded-xl bg-emerald-500 px-2 py-2 text-xs font-semibold text-gray-950 disabled:opacity-60"
+              className="w-full rounded-xl bg-emerald-500 px-3 py-2 text-sm font-semibold text-gray-950 disabled:opacity-60"
             >
-              {addingAnimal ? "Adding" : "Add"}
+              {addingAnimal ? "Adding animal" : "Add animal"}
             </button>
           </div>
 
-          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+          {!["bulk-entry", "inventory"].includes(activeTab) && (
+          <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1">
             {loadingAnimals ? (
               [0, 1, 2].map((item) => (
                 <SkeletonBlock key={item} className="h-14 w-32 shrink-0 rounded-xl" />
@@ -869,6 +934,7 @@ export default function Dashboard() {
               );
             })}
           </div>
+          )}
         </section>
         )}
 
@@ -958,6 +1024,22 @@ export default function Dashboard() {
                 onExportFinanceReport={handleExportHerdFinancePdf}
               />
             </div>
+          ) : !selectedAnimal && activeTab === "bulk-entry" ? (
+            <div className="p-3 sm:p-6">
+              <BulkEntry
+                animals={animals}
+                selectedHerd={selectedHerd}
+                primaryAnimalIdentifier={primaryAnimalIdentifier}
+                onSaved={() => setVaccinationRefresh((current) => current + 1)}
+              />
+            </div>
+          ) : !selectedAnimal && activeTab === "inventory" ? (
+            <div className="p-3 sm:p-6">
+              <HerdInventory
+                selectedHerd={selectedHerd}
+                isPremium={subscription.isPremium}
+              />
+            </div>
           ) : !selectedAnimal ? (
             <DashboardOverview
               loading={loadingHerds || loadingAnimals}
@@ -1043,66 +1125,87 @@ export default function Dashboard() {
             </>
           )}
         </div>
-        <nav className="dashboard-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-gray-800 bg-gray-950/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-2 shadow-[0_-16px_32px_rgba(0,0,0,0.35)] backdrop-blur md:hidden">
+        <nav className="dashboard-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-gray-800 bg-gray-950/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_28px_rgba(0,0,0,0.3)] backdrop-blur md:hidden">
           {selectedAnimal ? (
-            <div className="flex gap-1 overflow-x-auto pb-1">
+            <div className="flex overflow-x-auto px-1">
               {animalRecordTabs.map((tab) => (
                 <button
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
                   aria-label={tab.label}
-                  className={`min-h-12 min-w-[4.5rem] shrink-0 rounded-2xl px-3 text-[12px] font-semibold leading-none ${
-                    activeTab === tab.key ? "bg-blue-600 text-white" : "text-gray-400"
+                  className={`relative min-h-14 min-w-[4.4rem] flex-1 shrink-0 px-2 text-[11px] font-semibold leading-none transition ${
+                    activeTab === tab.key ? "text-blue-300" : "text-gray-500"
                   }`}
                 >
+                  {activeTab === tab.key && (
+                    <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-blue-400" />
+                  )}
                   {tab.mobileLabel}
                 </button>
               ))}
             </div>
           ) : (
-            <div className="flex gap-1 overflow-x-auto pb-1">
+            <div className="grid grid-cols-5">
               <button
                 type="button"
                 onClick={handleFarmOverviewClick}
-                className={`min-h-12 min-w-[4.5rem] shrink-0 rounded-2xl px-3 text-[12px] font-semibold leading-none ${
-                  activeTab !== "feed" && activeTab !== "herd-finance" ? "bg-blue-600 text-white" : "text-gray-400"
+                className={`relative min-h-14 px-1 text-[11px] font-semibold leading-none transition ${
+                  !["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab) ? "text-blue-300" : "text-gray-500"
                 }`}
               >
+                {!["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab) && (
+                  <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-blue-400" />
+                )}
                 Home
               </button>
               <button
                 type="button"
                 onClick={handleHerdFeedClick}
-                className={`min-h-12 min-w-[4.5rem] shrink-0 rounded-2xl px-3 text-[12px] font-semibold leading-none ${
-                  activeTab === "feed" ? "bg-blue-600 text-white" : "text-gray-400"
+                className={`relative min-h-14 px-1 text-[11px] font-semibold leading-none transition ${
+                  activeTab === "feed" ? "text-blue-300" : "text-gray-500"
                 }`}
               >
+                {activeTab === "feed" && (
+                  <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-blue-400" />
+                )}
                 Feed
               </button>
               <button
                 type="button"
                 onClick={handleHerdFinanceClick}
-                className={`min-h-12 min-w-[4.5rem] shrink-0 rounded-2xl px-3 text-[12px] font-semibold leading-none ${
-                  activeTab === "herd-finance" ? "bg-blue-600 text-white" : "text-gray-400"
+                className={`relative min-h-14 px-1 text-[11px] font-semibold leading-none transition ${
+                  activeTab === "herd-finance" ? "text-blue-300" : "text-gray-500"
                 }`}
               >
+                {activeTab === "herd-finance" && (
+                  <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-blue-400" />
+                )}
                 Money
               </button>
               <button
                 type="button"
-                onClick={handleAddAnimal}
-                disabled={!selectedHerd || addingAnimal}
-                className="min-h-12 min-w-[4.5rem] shrink-0 rounded-2xl px-3 text-[12px] font-semibold leading-none text-emerald-200 disabled:opacity-50"
+                onClick={handleBulkEntryClick}
+                className={`relative min-h-14 px-1 text-[11px] font-semibold leading-none transition ${
+                  activeTab === "bulk-entry" ? "text-blue-300" : "text-gray-500"
+                }`}
               >
-                Add
+                {activeTab === "bulk-entry" && (
+                  <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-blue-400" />
+                )}
+                Bulk
               </button>
               <button
                 type="button"
-                onClick={() => navigate("/settings/account")}
-                className="min-h-12 min-w-[5rem] shrink-0 rounded-2xl px-3 text-[12px] font-semibold leading-none text-gray-400"
+                onClick={handleInventoryClick}
+                className={`relative min-h-14 px-0.5 text-[10px] font-semibold leading-none transition ${
+                  activeTab === "inventory" ? "text-blue-300" : "text-gray-500"
+                }`}
               >
-                Settings
+                {activeTab === "inventory" && (
+                  <span className="absolute inset-x-2 top-0 h-0.5 rounded-full bg-blue-400" />
+                )}
+                Inventory
               </button>
             </div>
           )}

@@ -6,6 +6,7 @@ export default {
   "1a9bfcd4": [() => import(/* webpackChunkName: "1a9bfcd4" */ "@site/docs/premium/finance.md"), "@site/docs/premium/finance.md", require.resolveWeak("@site/docs/premium/finance.md")],
   "1f9bcf56": [() => import(/* webpackChunkName: "1f9bcf56" */ "@site/docs/account/preferences.md"), "@site/docs/account/preferences.md", require.resolveWeak("@site/docs/account/preferences.md")],
   "22dd74f7": [() => import(/* webpackChunkName: "22dd74f7" */ "@generated/docusaurus-plugin-content-docs/default/p/index-466.json"), "@generated/docusaurus-plugin-content-docs/default/p/index-466.json", require.resolveWeak("@generated/docusaurus-plugin-content-docs/default/p/index-466.json")],
+  "35359770": [() => import(/* webpackChunkName: "35359770" */ "@site/docs/premium/inventory.md"), "@site/docs/premium/inventory.md", require.resolveWeak("@site/docs/premium/inventory.md")],
   "464e4cb6": [() => import(/* webpackChunkName: "464e4cb6" */ "@site/docs/premium/reminders.md"), "@site/docs/premium/reminders.md", require.resolveWeak("@site/docs/premium/reminders.md")],
   "5d6865b0": [() => import(/* webpackChunkName: "5d6865b0" */ "@site/docs/support/contact.md"), "@site/docs/support/contact.md", require.resolveWeak("@site/docs/support/contact.md")],
   "5e95c892": [() => import(/* webpackChunkName: "5e95c892" */ "@theme/DocsRoot"), "@theme/DocsRoot", require.resolveWeak("@theme/DocsRoot")],

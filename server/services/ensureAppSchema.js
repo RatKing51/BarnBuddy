@@ -46,6 +46,37 @@ function ensurePremiumRecordSchema() {
       ADD COLUMN IF NOT EXISTS herd_id INTEGER REFERENCES herds(id) ON DELETE CASCADE,
       ADD COLUMN IF NOT EXISTS next_purchase_date DATE,
       ALTER COLUMN animal_id DROP NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS inventory_records (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      herd_id INTEGER REFERENCES herds(id) ON DELETE CASCADE,
+      item_name TEXT NOT NULL DEFAULT '',
+      category TEXT DEFAULT 'Supplies',
+      quantity DECIMAL(10,2) DEFAULT 0,
+      unit TEXT DEFAULT 'each',
+      reorder_level DECIMAL(10,2) DEFAULT 0,
+      cost_per_unit DECIMAL(10,2) DEFAULT 0,
+      supplier TEXT DEFAULT '',
+      expiration_date DATE,
+      notes TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    ALTER TABLE inventory_records
+      ADD COLUMN IF NOT EXISTS herd_id INTEGER REFERENCES herds(id) ON DELETE CASCADE,
+      ADD COLUMN IF NOT EXISTS item_name TEXT NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'Supplies',
+      ADD COLUMN IF NOT EXISTS quantity DECIMAL(10,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS unit TEXT DEFAULT 'each',
+      ADD COLUMN IF NOT EXISTS reorder_level DECIMAL(10,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS cost_per_unit DECIMAL(10,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS supplier TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS expiration_date DATE,
+      ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
   `);
 }
 

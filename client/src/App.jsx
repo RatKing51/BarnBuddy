@@ -71,7 +71,9 @@ function AppContent() {
   const [announcement, setAnnouncement] = useState(defaultSiteContent.announcement);
   const [maintenance, setMaintenance] = useState(defaultSiteContent.maintenance);
   const hiddenPaths = ["/dashboard", "/admin", "/settings/herd", "/settings/account"];
-  const showShell = !hiddenPaths.includes(location.pathname);
+  const showShell = !hiddenPaths.some(
+    (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
+  );
   const maintenanceAllowedPaths = ["/admin", "/login"];
   const showMaintenance = Boolean(
     maintenance?.enabled &&
@@ -204,6 +206,7 @@ function AppContent() {
 
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/animal/:animalId" element={<Dashboard />} />
           <Route path="/admin" element={<AdminContent />} />
           <Route path="/settings/account" element={<AccountSettings />} />
           <Route path="/settings/herd" element={<HerdSettings />} />

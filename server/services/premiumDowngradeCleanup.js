@@ -25,6 +25,7 @@ async function cleanupPremiumDataForUser(userId) {
   await pool.query("DELETE FROM reproductions WHERE user_id = $1", [userId]);
   await pool.query("DELETE FROM finance_records WHERE user_id = $1", [userId]);
   await pool.query("DELETE FROM feed_records WHERE user_id = $1", [userId]);
+  await pool.query("DELETE FROM inventory_records WHERE user_id = $1", [userId]);
   await pool.query(
     "UPDATE users SET automatic_reminders = false WHERE id = $1",
     [userId]

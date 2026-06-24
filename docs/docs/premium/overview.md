@@ -14,6 +14,7 @@ Premium expands BarnBuddy beyond basic records.
 - Breeding, reproduction, and birth planning tools
 - Finance records
 - Feed planning tools
+- Inventory tracking with low-stock and expiration visibility
 - Shared farm account access when available
 
 ## Free Plan Includes

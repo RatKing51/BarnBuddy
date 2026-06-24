@@ -361,4 +361,164 @@ router.delete("/feed/:id", authMiddleware, async (req, res) => {
   }
 });
 
+router.get("/inventory/herd/:herdId", authMiddleware, async (req, res) => {
+  if (!requirePremium(req, res)) return;
+
+  try {
+    await ensurePremiumSchema();
+    const { herdId } = req.params;
+    if (herdId !== "unassigned" && !(await userOwnsHerd(req.user.id, herdId))) {
+      return res.status(404).json({ error: "Herd not found" });
+    }
+
+    const result = await pool.query(
+      `SELECT *
+       FROM inventory_records
+       WHERE user_id = $1
+         AND ${herdId === "unassigned" ? "herd_id IS NULL" : "herd_id = $2"}
+       ORDER BY item_name ASC, id DESC`,
+      getHerdParams(req.user.id, herdId)
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch inventory" });
+  }
+});
+
+router.post("/inventory", authMiddleware, async (req, res) => {
+  if (!requirePremium(req, res)) return;
+
+  try {
+    await ensurePremiumSchema();
+    const {
+      herd_id,
+      item_name,
+      category,
+      quantity,
+      unit,
+      reorder_level,
+      cost_per_unit,
+      supplier,
+      expiration_date,
+      notes,
+    } = req.body;
+    const normalizedHerdId = herd_id || null;
+
+    if (normalizedHerdId && !(await userOwnsHerd(req.user.id, normalizedHerdId))) {
+      return res.status(404).json({ error: "Herd not found" });
+    }
+    if (!String(item_name || "").trim()) {
+      return res.status(400).json({ error: "Item name is required" });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO inventory_records
+       (user_id, herd_id, item_name, category, quantity, unit, reorder_level, cost_per_unit, supplier, expiration_date, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING *`,
+      [
+        req.user.id,
+        normalizedHerdId,
+        String(item_name).trim(),
+        category || "Supplies",
+        quantity || 0,
+        unit || "each",
+        reorder_level || 0,
+        cost_per_unit || 0,
+        supplier || "",
+        expiration_date || null,
+        notes || "",
+      ]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to create inventory item" });
+  }
+});
+
+router.put("/inventory/:id", authMiddleware, async (req, res) => {
+  if (!requirePremium(req, res)) return;
+
+  try {
+    await ensurePremiumSchema();
+    const {
+      herd_id,
+      item_name,
+      category,
+      quantity,
+      unit,
+      reorder_level,
+      cost_per_unit,
+      supplier,
+      expiration_date,
+      notes,
+    } = req.body;
+    const normalizedHerdId = herd_id || null;
+
+    if (normalizedHerdId && !(await userOwnsHerd(req.user.id, normalizedHerdId))) {
+      return res.status(404).json({ error: "Herd not found" });
+    }
+    if (!String(item_name || "").trim()) {
+      return res.status(400).json({ error: "Item name is required" });
+    }
+
+    const result = await pool.query(
+      `UPDATE inventory_records
+       SET herd_id = $1,
+           item_name = $2,
+           category = $3,
+           quantity = $4,
+           unit = $5,
+           reorder_level = $6,
+           cost_per_unit = $7,
+           supplier = $8,
+           expiration_date = $9,
+           notes = $10,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $11 AND user_id = $12
+       RETURNING *`,
+      [
+        normalizedHerdId,
+        String(item_name).trim(),
+        category || "Supplies",
+        quantity || 0,
+        unit || "each",
+        reorder_level || 0,
+        cost_per_unit || 0,
+        supplier || "",
+        expiration_date || null,
+        notes || "",
+        req.params.id,
+        req.user.id,
+      ]
+    );
+
+    if (result.rowCount === 0) return res.status(404).json({ error: "Inventory item not found" });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update inventory item" });
+  }
+});
+
+router.delete("/inventory/:id", authMiddleware, async (req, res) => {
+  if (!requirePremium(req, res)) return;
+
+  try {
+    await ensurePremiumSchema();
+    const result = await pool.query(
+      "DELETE FROM inventory_records WHERE id = $1 AND user_id = $2 RETURNING id",
+      [req.params.id, req.user.id]
+    );
+
+    if (result.rowCount === 0) return res.status(404).json({ error: "Inventory item not found" });
+    res.json({ message: "Inventory item deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete inventory item" });
+  }
+});
+
 module.exports = router;

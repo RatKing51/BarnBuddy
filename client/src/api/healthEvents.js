@@ -6,6 +6,9 @@ export const getHealthEvents = (animalId) =>
 export const createHealthEvent = (data) =>
     api.post("/healthEvents", data);
 
+export const createBulkHealthEvents = (data) =>
+    api.post("/healthEvents/bulk", data);
+
 export const updateHealthEvent = (id, data) =>
     api.put(`/healthEvents/${id}`, data);
 

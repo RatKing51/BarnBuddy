@@ -26,6 +26,12 @@ Use the **General Data** tab for:
 
 Upload a clear image that helps identify the animal. You can replace or remove the image later.
 
+## QR Tags
+
+Choose **QR tag** from an animal's General record to copy its secure profile link, download the QR code as an SVG, or print a simple tag.
+
+Scanning the code opens that animal in BarnBuddy. The person scanning must sign in, and the animal is only shown when their account has access.
+
 ## Delete an Animal
 
 Animal deletion is permanent. BarnBuddy asks for confirmation before deleting the animal and shows a toast when the delete succeeds.

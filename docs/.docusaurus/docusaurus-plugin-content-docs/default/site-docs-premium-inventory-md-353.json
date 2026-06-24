@@ -1,0 +1,16 @@
+{
+  "id": "premium/inventory",
+  "title": "Inventory Tracking",
+  "description": "Inventory is a Premium herd-level tool for tracking supplies used around the farm.",
+  "source": "@site/docs/premium/inventory.md",
+  "sourceDirName": "premium",
+  "slug": "/premium/inventory",
+  "permalink": "/premium/inventory",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Inventory Tracking"
+  }
+}

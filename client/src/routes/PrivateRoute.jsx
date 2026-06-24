@@ -1,9 +1,10 @@
-import { Navigate, Outlet }  from "react-router-dom";
+import { Navigate, Outlet, useLocation }  from "react-router-dom";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 
 export default function PrivateRoute() {
+    const location = useLocation();
     const { isLoaded, isSignedIn } = useClerkAuth();
     const { backendAuthLoading, backendAuthError } = useBarnBuddyAuth();
 
@@ -16,7 +17,13 @@ export default function PrivateRoute() {
     }
 
     if (!isSignedIn) {
-        return <Navigate to="/login" replace />;
+        return (
+            <Navigate
+                to="/login"
+                replace
+                state={{ returnTo: `${location.pathname}${location.search}${location.hash}` }}
+            />
+        );
     }
 
     if (backendAuthLoading) {

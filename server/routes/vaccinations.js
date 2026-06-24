@@ -4,6 +4,82 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
+function normalizeAnimalIds(value) {
+    if (!Array.isArray(value)) return [];
+    return [...new Set(
+        value
+            .map((id) => Number.parseInt(id, 10))
+            .filter((id) => Number.isInteger(id) && id > 0)
+    )];
+}
+
+// Create the same vaccination record for multiple owned animals.
+router.post("/bulk", authMiddleware, async (req, res) => {
+    const animalIds = normalizeAnimalIds(req.body.animal_ids);
+    const {
+        vaccine_name,
+        date_given,
+        next_due_date,
+        dosage,
+        notes
+    } = req.body;
+
+    if (!animalIds.length) {
+        return res.status(400).json({ error: "Select at least one animal" });
+    }
+    if (animalIds.length > 500) {
+        return res.status(400).json({ error: "Bulk entries are limited to 500 animals" });
+    }
+    if (!String(vaccine_name || "").trim()) {
+        return res.status(400).json({ error: "Vaccine name is required" });
+    }
+    if (!date_given) {
+        return res.status(400).json({ error: "Date given is required" });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+        const ownedAnimals = await client.query(
+            `SELECT id
+             FROM animals
+             WHERE user_id = $1
+               AND id = ANY($2::int[])`,
+            [req.user.id, animalIds]
+        );
+
+        if (ownedAnimals.rowCount !== animalIds.length) {
+            await client.query("ROLLBACK");
+            return res.status(403).json({ error: "One or more selected animals are unavailable" });
+        }
+
+        const result = await client.query(
+            `INSERT INTO vaccinations
+             (animal_id, vaccine_name, date_given, next_due_date, dosage, notes)
+             SELECT animal_id, $2, $3, $4, $5, $6
+             FROM unnest($1::int[]) AS selected(animal_id)
+             RETURNING *`,
+            [
+                animalIds,
+                String(vaccine_name).trim(),
+                date_given,
+                next_due_date || null,
+                dosage || null,
+                notes || ""
+            ]
+        );
+
+        await client.query("COMMIT");
+        res.status(201).json({ count: result.rowCount, records: result.rows });
+    } catch (err) {
+        await client.query("ROLLBACK");
+        console.error(err);
+        res.status(500).json({ error: "Failed to create bulk vaccinations" });
+    } finally {
+        client.release();
+    }
+});
+
 // Get vaccinations for one animal
 router.get("/animal/:animalId", authMiddleware, async (req, res) => {
     const { animalId } = req.params;
@@ -40,6 +116,14 @@ router.post("/", authMiddleware, async (req, res) =>{
     } = req.body;
 
     try {
+        const animalCheck = await pool.query(
+            "SELECT id FROM animals WHERE id = $1 AND user_id = $2",
+            [animal_id, req.user.id]
+        );
+        if (!animalCheck.rowCount) {
+            return res.status(403).json({ error: "Unauthorized animal access" });
+        }
+
         const result = await pool.query(
             `
             INSERT INTO vaccinations

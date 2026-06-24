@@ -4,6 +4,84 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
+function normalizeAnimalIds(value) {
+    if (!Array.isArray(value)) return [];
+    return [...new Set(
+        value
+            .map((id) => Number.parseInt(id, 10))
+            .filter((id) => Number.isInteger(id) && id > 0)
+    )];
+}
+
+// Create the same health event for multiple owned animals.
+router.post("/bulk", authMiddleware, async (req, res) => {
+    const animalIds = normalizeAnimalIds(req.body.animal_ids);
+    const {
+        event_date,
+        type,
+        description,
+        severity,
+        resolved,
+        notes
+    } = req.body;
+
+    if (!animalIds.length) {
+        return res.status(400).json({ error: "Select at least one animal" });
+    }
+    if (animalIds.length > 500) {
+        return res.status(400).json({ error: "Bulk entries are limited to 500 animals" });
+    }
+    if (!event_date) {
+        return res.status(400).json({ error: "Event date is required" });
+    }
+    if (!String(type || "").trim()) {
+        return res.status(400).json({ error: "Event type is required" });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+        const ownedAnimals = await client.query(
+            `SELECT id
+             FROM animals
+             WHERE user_id = $1
+               AND id = ANY($2::int[])`,
+            [req.user.id, animalIds]
+        );
+
+        if (ownedAnimals.rowCount !== animalIds.length) {
+            await client.query("ROLLBACK");
+            return res.status(403).json({ error: "One or more selected animals are unavailable" });
+        }
+
+        const result = await client.query(
+            `INSERT INTO health_events
+             (animal_id, event_date, type, description, severity, resolved, notes)
+             SELECT animal_id, $2, $3, $4, $5, $6, $7
+             FROM unnest($1::int[]) AS selected(animal_id)
+             RETURNING *`,
+            [
+                animalIds,
+                event_date,
+                String(type).trim(),
+                description || "",
+                severity || "Low",
+                resolved ?? false,
+                notes || ""
+            ]
+        );
+
+        await client.query("COMMIT");
+        res.status(201).json({ count: result.rowCount, records: result.rows });
+    } catch (err) {
+        await client.query("ROLLBACK");
+        console.error(err);
+        res.status(500).json({ error: "Failed to create bulk health events" });
+    } finally {
+        client.release();
+    }
+});
+
 // create health event
 router.post("/", authMiddleware, async (req, res) => {
     const {
