@@ -16,8 +16,21 @@ const {
 
 const cleanupOnly = process.argv.includes("--cleanup-only");
 const clearDatabaseBlobs = process.argv.includes("--clear-database-blobs");
+const assetsOnly = process.argv.includes("--assets-only");
+const databaseOnly = process.argv.includes("--database-only");
 const publicDirectory = path.resolve(__dirname, "../../client/public");
 const supportedExtensions = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif"]);
+const bundledAssetFilenames = [
+  "bblogo.png",
+  "dashboard.png",
+  "favicon.png",
+  "generaldata.png",
+  "IMG_5761.JPEG",
+  "pwa-192x192.png",
+  "pwa-512x512.png",
+  "vetvisits.png",
+  "weight-graph.png",
+];
 
 function mimeTypeForFilename(filename) {
   return {
@@ -80,27 +93,34 @@ async function uploadBundledAssets() {
     console.log(`Uploaded bundled site asset ${file.name} to ${key}`);
   }
 
+  return imageFiles.length;
+}
+
+async function updateStoredContentUrls() {
+  const assetUrls = new Map(
+    bundledAssetFilenames.map((filename) => [filename.toLowerCase(), publicAssetUrl(filename)])
+  );
+
   const contentResult = await pool.query(
     `SELECT news_posts, carousel_slides
      FROM site_content
      WHERE id = 'default'
      LIMIT 1`
   );
-  if (contentResult.rows.length) {
-    const row = contentResult.rows[0];
-    const newsPosts = replaceBundledAssetUrls(row.news_posts, assetUrls);
-    const carouselSlides = replaceBundledAssetUrls(row.carousel_slides, assetUrls);
-    await pool.query(
-      `UPDATE site_content
-       SET news_posts = $1::jsonb,
-           carousel_slides = $2::jsonb,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = 'default'`,
-      [JSON.stringify(newsPosts), JSON.stringify(carouselSlides)]
-    );
-  }
+  if (!contentResult.rows.length) return;
 
-  return imageFiles.length;
+  const row = contentResult.rows[0];
+  await pool.query(
+    `UPDATE site_content
+     SET news_posts = $1::jsonb,
+         carousel_slides = $2::jsonb,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = 'default'`,
+    [
+      JSON.stringify(replaceBundledAssetUrls(row.news_posts, assetUrls)),
+      JSON.stringify(replaceBundledAssetUrls(row.carousel_slides, assetUrls)),
+    ]
+  );
 }
 
 async function migrateDatabaseMedia() {
@@ -166,21 +186,37 @@ async function cleanupDatabaseMedia() {
 }
 
 async function migrate() {
+  if (assetsOnly && databaseOnly) {
+    throw new Error("Choose either --assets-only or --database-only, not both.");
+  }
   if (!isSiteR2Configured()) {
     throw new Error("Set R2 credentials and R2_SITE_BUCKET_NAME before running this migration.");
   }
+  if (
+    process.env.USE_PUBLIC_DATABASE_URL === "true" &&
+    !process.env.DATABASE_PUBLIC_URL
+  ) {
+    throw new Error(
+      "DATABASE_PUBLIC_URL is missing. Add the Postgres public URL to the linked Railway service before running locally."
+    );
+  }
 
-  await ensureAppSchema();
   await verifyR2Connection(env.r2.siteBucket);
 
   if (cleanupOnly) {
+    await ensureAppSchema();
     const cleaned = await cleanupDatabaseMedia();
     console.log(`Site image cleanup complete. ${cleaned} PostgreSQL blob(s) cleared.`);
     return;
   }
 
-  const bundledAssets = await uploadBundledAssets();
-  const databaseMedia = await migrateDatabaseMedia();
+  const bundledAssets = databaseOnly ? 0 : await uploadBundledAssets();
+  let databaseMedia = 0;
+  if (!assetsOnly) {
+    await ensureAppSchema();
+    await updateStoredContentUrls();
+    databaseMedia = await migrateDatabaseMedia();
+  }
   console.log(
     `Site image migration complete. ${bundledAssets} bundled asset(s) and ${databaseMedia} admin media item(s) uploaded.${
       clearDatabaseBlobs

@@ -9,6 +9,11 @@ const configuredClientUrls = (process.env.CLIENT_URL || "")
   .map((url) => url.trim())
   .filter(Boolean);
 
+const usePublicDatabaseUrl = process.env.USE_PUBLIC_DATABASE_URL === "true";
+const databaseUrl = usePublicDatabaseUrl
+  ? process.env.DATABASE_PUBLIC_URL || process.env.DATABASE_URL || process.env.DB_URL || ""
+  : process.env.DATABASE_URL || process.env.DB_URL || "";
+
 const env = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: Number(process.env.PORT) || 5000,
@@ -19,7 +24,7 @@ const env = {
     "https://barnbuddy.pro",
     "https://www.barnbuddy.pro",
   ]),
-  databaseUrl: process.env.DATABASE_URL || process.env.DB_URL || "",
+  databaseUrl,
   db: {
     user: process.env.PGUSER || "postgres",
     host: process.env.PGHOST || "localhost",
