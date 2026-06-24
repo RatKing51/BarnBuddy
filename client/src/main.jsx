@@ -6,8 +6,6 @@ import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { PreferencesProvider } from './context/PreferencesContext';
 import { registerServiceWorker } from './registerServiceWorker';
-import { API_BASE_URL } from './config/env';
-import { getSiteAssetUrl } from './config/siteImages';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -22,13 +20,6 @@ if (
 ) {
   throw new Error("Production is using a Clerk test publishable key. Set VITE_CLERK_PUBLISHABLE_KEY to a pk_live key.");
 }
-
-const favicon = document.querySelector('link[rel="icon"]');
-const appleTouchIcon = document.querySelector('link[rel="apple-touch-icon"]');
-const manifest = document.querySelector('link[rel="manifest"]');
-if (favicon) favicon.href = getSiteAssetUrl('favicon.png');
-if (appleTouchIcon) appleTouchIcon.href = getSiteAssetUrl('pwa-192x192.png');
-if (manifest) manifest.href = `${API_BASE_URL}/site-content/manifest.webmanifest`;
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <ClerkProvider
