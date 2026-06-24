@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import Footer from '../components/Footer'
 import { getSiteContent } from '../api/siteContent'
 import { defaultSiteContent } from '../data/siteContent'
+import { resolveSiteImageUrl } from '../config/siteImages'
 
 export default function News() {
   const [posts, setPosts] = useState(defaultSiteContent.newsPosts)
@@ -54,7 +55,7 @@ export default function News() {
               <article className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch mb-12">
                 <div className="lg:col-span-7 min-h-80 overflow-hidden rounded-lg border border-white/10 bg-white/5">
                   <img
-                    src={featuredPost.image}
+                    src={resolveSiteImageUrl(featuredPost.image)}
                     alt={featuredPost.imageAlt}
                     className={`h-full min-h-80 w-full ${featuredPost.imageFit === 'contain' ? 'object-contain p-8' : 'object-cover'}`}
                   />
@@ -82,7 +83,7 @@ export default function News() {
                 >
                   <div className="aspect-[16/10] bg-[#101D42]">
                     <img
-                      src={post.image}
+                      src={resolveSiteImageUrl(post.image)}
                       alt={post.imageAlt}
                       className={`h-full w-full ${post.imageFit === 'contain' ? 'object-contain p-6' : 'object-cover'}`}
                     />

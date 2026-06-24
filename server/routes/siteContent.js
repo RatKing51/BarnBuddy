@@ -1,7 +1,17 @@
 const express = require("express");
 const multer = require("multer");
+const env = require("../config/env");
 const authMiddleware = require("../middleware/authMiddleware");
 const pool = require("../data-source");
+const {
+  createSiteAssetKey,
+  createSiteMediaKey,
+  deleteObject,
+  getPublicObjectUrl,
+  getSignedDownloadUrl,
+  isSiteR2Configured,
+  uploadObject,
+} = require("../services/r2Storage");
 const {
   defaultSiteContent,
   getAdminActivity,
@@ -13,14 +23,21 @@ const {
 
 const router = express.Router();
 const validTones = new Set(["green", "blue", "yellow", "red"]);
+const supportedSiteImageTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/avif",
+]);
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter(req, file, cb) {
-    if (file.mimetype.startsWith("image/")) {
+    if (supportedSiteImageTypes.has(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error("Only images allowed"), false);
+      cb(new Error("Unsupported image type"), false);
     }
   },
 });
@@ -81,7 +98,7 @@ function sanitizeNewsPosts(newsPosts) {
       category: asTrimmedString(post.category, "Updates"),
       excerpt: asTrimmedString(post.excerpt),
       body: asTrimmedString(post.body),
-      image: asTrimmedString(post.image, "/bblogo.png"),
+      image: asTrimmedString(post.image, "/api/site-content/assets/bblogo.png"),
       imageAlt: asTrimmedString(post.imageAlt, title),
       imageFit: post.imageFit === "contain" ? "contain" : "cover",
       featured: post.featured === true,
@@ -190,10 +207,53 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/manifest.webmanifest", (req, res) => {
+  const assetUrl = (filename) => {
+    const key = createSiteAssetKey(filename);
+    return getPublicObjectUrl(key) || `${req.protocol}://${req.get("host")}/api/site-content/assets/${filename}`;
+  };
+
+  res.type("application/manifest+json").set("Cache-Control", "public, max-age=3600").json({
+    name: "BarnBuddy",
+    short_name: "BarnBuddy",
+    description: "Track herds, health records, reminders, and farm operations from anywhere.",
+    start_url: "/",
+    scope: "/",
+    display: "standalone",
+    orientation: "portrait-primary",
+    background_color: "#f7faf5",
+    theme_color: "#2f6f4e",
+    categories: ["business", "productivity", "utilities"],
+    icons: [
+      {
+        src: assetUrl("pwa-192x192.png"),
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any maskable",
+      },
+      {
+        src: assetUrl("pwa-512x512.png"),
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any maskable",
+      },
+    ],
+    shortcuts: [
+      {
+        name: "Dashboard",
+        short_name: "Dashboard",
+        description: "Open your BarnBuddy dashboard.",
+        url: "/dashboard",
+        icons: [{ src: assetUrl("pwa-192x192.png"), sizes: "192x192" }],
+      },
+    ],
+  });
+});
+
 router.get("/media/:id", async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT mime_type, data
+      `SELECT mime_type, data, r2_key
        FROM site_media
        WHERE id = $1`,
       [req.params.id]
@@ -203,12 +263,35 @@ router.get("/media/:id", async (req, res) => {
       return res.status(404).json({ error: "Image not found" });
     }
 
+    if (result.rows[0].r2_key) {
+      const publicUrl = getPublicObjectUrl(result.rows[0].r2_key);
+      return res.redirect(302, publicUrl || await getSignedDownloadUrl(result.rows[0].r2_key, { bucket: env.r2.siteBucket }));
+    }
+
+    if (!result.rows[0].data) {
+      return res.status(404).json({ error: "Image data not found" });
+    }
+
     res.set("Content-Type", result.rows[0].mime_type);
     res.set("Cache-Control", "public, max-age=31536000, immutable");
     res.send(result.rows[0].data);
   } catch (err) {
     console.error("Failed to load site media:", err);
     res.status(500).json({ error: "Failed to load image" });
+  }
+});
+
+router.get("/assets/:filename", async (req, res) => {
+  try {
+    const key = createSiteAssetKey(req.params.filename);
+    if (!isSiteR2Configured()) {
+      return res.status(503).json({ error: "R2 is not configured" });
+    }
+    const publicUrl = getPublicObjectUrl(key);
+    return res.redirect(302, publicUrl || await getSignedDownloadUrl(key, { bucket: env.r2.siteBucket }));
+  } catch (err) {
+    console.error("Failed to load site asset:", err);
+    res.status(404).json({ error: "Site asset not found" });
   }
 });
 
@@ -338,16 +421,31 @@ router.put("/admin", authMiddleware, requireAdmin, async (req, res) => {
 });
 
 router.post("/admin/media", authMiddleware, requireAdmin, upload.single("image"), async (req, res) => {
+  let uploadedR2Key = "";
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No image uploaded" });
     }
 
+    if (!isSiteR2Configured()) {
+      return res.status(503).json({ error: "R2 must be configured before uploading website images." });
+    }
+
+    const r2Key = createSiteMediaKey(req.file.originalname, req.file.mimetype);
+    uploadedR2Key = r2Key;
+    await uploadObject({
+      key: r2Key,
+      body: req.file.buffer,
+      contentType: req.file.mimetype,
+      cacheControl: "public, max-age=31536000, immutable",
+      bucket: env.r2.siteBucket,
+    });
+
     const result = await pool.query(
-      `INSERT INTO site_media (filename, mime_type, data, uploaded_by)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO site_media (filename, mime_type, r2_key, size_bytes, uploaded_by)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
-      [req.file.originalname || "", req.file.mimetype, req.file.buffer, req.user.id]
+      [req.file.originalname || "", req.file.mimetype, r2Key, req.file.size, req.user.id]
     );
     const id = result.rows[0].id;
     await logAdminActivity({
@@ -358,14 +456,22 @@ router.post("/admin/media", authMiddleware, requireAdmin, upload.single("image")
         filename: req.file.originalname || "",
         mimeType: req.file.mimetype,
         size: req.file.size,
+        storage: "r2",
+        r2Key,
       },
     });
 
     res.status(201).json({
       id,
-      url: `/api/site-content/media/${id}`,
+      url: getPublicObjectUrl(r2Key) || `/api/site-content/media/${id}`,
+      storage: "r2",
     });
   } catch (err) {
+    if (uploadedR2Key) {
+      await deleteObject(uploadedR2Key, { bucket: env.r2.siteBucket }).catch((cleanupError) => {
+        console.error("Failed to clean up orphaned R2 site image:", cleanupError);
+      });
+    }
     console.error("Failed to upload site media:", err);
     res.status(500).json({ error: "Failed to upload image" });
   }

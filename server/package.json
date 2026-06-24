@@ -8,6 +8,8 @@
     "reminders:send": "node scripts/sendReminderCron.js",
     "images:migrate:r2": "node scripts/migrateAnimalImagesToR2.js",
     "images:cleanup:database": "node scripts/migrateAnimalImagesToR2.js --cleanup-only",
+    "site-images:migrate:r2": "node scripts/migrateSiteImagesToR2.js",
+    "site-images:cleanup:database": "node scripts/migrateSiteImagesToR2.js --cleanup-only",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js"
   },

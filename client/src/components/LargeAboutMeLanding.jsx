@@ -1,5 +1,6 @@
 import React from 'react'
 import '../index.css'
+import { getSiteAssetUrl } from '../config/siteImages'
 
 export default function LargeAboutMeLanding() {
   return (
@@ -11,7 +12,7 @@ export default function LargeAboutMeLanding() {
               <div className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-white/12 bg-white/5 shadow-xl shadow-black/25">
                 <div className="aspect-[4/3] sm:aspect-[16/11] lg:aspect-[4/5] xl:aspect-[5/4]">
                   <img
-                    src="/IMG_5761.JPEG"
+                    src={getSiteAssetUrl("IMG_5761.JPEG")}
                     alt="Gage Billinger at a Kansas FFA event"
                     className="h-full w-full object-cover object-[center_38%]"
                   />

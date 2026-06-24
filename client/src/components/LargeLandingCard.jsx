@@ -3,6 +3,7 @@ import { useAuth } from '@clerk/clerk-react'
 import { landingCarouselSlides } from '../data/carouselSlides'
 import PwaInstallButton from './PwaInstallButton'
 import '../index.css'
+import { getSiteAssetUrl, resolveSiteImageUrl } from '../config/siteImages'
 
 export default function LargeLandingCard({ slides = landingCarouselSlides }) {
   const [activeSlide, setActiveSlide] = useState(0)
@@ -60,7 +61,7 @@ export default function LargeLandingCard({ slides = landingCarouselSlides }) {
             <div className="absolute -inset-5 rounded-[2rem] bg-blue-500/14 blur-2xl" aria-hidden="true" />
             <div className="relative overflow-hidden rounded-2xl border border-white/12 bg-[#07102a] shadow-2xl shadow-black/35">
               <div className="flex items-center justify-between gap-4 border-b border-white/10 bg-white px-5 py-4">
-                <img src="/bblogo.png" alt="BarnBuddy logo" className="h-10 w-auto object-contain" />
+                <img src={getSiteAssetUrl("bblogo.png")} alt="BarnBuddy logo" className="h-10 w-auto object-contain" />
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -91,7 +92,7 @@ export default function LargeLandingCard({ slides = landingCarouselSlides }) {
                       <div className="px-4 pt-4">
                         <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0b1425]">
                           <img
-                            src={slide.image}
+                            src={resolveSiteImageUrl(slide.image)}
                             alt={slide.alt}
                             className="aspect-[16/10] h-auto w-full object-cover object-left-top"
                           />

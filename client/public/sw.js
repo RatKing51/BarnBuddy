@@ -1,8 +1,8 @@
-const CACHE_VERSION = "barnbuddy-v1";
+const CACHE_VERSION = "barnbuddy-v2";
 const APP_SHELL_CACHE = `${CACHE_VERSION}-app-shell`;
 const ASSET_CACHE = `${CACHE_VERSION}-assets`;
 
-const APP_SHELL = ["/", "/manifest.webmanifest", "/pwa-192x192.png", "/pwa-512x512.png"];
+const APP_SHELL = ["/"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

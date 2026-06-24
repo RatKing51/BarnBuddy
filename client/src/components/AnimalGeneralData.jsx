@@ -7,6 +7,7 @@ import { toast, ToastContainer } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 import { usePreferences } from "../context/PreferencesContext";
 import { API_URL } from "../config/env";
+import { ANIMAL_TYPES, SEX_OPTIONS_BY_SPECIES } from "../config/animalTypes";
 import { SkeletonBlock } from "./LoadingSpinner";
 import ImageCropModal from "./ImageCropModal";
 
@@ -160,13 +161,6 @@ export default function AnimalGeneralData({
   const selectedAnimalRecordId = animal?.id;
   currentAnimalIdRef.current = selectedAnimalRecordId;
   const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
-  const sexOptionsBySpecies = {
-    Cow: ["Cow", "Heifer", "Steer", "Bull", "Calf"],
-    Sheep: ["Ewe", "Ram", "Lamb", "Wether"],
-    Goat: ["Doe", "Buck", "Wether", "Yearling"],
-    Swine: ["Gilt", "Sow", "Boar", "Barrow", "Stag"],
-  };
-
   const MAX_SOURCE_IMAGE_SIZE = 25 * 1024 * 1024;
   const SUPPORTED_IMAGE_TYPES = new Set([
     "image/jpeg",
@@ -770,8 +764,11 @@ export default function AnimalGeneralData({
               className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
             >
               <option value="">Select Sex</option>
+              {sex && !(SEX_OPTIONS_BY_SPECIES[species] || SEX_OPTIONS_BY_SPECIES.Other).includes(sex) && (
+                <option value={sex}>{sex}</option>
+              )}
 
-              {(sexOptionsBySpecies[species] || []).map((option) => (
+              {(SEX_OPTIONS_BY_SPECIES[species] || SEX_OPTIONS_BY_SPECIES.Other).map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -882,10 +879,11 @@ export default function AnimalGeneralData({
             onBlur={() => saveAnimal()}
             className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
           >
-            <option value="Cow">Cow</option>
-            <option value="Sheep">Sheep</option>
-            <option value="Goat">Goat</option>
-            <option value="Swine">Swine</option>
+            {ANIMAL_TYPES.map((animalType) => (
+              <option key={animalType.value} value={animalType.value}>
+                {animalType.label}
+              </option>
+            ))}
           </select>
         </div>
 

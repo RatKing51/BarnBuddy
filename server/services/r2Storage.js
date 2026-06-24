@@ -38,6 +38,15 @@ function isR2Configured() {
   );
 }
 
+function isSiteR2Configured() {
+  return Boolean(
+    env.r2.accountId &&
+      env.r2.accessKeyId &&
+      env.r2.secretAccessKey &&
+      env.r2.siteBucket
+  );
+}
+
 function getR2Client() {
   if (!isR2Configured()) {
     throw new Error("R2 is not configured");
@@ -73,48 +82,78 @@ function createAnimalImageKey(userId, animalId, mimeType) {
   return `users/${userId}/animals/${animalId}/${crypto.randomUUID()}.${extension}`;
 }
 
-async function uploadObject({ key, body, contentType }) {
+function sanitizeFilename(filename) {
+  return String(filename || "image")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "image";
+}
+
+function createSiteMediaKey(filename, mimeType) {
+  const originalExtension = sanitizeFilename(filename).split(".").pop();
+  const extension = originalExtension && originalExtension !== sanitizeFilename(filename)
+    ? originalExtension
+    : extensionForMimeType(mimeType);
+  return `site/media/${crypto.randomUUID()}.${extension}`;
+}
+
+function createSiteAssetKey(filename) {
+  return `site/assets/${sanitizeFilename(filename)}`;
+}
+
+function getPublicObjectUrl(key) {
+  return env.r2.publicBaseUrl ? `${env.r2.publicBaseUrl}/${key}` : "";
+}
+
+async function uploadObject({
+  key,
+  body,
+  contentType,
+  cacheControl = "private, max-age=31536000, immutable",
+  bucket = env.r2.bucket,
+}) {
   await getR2Client().send(
     new PutObjectCommand({
-      Bucket: env.r2.bucket,
+      Bucket: bucket,
       Key: key,
       Body: body,
       ContentType: contentType,
-      CacheControl: "private, max-age=31536000, immutable",
+      CacheControl: cacheControl,
     })
   );
 }
 
-async function deleteObject(key) {
+async function deleteObject(key, { bucket = env.r2.bucket } = {}) {
   if (!key || !isR2Configured()) return;
 
   await getR2Client().send(
     new DeleteObjectCommand({
-      Bucket: env.r2.bucket,
+      Bucket: bucket,
       Key: key,
     })
   );
 }
 
-async function getSignedDownloadUrl(key) {
+async function getSignedDownloadUrl(key, { bucket = env.r2.bucket } = {}) {
   return getSignedUrl(
     getR2Client(),
     new GetObjectCommand({
-      Bucket: env.r2.bucket,
+      Bucket: bucket,
       Key: key,
     }),
     { expiresIn: env.r2.signedUrlTtlSeconds }
   );
 }
 
-async function verifyR2Connection() {
-  await getR2Client().send(new HeadBucketCommand({ Bucket: env.r2.bucket }));
+async function verifyR2Connection(bucket = env.r2.bucket) {
+  await getR2Client().send(new HeadBucketCommand({ Bucket: bucket }));
 }
 
-async function verifyObject(key) {
+async function verifyObject(key, { bucket = env.r2.bucket } = {}) {
   await getR2Client().send(
     new HeadObjectCommand({
-      Bucket: env.r2.bucket,
+      Bucket: bucket,
       Key: key,
     })
   );
@@ -122,9 +161,13 @@ async function verifyObject(key) {
 
 module.exports = {
   createAnimalImageKey,
+  createSiteAssetKey,
+  createSiteMediaKey,
   deleteObject,
+  getPublicObjectUrl,
   getSignedDownloadUrl,
   isR2Configured,
+  isSiteR2Configured,
   uploadObject,
   verifyObject,
   verifyR2Connection,

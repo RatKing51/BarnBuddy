@@ -4,6 +4,7 @@ import { API_BASE_URL, API_URL } from '../config/env'
 import { useAuth } from '../context/AuthContext'
 import ReviewLandingCard from '../components/ReviewLandingCard'
 import { defaultSiteContent } from '../data/siteContent'
+import { getSiteAssetUrl, resolveSiteImageUrl } from '../config/siteImages'
 
 const blankPost = {
   id: '',
@@ -12,7 +13,7 @@ const blankPost = {
   category: 'Updates',
   excerpt: '',
   body: '',
-  image: '/bblogo.png',
+  image: getSiteAssetUrl('bblogo.png'),
   imageAlt: 'BarnBuddy logo',
   imageFit: 'cover',
   featured: false,
@@ -1125,7 +1126,7 @@ export default function AdminContent() {
                             <input className={inputClass()} value={selectedCarouselSlide.title || ''} onChange={(event) => updateCarouselSlide(selectedCarouselIndex, { title: event.target.value })} />
                           </Field>
                           <Field label="Image URL" span="md:col-span-2">
-                            <input className={inputClass()} value={selectedCarouselSlide.image || ''} onChange={(event) => updateCarouselSlide(selectedCarouselIndex, { image: event.target.value })} placeholder="/dashboard.png or uploaded image URL" />
+                            <input className={inputClass()} value={selectedCarouselSlide.image || ''} onChange={(event) => updateCarouselSlide(selectedCarouselIndex, { image: event.target.value })} placeholder="Upload an image or paste an R2 URL" />
                           </Field>
                           <Field label="Alt text" span="md:col-span-2">
                             <textarea className={inputClass('min-h-28 resize-y')} value={selectedCarouselSlide.alt || ''} onChange={(event) => updateCarouselSlide(selectedCarouselIndex, { alt: event.target.value })} />
@@ -1154,7 +1155,7 @@ export default function AdminContent() {
                           <div className="aspect-[16/10] bg-slate-950">
                             {selectedCarouselSlide.image ? (
                               <img
-                                src={selectedCarouselSlide.image}
+                                src={resolveSiteImageUrl(selectedCarouselSlide.image)}
                                 alt={selectedCarouselSlide.alt || selectedCarouselSlide.title || 'Carousel slide'}
                                 className="h-full w-full object-cover object-left-top"
                               />
@@ -1307,7 +1308,7 @@ export default function AdminContent() {
                         <div className="mt-4 overflow-hidden rounded-md border border-slate-800 bg-slate-950">
                           <div className="aspect-[16/10] bg-slate-900">
                             <img
-                              src={selectedPost.image || '/bblogo.png'}
+                              src={resolveSiteImageUrl(selectedPost.image)}
                               alt={selectedPost.imageAlt || selectedPost.title || 'News image'}
                               className={`h-full w-full ${selectedPost.imageFit === 'contain' ? 'object-contain p-5' : 'object-cover'}`}
                             />
@@ -1622,14 +1623,14 @@ export default function AdminContent() {
                 {mediaLibrary.map((item) => (
                   <article key={item.id} className="overflow-hidden rounded-lg border border-slate-800 bg-slate-950/45">
                     <div className="aspect-[16/10] bg-slate-950">
-                      <img src={item.url?.startsWith('/api/') ? `${API_URL}${item.url}` : item.url} alt={item.filename} className="h-full w-full object-cover" />
+                      <img src={resolveSiteImageUrl(item.url)} alt={item.filename} className="h-full w-full object-cover" />
                     </div>
                     <div className="p-4">
                       <p className="truncate text-sm font-semibold text-white">{item.filename}</p>
                       <p className="mt-1 text-xs text-slate-500">{formatBytes(item.size)} - {formatDateTime(item.createdAt)}</p>
                       <button
                         type="button"
-                        onClick={() => navigator.clipboard?.writeText(item.url?.startsWith('/api/') ? `${API_URL}${item.url}` : item.url)}
+                        onClick={() => navigator.clipboard?.writeText(resolveSiteImageUrl(item.url))}
                         className="mt-3 rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800"
                       >
                         Copy URL

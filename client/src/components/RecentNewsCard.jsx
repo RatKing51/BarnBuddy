@@ -1,4 +1,5 @@
 import React from 'react'
+import { resolveSiteImageUrl } from '../config/siteImages'
 
 export default function RecentNewsCard({
   title = 'News headline goes here',
@@ -18,7 +19,7 @@ export default function RecentNewsCard({
     <article className="flex flex-col sm:flex-row items-stretch gap-6 bg-transparent">
       <div className="w-full sm:w-1/3 lg:w-1/4 h-72 sm:h-48 lg:h-56 bg-[#f8fbff] border border-white/14 rounded-lg overflow-hidden shadow-lg shadow-black/20">
         <img
-          src={image}
+          src={resolveSiteImageUrl(image)}
           alt={imageAlt}
           className={`min-h-full w-full ${imageFit === 'contain' ? 'object-contain p-5' : 'object-cover object-center'}`}
         />

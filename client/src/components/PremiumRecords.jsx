@@ -5,6 +5,7 @@ import * as birthsAPI from "../api/births";
 import * as reproductionsAPI from "../api/reproductions";
 import * as premiumRecordsAPI from "../api/premiumRecords";
 import * as vetVisitsAPI from "../api/vetVisits";
+import { getReproductionDefaults } from "../config/animalTypes";
 import { SkeletonBlock } from "./LoadingSpinner";
 
 function today() {
@@ -26,10 +27,19 @@ function getAnimalLabel(animal) {
 
 function getSexRole(animal) {
   const normalized = String(animal?.sex || "").toLowerCase();
-  if (normalized.startsWith("m") || normalized.includes("bull") || normalized.includes("ram") || normalized.includes("buck") || normalized.includes("boar")) {
+  const maleTerms = [
+    "male", "bull", "ram", "buck", "boar", "stallion", "jack", "rooster",
+    "cockerel", "drake", "tom", "gander", "colt", "buckling", "barrow",
+    "steer", "wether", "gelding", "stag", "jake",
+  ];
+  const femaleTerms = [
+    "female", "cow", "ewe", "doe", "sow", "mare", "jenny", "jennet", "hen",
+    "pullet", "goose", "filly", "doeling", "gilt",
+  ];
+  if (maleTerms.some((term) => normalized === term || normalized.includes(term))) {
     return "male";
   }
-  if (normalized.startsWith("f") || normalized.includes("cow") || normalized.includes("ewe") || normalized.includes("doe") || normalized.includes("sow")) {
+  if (femaleTerms.some((term) => normalized === term || normalized.includes(term))) {
     return "female";
   }
   return "unknown";
@@ -46,16 +56,11 @@ function canBeSire(animal) {
 }
 
 function getGestationDays(species) {
-  const normalized = String(species || "").toLowerCase();
-  if (normalized.includes("cow") || normalized.includes("cattle")) return 283;
-  if (normalized.includes("sheep")) return 147;
-  if (normalized.includes("goat")) return 150;
-  if (normalized.includes("swine") || normalized.includes("pig")) return 114;
-  return 150;
+  return getReproductionDefaults(species).days;
 }
 
 function addDays(dateValue, days) {
-  if (!dateValue) return "";
+  if (!dateValue || !Number.isFinite(days)) return "";
   const date = new Date(dateValue);
   if (Number.isNaN(date.getTime())) return "";
   date.setDate(date.getDate() + days);
@@ -512,6 +517,13 @@ export default function PremiumRecords({
   }, 0);
   const selectedDam = animals.find((item) => String(item.id) === String(selectedReproduction?.dam_id));
   const selectedSire = animals.find((item) => String(item.id) === String(selectedReproduction?.sire_id));
+  const selectedReproductionDefaults = getReproductionDefaults(selectedDam?.species || animal?.species);
+  const expectedDateLabel = selectedReproductionDefaults.term === "incubation"
+    ? "Expected hatch date"
+    : "Expected due date";
+  const estimateButtonLabel = selectedReproductionDefaults.term === "incubation"
+    ? "Estimate hatch"
+    : "Estimate due";
   const selectedOffspring = [...birthRecords.asDam, ...birthRecords.asSire].filter((birth) => String(birth.reproduction_id) === String(selectedReproduction?.id));
   const animalParentage = birthRecords.asOffspring[0] || null;
   const currentAnimalDam = animals.find((item) => String(item.id) === String(animalDamId));
@@ -715,7 +727,12 @@ export default function PremiumRecords({
     }
 
     const dam = animals.find((item) => String(item.id) === String(selectedReproduction.dam_id)) || animal;
-    setReproductionField("due_date", addDays(selectedReproduction.breeding_date, getGestationDays(dam.species)));
+    const days = getGestationDays(dam.species);
+    if (!Number.isFinite(days)) {
+      toast.info("No automatic reproduction period is set for this animal type. Enter the expected date manually.");
+      return;
+    }
+    setReproductionField("due_date", addDays(selectedReproduction.breeding_date, days));
   };
 
   if (view === "reproduction") {
@@ -875,15 +892,20 @@ export default function PremiumRecords({
                       <input type="date" value={formatDate(selectedReproduction.breeding_date)} onChange={(e) => setReproductionField("breeding_date", e.target.value)} onBlur={saveReproduction} className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
                     </label>
                     <label className="block text-xs text-gray-400">
-                      Expected due date
+                      {expectedDateLabel}
                       <input type="date" value={formatDate(selectedReproduction.due_date)} onChange={(e) => setReproductionField("due_date", e.target.value)} onBlur={saveReproduction} className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
                     </label>
                     <div className="flex items-end">
                       <button type="button" onClick={estimateDueDate} className="w-full rounded-lg border border-blue-400/40 bg-blue-500/10 px-3 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">
-                        Estimate due
+                        {estimateButtonLabel}
                       </button>
                     </div>
                   </div>
+                  <p className="mt-3 text-xs text-gray-500">
+                    {Number.isFinite(selectedReproductionDefaults.days)
+                      ? `Uses a typical ${selectedReproductionDefaults.reproductionTerm || selectedReproductionDefaults.term} period of ${selectedReproductionDefaults.days} days. Actual timing can vary by breed and individual animal.`
+                      : "No automatic estimate is available for this animal type; enter the expected date manually."}
+                  </p>
                 </section>
 
                 <section className="rounded-xl border border-gray-700 bg-gray-900 p-4">
