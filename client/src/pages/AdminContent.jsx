@@ -149,6 +149,7 @@ function broadcastMaintenance(maintenance) {
 const quickLinks = [
   { label: 'Clerk', url: 'https://dashboard.clerk.com/' },
   { label: 'Railway', url: 'https://railway.app/dashboard' },
+  { label: 'Cloudflare R2', url: 'https://dash.cloudflare.com/?to=/:account/r2' },
   { label: 'Resend', url: 'https://resend.com/emails' },
   { label: 'GitHub', url: 'https://github.com/' },
   { label: 'Docs Site', url: 'https://doc.barnbuddy.pro' },
