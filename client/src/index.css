@@ -334,13 +334,51 @@ input[type="date"]::-webkit-date-and-time-value {
   margin-top: 0.75rem;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1280px) {
   .bb-compact .dashboard-page aside {
     width: 15rem;
   }
 
   .bb-compact .dashboard-page .dashboard-main {
     padding: 1rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1279px) {
+  .dashboard-page {
+    min-height: 100dvh;
+  }
+
+  .dashboard-page .dashboard-main {
+    background:
+      radial-gradient(circle at 12% -12%, rgba(59, 130, 246, 0.13), transparent 28rem),
+      #030712 !important;
+  }
+
+  .dashboard-page .dashboard-app-header {
+    padding-left: max(1.5rem, env(safe-area-inset-left));
+    padding-right: max(1.5rem, env(safe-area-inset-right));
+  }
+
+  .dashboard-page .dashboard-animal-strip {
+    padding-left: max(1.5rem, env(safe-area-inset-left));
+    padding-right: max(1.5rem, env(safe-area-inset-right));
+  }
+
+  .dashboard-page .dashboard-content-card {
+    margin: 1.5rem;
+    margin-left: max(1.5rem, env(safe-area-inset-left));
+    margin-right: max(1.5rem, env(safe-area-inset-right));
+    overflow: hidden;
+  }
+
+  .dashboard-page .dashboard-bottom-nav > div {
+    margin: 0 auto;
+    max-width: 52rem;
+  }
+
+  .dashboard-page .dashboard-bottom-nav button {
+    font-size: 0.75rem;
   }
 }
 

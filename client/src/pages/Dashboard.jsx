@@ -652,9 +652,9 @@ export default function Dashboard() {
     : selectedHerd?.name || "Select a herd";
 
   return (
-    <div className={`dashboard-page flex min-h-screen flex-col bg-gray-950 text-gray-100 md:h-screen md:flex-row md:overflow-hidden ${isCompact ? "dashboard-compact" : "dashboard-comfortable"}`}>
+    <div className={`dashboard-page flex min-h-screen flex-col bg-gray-950 text-gray-100 xl:h-screen xl:flex-row xl:overflow-hidden ${isCompact ? "dashboard-compact" : "dashboard-comfortable"}`}>
       {/* SIDEBAR */}
-      <aside className="hidden w-full flex-shrink-0 flex-col border-b border-gray-700 bg-gray-800 shadow-lg md:flex md:h-screen md:w-72 md:border-b-0 md:border-r">
+      <aside className="hidden w-full flex-shrink-0 flex-col border-b border-gray-700 bg-gray-800 shadow-lg xl:flex xl:h-screen xl:w-72 xl:border-b-0 xl:border-r">
         <div className="px-6 py-6 border-b border-gray-700">
           <button
             type="button"
@@ -806,9 +806,9 @@ export default function Dashboard() {
       </aside>
 
       {/* MAIN AREA */}
-      <main className={`dashboard-main min-h-screen flex-1 overflow-y-auto bg-gray-950 pb-24 md:min-h-0 md:pb-0 ${isCompact ? "md:p-5" : "md:p-8"}`}>
-        {/* MOBILE APP HEADER */}
-        <section className="sticky top-0 z-30 border-b border-gray-800 bg-gray-950/95 px-3 pb-3 pt-3 shadow-lg shadow-black/20 backdrop-blur md:hidden">
+      <main className={`dashboard-main min-h-screen flex-1 overflow-y-auto bg-gray-950 pb-24 xl:min-h-0 xl:pb-0 ${isCompact ? "xl:p-5" : "xl:p-8"}`}>
+        {/* MOBILE + TABLET APP HEADER */}
+        <section className="dashboard-app-header sticky top-0 z-30 border-b border-gray-800 bg-gray-950/95 px-3 pb-3 pt-3 shadow-lg shadow-black/20 backdrop-blur md:px-6 md:pb-4 md:pt-4 xl:hidden">
           <div className="flex items-center justify-between gap-3">
             <button
               type="button"
@@ -840,7 +840,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="mt-3">
+          <div className="mt-3 md:grid md:grid-cols-[minmax(0,1fr)_minmax(240px,340px)] md:items-end md:gap-5">
             <div className="mb-2 flex items-end justify-between gap-3">
               <div className="min-w-0">
                 <h1 className="truncate text-lg font-semibold text-white">{currentViewTitle}</h1>
@@ -864,7 +864,7 @@ export default function Dashboard() {
               value={selectedHerd ? selectedHerd.id : ""}
               disabled={loadingHerds}
               onChange={(e) => setHerdFromValue(e.target.value)}
-              className="w-full rounded-xl border border-gray-700 bg-gray-900 px-3 py-2.5 text-base text-gray-100 outline-none disabled:opacity-70"
+              className="w-full rounded-xl border border-gray-700 bg-gray-900 px-3 py-2.5 text-base text-gray-100 outline-none disabled:opacity-70 md:self-end"
             >
               <option value="" disabled>
                 {loadingHerds ? "Loading herds..." : "Select Herd"}
@@ -880,7 +880,7 @@ export default function Dashboard() {
         </section>
 
         {!selectedAnimal && (
-        <section className="border-b border-gray-800 bg-gray-950 px-3 py-2.5 md:hidden">
+        <section className="dashboard-animal-strip border-b border-gray-800 bg-gray-950 px-3 py-2.5 md:px-6 md:py-4 xl:hidden">
           <div>
             <button
               type="button"
@@ -893,7 +893,7 @@ export default function Dashboard() {
           </div>
 
           {!["bulk-entry", "inventory"].includes(activeTab) && (
-          <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1">
+          <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1 md:gap-3">
             {loadingAnimals ? (
               [0, 1, 2].map((item) => (
                 <SkeletonBlock key={item} className="h-14 w-32 shrink-0 rounded-xl" />
@@ -909,7 +909,7 @@ export default function Dashboard() {
                   key={animal.id}
                   type="button"
                   onClick={() => handleSelectAnimal(animal)}
-                  className={`min-w-32 max-w-40 shrink-0 rounded-xl border p-2.5 text-left ${
+                  className={`min-w-32 max-w-40 shrink-0 rounded-xl border p-2.5 text-left md:min-w-44 md:max-w-52 md:p-3 ${
                     selectedAnimal?.id === animal.id
                       ? "border-blue-400 bg-blue-600/25"
                       : "border-gray-800 bg-gray-900"
@@ -939,7 +939,7 @@ export default function Dashboard() {
         )}
 
         {/* HEADER */}
-        <header className={`hidden flex-col sm:flex-row items-start sm:items-center justify-between md:flex ${isCompact ? "mb-4" : "mb-6"}`}>
+        <header className={`hidden flex-col sm:flex-row items-start sm:items-center justify-between xl:flex ${isCompact ? "mb-4" : "mb-6"}`}>
           <div className="mb-4 sm:mb-0">
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-2xl font-semibold">Welcome back</h2>
@@ -979,7 +979,7 @@ export default function Dashboard() {
         </header>
 
         {/* QUICK STATS */}
-        <section className={`hidden grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 md:grid ${isCompact ? "gap-3 mb-4" : "gap-4 mb-6"}`}>
+        <section className={`hidden grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 xl:grid ${isCompact ? "gap-3 mb-4" : "gap-4 mb-6"}`}>
           {[
             { title: "Animals", value: animals.length },
             { title: "Active", value: totalActiveAnimals },
@@ -1006,7 +1006,7 @@ export default function Dashboard() {
         </section>
 
         {/* ANIMAL DATA */}
-        <div className="bg-gray-950 md:rounded-2xl md:border md:border-gray-800 md:bg-gray-900 md:shadow-md">
+        <div className="dashboard-content-card bg-gray-950 md:rounded-2xl md:border md:border-gray-800 md:bg-gray-900 md:shadow-md">
           {!selectedAnimal && activeTab === "feed" ? (
             <div className="p-3 sm:p-6">
               <HerdFeedRecords
@@ -1063,7 +1063,7 @@ export default function Dashboard() {
           ) : (
             <>
               {/* TABS */}
-              <div className="hidden border-b border-gray-700 md:flex md:flex-wrap">
+              <div className="hidden border-b border-gray-700 xl:flex xl:flex-wrap">
                 {animalRecordTabs.map((tab) => (
                   <button
                     key={tab.key}
@@ -1133,7 +1133,7 @@ export default function Dashboard() {
             </>
           )}
         </div>
-        <nav className="dashboard-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-gray-800 bg-gray-950/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_28px_rgba(0,0,0,0.3)] backdrop-blur md:hidden">
+        <nav className="dashboard-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-gray-800 bg-gray-950/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_28px_rgba(0,0,0,0.3)] backdrop-blur xl:hidden">
           {selectedAnimal ? (
             <div className="flex overflow-x-auto px-1">
               {animalRecordTabs.map((tab) => (
