@@ -12,17 +12,18 @@ Premium expands BarnBuddy beyond basic records.
 - PDF and scheduled exports
 - Automatic reminders
 - Breeding, reproduction, and birth planning tools
-- Finance records
+- Animal and herd finance records
 - Feed planning tools
 - Inventory tracking with low-stock and expiration visibility
-- Shared farm account access when available
 
 ## Free Plan Includes
 
 - Animal profiles
 - Herd organization
 - Health records
+- Weight history and trend charts
 - Vet visit history
+- Bulk health and vaccination entry
 - Basic dashboard care status
 - Mobile-friendly record keeping
 

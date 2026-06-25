@@ -15,11 +15,11 @@
   },
   "sidebar": "tutorialSidebar",
   "previous": {
-    "title": "Finance",
-    "permalink": "/premium/finance"
+    "title": "Herd Finances",
+    "permalink": "/premium/herd-finances"
   },
   "next": {
-    "title": "Exports",
-    "permalink": "/premium/exports"
+    "title": "Inventory Tracking",
+    "permalink": "/premium/inventory"
   }
 }

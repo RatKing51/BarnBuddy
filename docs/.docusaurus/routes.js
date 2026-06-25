@@ -4,15 +4,15 @@ import ComponentCreator from '@docusaurus/ComponentCreator';
 export default [
   {
     path: '/',
-    component: ComponentCreator('/', '7e1'),
+    component: ComponentCreator('/', '977'),
     routes: [
       {
         path: '/',
-        component: ComponentCreator('/', '056'),
+        component: ComponentCreator('/', '9f6'),
         routes: [
           {
             path: '/',
-            component: ComponentCreator('/', '536'),
+            component: ComponentCreator('/', '05a'),
             routes: [
               {
                 path: '/account/billing',
@@ -81,9 +81,16 @@ export default [
                 sidebar: "tutorialSidebar"
               },
               {
+                path: '/premium/herd-finances',
+                component: ComponentCreator('/premium/herd-finances', '32a'),
+                exact: true,
+                sidebar: "tutorialSidebar"
+              },
+              {
                 path: '/premium/inventory',
-                component: ComponentCreator('/premium/inventory', 'df6'),
-                exact: true
+                component: ComponentCreator('/premium/inventory', 'af8'),
+                exact: true,
+                sidebar: "tutorialSidebar"
               },
               {
                 path: '/premium/overview',
@@ -110,6 +117,12 @@ export default [
                 sidebar: "tutorialSidebar"
               },
               {
+                path: '/records/bulk-entry',
+                component: ComponentCreator('/records/bulk-entry', '073'),
+                exact: true,
+                sidebar: "tutorialSidebar"
+              },
+              {
                 path: '/records/farm-overview',
                 component: ComponentCreator('/records/farm-overview', 'ff9'),
                 exact: true,
@@ -130,6 +143,12 @@ export default [
               {
                 path: '/records/vet-visits',
                 component: ComponentCreator('/records/vet-visits', '591'),
+                exact: true,
+                sidebar: "tutorialSidebar"
+              },
+              {
+                path: '/records/weight-tracking',
+                component: ComponentCreator('/records/weight-tracking', '092'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },

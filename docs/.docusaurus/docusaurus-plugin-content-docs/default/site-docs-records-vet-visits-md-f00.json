@@ -15,11 +15,11 @@
   },
   "sidebar": "tutorialSidebar",
   "previous": {
-    "title": "Health Records",
-    "permalink": "/records/health-records"
+    "title": "Weight Tracking",
+    "permalink": "/records/weight-tracking"
   },
   "next": {
-    "title": "Farm Overview",
-    "permalink": "/records/farm-overview"
+    "title": "Bulk Entry",
+    "permalink": "/records/bulk-entry"
   }
 }

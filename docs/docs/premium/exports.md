@@ -8,7 +8,7 @@ Exports help turn BarnBuddy records into PDFs for review, sharing, and offline u
 
 ## Farm Export
 
-Farm export summarizes herd-level records and care status.
+Farm export summarizes the selected herd's roster and care status.
 
 ## Animal Export
 
@@ -21,6 +21,16 @@ Animal export can include:
 - Reproduction records
 - Finance records
 - Feed records
+
+## Herd Finance Export
+
+The Herd Finances screen can prepare a finance report with:
+
+- Net, income, and expense totals
+- Feed and vet costs
+- Expense categories
+- Monthly cash flow
+- Income, expense, and complete ledger tables
 
 ## Blocked Sections
 

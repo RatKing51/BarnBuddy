@@ -8,6 +8,8 @@ slug: /
 
 BarnBuddy helps small farms, FFA students, 4H families, and hobby producers keep livestock records in one organized place.
 
+![BarnBuddy farm overview showing herd care status and priority animals](/img/screenshots/farm-overview.png)
+
 Use these docs to learn the main workflows:
 
 <div className="card-grid">
@@ -17,11 +19,11 @@ Use these docs to learn the main workflows:
   </div>
   <div className="doc-card">
     <h3>Track care</h3>
-    <p>Log health events, vaccinations, vet visits, follow-ups, and animal status.</p>
+    <p>Log health events, vaccinations, weights, vet visits, follow-ups, and animal status.</p>
   </div>
   <div className="doc-card">
     <h3>Use Premium</h3>
-    <p>Work with reproduction, finance, feed records, exports, and reminders.</p>
+    <p>Work with reproduction, herd finances, feed, inventory, exports, and reminders.</p>
   </div>
   <div className="doc-card">
     <h3>Manage account</h3>
@@ -40,5 +42,6 @@ The docs site is intended to run separately at [doc.barnbuddy.pro](https://doc.b
 - Use consistent animal names or tag numbers.
 - Add records when chores happen instead of waiting until the end of the week.
 - Put dates on health, vaccine, breeding, feed, and finance records.
+- Use Bulk Entry when the same care was given to several animals.
 - Keep notes short but specific enough to explain what happened.
 - Export records before shows, sales, vet appointments, or end-of-season reviews.

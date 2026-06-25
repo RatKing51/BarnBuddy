@@ -1,15 +1,15 @@
 {
-  "/-7e1": {
+  "/-977": {
     "__comp": "5e95c892",
     "__context": {
       "plugin": "aba21aa0"
     }
   },
-  "/-056": {
+  "/-9f6": {
     "__comp": "a7bd4aaa",
     "__props": "22dd74f7"
   },
-  "/-536": {
+  "/-05a": {
     "__comp": "a94703ab"
   },
   "/account/billing-f79": {
@@ -56,7 +56,11 @@
     "__comp": "17896441",
     "content": "1a9bfcd4"
   },
-  "/premium/inventory-df6": {
+  "/premium/herd-finances-32a": {
+    "__comp": "17896441",
+    "content": "9dc7d775"
+  },
+  "/premium/inventory-af8": {
     "__comp": "17896441",
     "content": "35359770"
   },
@@ -76,6 +80,10 @@
     "__comp": "17896441",
     "content": "bb66031c"
   },
+  "/records/bulk-entry-073": {
+    "__comp": "17896441",
+    "content": "2517bbec"
+  },
   "/records/farm-overview-ff9": {
     "__comp": "17896441",
     "content": "d35179f7"
@@ -91,6 +99,10 @@
   "/records/vet-visits-591": {
     "__comp": "17896441",
     "content": "f008a718"
+  },
+  "/records/weight-tracking-092": {
+    "__comp": "17896441",
+    "content": "18b36acb"
   },
   "/support/contact-a44": {
     "__comp": "17896441",

@@ -1,0 +1,25 @@
+{
+  "id": "records/bulk-entry",
+  "title": "Bulk Entry",
+  "description": "Bulk Entry creates the same vaccination or health event for several active animals at once.",
+  "source": "@site/docs/records/bulk-entry.md",
+  "sourceDirName": "records",
+  "slug": "/records/bulk-entry",
+  "permalink": "/records/bulk-entry",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Bulk Entry"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Vet Visits",
+    "permalink": "/records/vet-visits"
+  },
+  "next": {
+    "title": "Farm Overview",
+    "permalink": "/records/farm-overview"
+  }
+}

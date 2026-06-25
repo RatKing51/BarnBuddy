@@ -1,0 +1,25 @@
+{
+  "id": "premium/herd-finances",
+  "title": "Herd Finances",
+  "description": "Herd Finances combines financial activity across the selected herd into one Premium reporting screen.",
+  "source": "@site/docs/premium/herd-finances.md",
+  "sourceDirName": "premium",
+  "slug": "/premium/herd-finances",
+  "permalink": "/premium/herd-finances",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Herd Finances"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Finance",
+    "permalink": "/premium/finance"
+  },
+  "next": {
+    "title": "Feed Records",
+    "permalink": "/premium/feed"
+  }
+}

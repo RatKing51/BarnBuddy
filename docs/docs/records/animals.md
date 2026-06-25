@@ -6,6 +6,8 @@ title: Animal Records
 
 Each animal has a profile that collects basic identity, health, vet, and Premium records.
 
+![Animal General Data tab](/img/screenshots/general-data.png)
+
 ## General Data
 
 Use the **General Data** tab for:
@@ -31,6 +33,10 @@ Upload a clear image that helps identify the animal. You can replace or remove t
 Choose **QR tag** from an animal's General record to copy its secure profile link, download the QR code as an SVG, or print a simple tag.
 
 Scanning the code opens that animal in BarnBuddy. The person scanning must sign in, and the animal is only shown when their account has access.
+
+## Quick Dates
+
+The General Data tab summarizes upcoming vaccinations, vet visits, and follow-up dates so the next care item is visible without opening every record tab.
 
 ## Delete an Animal
 

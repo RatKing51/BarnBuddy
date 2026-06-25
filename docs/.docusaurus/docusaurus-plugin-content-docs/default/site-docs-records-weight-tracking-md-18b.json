@@ -1,0 +1,25 @@
+{
+  "id": "records/weight-tracking",
+  "title": "Weight Tracking",
+  "description": "The Weight tab keeps a dated weigh-in history for each animal and turns those records into a trend chart.",
+  "source": "@site/docs/records/weight-tracking.md",
+  "sourceDirName": "records",
+  "slug": "/records/weight-tracking",
+  "permalink": "/records/weight-tracking",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Weight Tracking"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Health Records",
+    "permalink": "/records/health-records"
+  },
+  "next": {
+    "title": "Vet Visits",
+    "permalink": "/records/vet-visits"
+  }
+}

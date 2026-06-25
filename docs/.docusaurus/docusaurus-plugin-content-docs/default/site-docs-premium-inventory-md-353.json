@@ -12,5 +12,14 @@
   "version": "current",
   "frontMatter": {
     "title": "Inventory Tracking"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Feed Records",
+    "permalink": "/premium/feed"
+  },
+  "next": {
+    "title": "Exports",
+    "permalink": "/premium/exports"
   }
 }

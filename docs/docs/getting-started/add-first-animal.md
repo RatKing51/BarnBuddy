@@ -6,6 +6,8 @@ title: Add Your First Animal
 
 Animals are the center of BarnBuddy records.
 
+![General Data screen for an animal profile](/img/screenshots/general-data.png)
+
 ## Add an Animal
 
 1. Open the dashboard.
@@ -24,6 +26,8 @@ Animals are the center of BarnBuddy records.
 - Herd
 - Notes
 - Profile photo
+
+Most General Data fields save when you leave the field. Watch the save indicator or toast message for confirmation.
 
 ## Animal Status
 
