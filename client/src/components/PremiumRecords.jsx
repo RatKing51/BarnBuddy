@@ -21,6 +21,12 @@ function money(value) {
   return Number.isFinite(number) ? `$${number.toFixed(2)}` : "$0.00";
 }
 
+const FINANCE_INCOME_CATEGORIES = ["Income", "Animal sales"];
+
+function isFinanceIncome(category) {
+  return FINANCE_INCOME_CATEGORIES.includes(category);
+}
+
 function getAnimalLabel(animal) {
   return animal?.name || animal?.tag_id || "Unnamed animal";
 }
@@ -462,6 +468,7 @@ export default function PremiumRecords({
       lastFinanceSignatures.current.set(res.data.id, JSON.stringify(getFinancePayload(res.data)));
       setFinanceRecords((current) => [res.data, ...current]);
       setSelectedFinance(res.data);
+      if (res.data.archived_animal) onAnimalSaved?.(res.data.archived_animal);
       toast.success("Finance record created.");
     } catch (err) {
       console.error(err);
@@ -482,6 +489,7 @@ export default function PremiumRecords({
       const res = await premiumRecordsAPI.updateFinanceRecord(selectedFinance.id, payload);
       lastFinanceSignatures.current.set(res.data.id, JSON.stringify(getFinancePayload(res.data)));
       setFinanceRecords((current) => current.map((record) => (record.id === res.data.id ? res.data : record)));
+      if (res.data.archived_animal) onAnimalSaved?.(res.data.archived_animal);
       markSaved();
     } catch (err) {
       setSaveStatus("idle");
@@ -509,7 +517,7 @@ export default function PremiumRecords({
   const financeTotal = financeRecords.reduce((sum, record) => {
     const amount = Number.parseFloat(record.amount);
     if (!Number.isFinite(amount)) return sum;
-    return record.category === "Income" ? sum + amount : sum - amount;
+    return isFinanceIncome(record.category) ? sum + amount : sum - amount;
   }, 0);
   const vetCostTotal = vetVisits.reduce((sum, visit) => {
     const cost = Number.parseFloat(visit.cost);
@@ -1123,6 +1131,7 @@ export default function PremiumRecords({
               <select value={selectedFinance.category || "Expense"} onChange={(e) => setSelectedFinance({ ...selectedFinance, category: e.target.value })} onBlur={saveFinance} className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white">
                 <option>Expense</option>
                 <option>Income</option>
+                <option>Animal sales</option>
               </select>
               <input type="number" step="0.01" value={selectedFinance.amount || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, amount: e.target.value })} onBlur={saveFinance} placeholder="Amount" className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
               <input value={selectedFinance.vendor || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, vendor: e.target.value })} onBlur={saveFinance} placeholder="Vendor or buyer" className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />

@@ -106,6 +106,14 @@ const animalImageCache = new Map();
 const animalsWithRemovedImages = new Set();
 const MAX_CACHED_ANIMAL_IMAGES = 20;
 
+function normalizeLifecycleStatus(value) {
+  return ["active", "deceased", "archived"].includes(value) ? value : "active";
+}
+
+function isInactiveLifecycleStatus(value) {
+  return ["deceased", "archived"].includes(value);
+}
+
 function cacheAnimalImage(animalId, blob) {
   animalImageCache.delete(animalId);
   animalImageCache.set(animalId, blob);
@@ -220,7 +228,7 @@ export default function AnimalGeneralData({
     setBehavior(animal.behavior || "");
     setHerdId(animal.herd_id === null ? "unassigned" : String(animal.herd_id));
     setAnimalId(animal.id || "");
-    setStatus(animal.status === "deceased" ? "deceased" : "active");
+    setStatus(normalizeLifecycleStatus(animal.status));
     setDeceasedDate(animal.deceased_date ? animal.deceased_date.slice(0, 10) : "");
     setDeceasedNotes(animal.deceased_notes || "");
     const savedAnimalData = {
@@ -234,7 +242,7 @@ export default function AnimalGeneralData({
       weight: animal.weight || "",
       behavior: animal.behavior || "",
       tag_id: animal.tag_id || "",
-      status: animal.status === "deceased" ? "deceased" : "active",
+      status: normalizeLifecycleStatus(animal.status),
       deceased_date: animal.status === "deceased" && animal.deceased_date ? animal.deceased_date.slice(0, 10) : null,
       deceased_notes: animal.status === "deceased" ? animal.deceased_notes || null : null,
     };
@@ -518,7 +526,7 @@ export default function AnimalGeneralData({
 
 
 
-  const upcomingQuickDates = status === "deceased"
+  const upcomingQuickDates = isInactiveLifecycleStatus(status)
     ? []
     : [...upcomingVaccinations, ...upcomingVetVisitDates].sort(
         (a, b) => new Date(a.date) - new Date(b.date)
@@ -1056,7 +1064,7 @@ export default function AnimalGeneralData({
         <div className="flex flex-col gap-1">
           <h4 className="text-gray-400 font-semibold">Life Status</h4>
           <p className="text-sm text-gray-500">
-            Mark animals deceased to keep records without counting them as active care.
+            Mark animals deceased or archived to keep records without counting them as active care.
           </p>
         </div>
 
@@ -1083,6 +1091,7 @@ export default function AnimalGeneralData({
               >
                 <option value="active">Active</option>
                 <option value="deceased">Deceased</option>
+                <option value="archived">Archived / Sold</option>
               </select>
             </div>
 
@@ -1114,18 +1123,18 @@ export default function AnimalGeneralData({
           </div>
 
           <div className={`rounded-xl border p-4 ${
-            status === "deceased"
+            isInactiveLifecycleStatus(status)
               ? "border-gray-600 bg-gray-900/70"
               : "border-emerald-400/20 bg-emerald-400/10"
           }`}>
             <div className="flex items-center gap-3">
-              <span className={`h-3 w-3 rounded-full ${status === "deceased" ? "bg-gray-400" : "bg-emerald-300"}`} />
+              <span className={`h-3 w-3 rounded-full ${isInactiveLifecycleStatus(status) ? "bg-gray-400" : "bg-emerald-300"}`} />
               <p className="font-semibold text-white">
-                {status === "deceased" ? "Record kept as deceased" : "Active animal"}
+                {status === "deceased" ? "Record kept as deceased" : status === "archived" ? "Record kept as archived" : "Active animal"}
               </p>
             </div>
             <p className="mt-3 text-sm leading-relaxed text-gray-400">
-              {status === "deceased"
+              {isInactiveLifecycleStatus(status)
                 ? "This animal stays in your records and exports, but is excluded from active care counts and upcoming quick dates."
                 : "This animal is included in active care counts, dashboard status, and upcoming quick dates."}
             </p>

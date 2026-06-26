@@ -70,6 +70,12 @@ function getHerdFinancePayload(record, selectedHerd) {
   };
 }
 
+function getFinanceRecord(data) {
+  if (!data || typeof data !== "object") return data;
+  const { archived_animal, ...record } = data;
+  return record;
+}
+
 function asLedgerItem(record) {
   const amount = numeric(record.amount);
   const isIncome = INCOME_CATEGORIES.includes(record.category) || record.category === "Income";
@@ -90,7 +96,7 @@ function PieChart({ segments, total }) {
   let offset = 25;
 
   return (
-    <div className="grid grid-cols-[112px_1fr] items-center gap-4">
+    <div className="grid min-w-0 grid-cols-[112px_minmax(0,1fr)] items-center gap-4">
       <svg viewBox="0 0 36 36" className="h-28 w-28 -rotate-90 overflow-visible" role="img" aria-label="Expense category pie chart">
         <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#1f2937" strokeWidth="6" />
         {segments.map((segment) => {
@@ -117,7 +123,7 @@ function PieChart({ segments, total }) {
         {segments.length === 0 ? (
           <p className="text-sm text-gray-400">No expenses yet.</p>
         ) : segments.map((segment) => (
-          <div key={segment.label} className="grid grid-cols-[10px_minmax(0,1fr)_auto] items-center gap-2 text-sm">
+          <div key={segment.label} className="grid min-w-0 grid-cols-[10px_minmax(0,1fr)_auto] items-center gap-2 text-sm">
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: segment.color }} />
             <span className="truncate text-gray-300">{segment.label}</span>
             <span className="font-semibold text-white">{money(segment.value)}</span>
@@ -136,7 +142,7 @@ function CashflowChart({ months }) {
       {months.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-700 bg-gray-900 p-4 text-sm text-gray-400">No monthly cashflow yet.</div>
       ) : months.map((item) => (
-        <div key={item.key} className="grid grid-cols-[72px_1fr_88px] items-center gap-3 text-sm">
+        <div key={item.key} className="grid min-w-0 grid-cols-[72px_minmax(0,1fr)_88px] items-center gap-3 text-sm">
           <span className="text-gray-400">{monthLabel(item.key)}</span>
           <div className="space-y-1">
             <div className="h-2 rounded-full bg-gray-900">
@@ -242,7 +248,7 @@ function HerdFinanceSkeleton() {
   );
 }
 
-export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremium = false, onExportFinanceReport }) {
+export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremium = false, onExportFinanceReport, onAnimalSaved }) {
   const [financeRecords, setFinanceRecords] = useState([]);
   const [feedRecords, setFeedRecords] = useState([]);
   const [vetVisits, setVetVisits] = useState([]);
@@ -402,9 +408,11 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
         vendor: "",
         notes: "",
       });
-      lastFinanceSignatures.current.set(res.data.id, JSON.stringify(getHerdFinancePayload(res.data, selectedHerd)));
-      setFinanceRecords((current) => [res.data, ...current]);
-      setSelectedFinance(res.data);
+      const record = getFinanceRecord(res.data);
+      lastFinanceSignatures.current.set(record.id, JSON.stringify(getHerdFinancePayload(record, selectedHerd)));
+      setFinanceRecords((current) => [record, ...current]);
+      setSelectedFinance(record);
+      if (res.data.archived_animal) onAnimalSaved?.(res.data.archived_animal);
       toast.success("Herd finance record created.");
     } catch (err) {
       console.error(err);
@@ -446,9 +454,11 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
     try {
       setSaveStatus("saving");
       const res = await premiumRecordsAPI.updateFinanceRecord(selectedFinance.id, payload);
-      lastFinanceSignatures.current.set(res.data.id, JSON.stringify(getHerdFinancePayload(res.data, selectedHerd)));
-      setFinanceRecords((current) => current.map((record) => (record.id === res.data.id ? res.data : record)));
-      setSelectedFinance(res.data);
+      const record = getFinanceRecord(res.data);
+      lastFinanceSignatures.current.set(record.id, JSON.stringify(getHerdFinancePayload(record, selectedHerd)));
+      setFinanceRecords((current) => current.map((item) => (item.id === record.id ? record : item)));
+      setSelectedFinance(record);
+      if (res.data.archived_animal) onAnimalSaved?.(res.data.archived_animal);
       markSaved();
     } catch (err) {
       setSaveStatus("idle");
@@ -476,9 +486,12 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
 
   const selectedIsIncome = selectedFinance && (INCOME_CATEGORIES.includes(selectedFinance.category) || selectedFinance.category === "Income");
   const categoryOptions = selectedIsIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const animalOptions = animals.filter(
+    (animal) => animal.status !== "archived" || String(animal.id) === String(selectedFinance?.animal_id)
+  );
   const saveBadgeText = saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Auto-saves on blur";
   return (
-    <div className="space-y-6">
+    <div className="max-w-full space-y-6 overflow-x-hidden">
       <div>
         <h2 className="text-2xl font-semibold text-white">{selectedHerd?.name || "Herd"} finances</h2>
       </div>
@@ -498,8 +511,8 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
+      <section className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="min-w-0 rounded-2xl border border-gray-700 bg-gray-800 p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-lg font-semibold text-white">Expense mix</h3>
             <div className="flex flex-wrap items-center gap-2">
@@ -516,7 +529,7 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
           <PieChart segments={expenseSegments} total={totals.expenses} />
         </div>
 
-        <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
+        <div className="min-w-0 rounded-2xl border border-gray-700 bg-gray-800 p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-lg font-semibold text-white">Monthly cashflow</h3>
             <div className="flex items-center gap-3 text-xs text-gray-400">
@@ -528,8 +541,8 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[380px_1fr]">
-        <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
+      <section className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]">
+        <div className="min-w-0 rounded-2xl border border-gray-700 bg-gray-800 p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-lg font-semibold text-white">Herd ledger</h3>
             <button
@@ -558,54 +571,54 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
+        <div className="min-w-0 space-y-6">
+          <div className="min-w-0 rounded-2xl border border-gray-700 bg-gray-800 p-5">
             {!selectedFinance ? (
               <div className="rounded-xl border border-dashed border-gray-700 bg-gray-900 p-6 text-sm text-gray-400">Select or add a ledger record.</div>
             ) : (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <label className="block text-xs text-gray-400">
+                <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                  <label className="block min-w-0 text-xs text-gray-400">
                     Type
                     <select
                       value={selectedIsIncome ? "Income" : "Expense"}
                       onChange={(e) => setSelectedFinance({ ...selectedFinance, category: e.target.value === "Income" ? "Animal sales" : "Other expense" })}
                       onBlur={saveFinance}
-                      className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white"
+                      className="mt-1 w-full min-w-0 rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white"
                     >
                       <option>Expense</option>
                       <option>Income</option>
                     </select>
                   </label>
-                  <label className="block text-xs text-gray-400">
+                  <label className="block min-w-0 text-xs text-gray-400">
                     Category
-                    <select value={selectedFinance.category || "Other expense"} onChange={(e) => setSelectedFinance({ ...selectedFinance, category: e.target.value })} onBlur={saveFinance} className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white">
+                    <select value={selectedFinance.category || "Other expense"} onChange={(e) => setSelectedFinance({ ...selectedFinance, category: e.target.value })} onBlur={saveFinance} className="mt-1 w-full min-w-0 rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white">
                       {categoryOptions.map((category) => <option key={category}>{category}</option>)}
                     </select>
                   </label>
-                  <label className="block text-xs text-gray-400">
+                  <label className="block min-w-0 text-xs text-gray-400">
                     Record date
-                    <input type="date" value={formatDate(selectedFinance.record_date)} onChange={(e) => setSelectedFinance({ ...selectedFinance, record_date: e.target.value })} onBlur={saveFinance} className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
+                    <input type="date" value={formatDate(selectedFinance.record_date)} onChange={(e) => setSelectedFinance({ ...selectedFinance, record_date: e.target.value })} onBlur={saveFinance} className="mt-1 w-full min-w-0 rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
                   </label>
-                  <label className="block text-xs text-gray-400">
+                  <label className="block min-w-0 text-xs text-gray-400">
                     Amount
-                    <input type="number" step="0.01" value={selectedFinance.amount || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, amount: e.target.value })} onBlur={saveFinance} placeholder="0.00" className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
+                    <input type="number" step="0.01" value={selectedFinance.amount || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, amount: e.target.value })} onBlur={saveFinance} placeholder="0.00" className="mt-1 w-full min-w-0 rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
                   </label>
-                  <label className="block text-xs text-gray-400">
+                  <label className="block min-w-0 text-xs text-gray-400">
                     Vendor, buyer, or payee
-                    <input value={selectedFinance.vendor || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, vendor: e.target.value })} onBlur={saveFinance} placeholder="Co-op, buyer, supplier..." className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
+                    <input value={selectedFinance.vendor || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, vendor: e.target.value })} onBlur={saveFinance} placeholder="Co-op, buyer, supplier..." className="mt-1 w-full min-w-0 rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
                   </label>
-                  <label className="block text-xs text-gray-400">
+                  <label className="block min-w-0 text-xs text-gray-400">
                     Animal
-                    <select value={selectedFinance.animal_id || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, animal_id: e.target.value || null })} onBlur={saveFinance} className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white">
+                    <select value={selectedFinance.animal_id || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, animal_id: e.target.value || null })} onBlur={saveFinance} className="mt-1 w-full min-w-0 rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white">
                       <option value="">Whole herd</option>
-                      {animals.map((animal) => (
+                      {animalOptions.map((animal) => (
                         <option key={animal.id} value={animal.id}>{animal.name || animal.tag_id || "Unnamed animal"}</option>
                       ))}
                     </select>
                   </label>
                 </div>
-                <textarea rows="4" value={selectedFinance.notes || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, notes: e.target.value })} onBlur={saveFinance} placeholder="Notes" className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
+                <textarea rows="4" value={selectedFinance.notes || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, notes: e.target.value })} onBlur={saveFinance} placeholder="Notes" className="w-full min-w-0 rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={`rounded-lg px-4 py-2 text-sm font-semibold ${saveStatus === "saved" ? "bg-emerald-500/15 text-emerald-200" : "bg-gray-700 text-gray-300"}`}>{saveBadgeText}</span>
                   <button onClick={deleteFinance} disabled={deletingFinance} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-60">
@@ -616,7 +629,7 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
             )}
           </div>
 
-          <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
+          <div className="min-w-0 rounded-2xl border border-gray-700 bg-gray-800 p-5">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-lg font-semibold text-white">All finance activity</h3>
               <div className="flex flex-wrap gap-2 text-xs font-semibold">

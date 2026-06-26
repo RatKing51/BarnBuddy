@@ -37,7 +37,7 @@ export default function BulkEntry({
   onSaved,
 }) {
   const availableAnimals = useMemo(
-    () => animals.filter((animal) => animal.status !== "deceased"),
+    () => animals.filter((animal) => !["archived", "deceased"].includes(animal.status)),
     [animals]
   );
   const [recordType, setRecordType] = useState("vaccination");

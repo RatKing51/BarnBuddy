@@ -151,7 +151,7 @@ async function collectVaccinationReminders(userId, windowDays) {
        AND v.next_due_date IS NOT NULL
        AND v.next_due_date <= CURRENT_DATE + ($2::int * INTERVAL '1 day')
        AND v.next_due_date >= CURRENT_DATE - INTERVAL '365 days'
-       AND COALESCE(a.status, 'active') <> 'deceased'
+       AND COALESCE(a.status, 'active') NOT IN ('archived', 'deceased')
      ORDER BY v.next_due_date ASC`,
     [userId, windowDays]
   );
@@ -176,7 +176,7 @@ async function collectVetVisitReminders(userId, windowDays) {
      JOIN animals a ON vv.animal_id = a.id
      WHERE a.user_id = $1
        AND COALESCE(vv.completed, false) = false
-       AND COALESCE(a.status, 'active') <> 'deceased'
+       AND COALESCE(a.status, 'active') NOT IN ('archived', 'deceased')
        AND (
          (COALESCE(vv.visit_completed, false) = false
           AND vv.visit_date IS NOT NULL

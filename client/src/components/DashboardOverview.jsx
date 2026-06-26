@@ -26,7 +26,17 @@ const statusMeta = {
     dot: "bg-gray-400",
     row: "border-gray-600 bg-gray-800/40 opacity-80",
   },
+  archived: {
+    label: "Archived",
+    badge: "bg-gray-500/15 text-gray-200 ring-gray-400/30",
+    dot: "bg-gray-500",
+    row: "border-gray-600 bg-gray-800/40 opacity-80",
+  },
 };
+
+function isInactiveAnimalStatus(status) {
+  return ["archived", "deceased"].includes(status);
+}
 
 function asNumber(value) {
   const number = Number.parseFloat(value);
@@ -91,12 +101,13 @@ function BarChart({ data, valueLabel = (value) => value }) {
   );
 }
 
-function DonutChart({ redCount, yellowCount, stableCount, deceasedCount, totalAnimals }) {
+function DonutChart({ redCount, yellowCount, stableCount, deceasedCount, archivedCount, totalAnimals }) {
   const redPct = totalAnimals ? (redCount / totalAnimals) * 100 : 0;
   const yellowPct = totalAnimals ? (yellowCount / totalAnimals) * 100 : 0;
   const stablePct = totalAnimals ? (stableCount / totalAnimals) * 100 : 0;
+  const deceasedPct = totalAnimals ? (deceasedCount / totalAnimals) * 100 : 0;
   const background = totalAnimals
-    ? `conic-gradient(#f87171 0 ${redPct}%, #fbbf24 ${redPct}% ${redPct + yellowPct}%, #34d399 ${redPct + yellowPct}% ${redPct + yellowPct + stablePct}%, #6b7280 ${redPct + yellowPct + stablePct}% 100%)`
+    ? `conic-gradient(#f87171 0 ${redPct}%, #fbbf24 ${redPct}% ${redPct + yellowPct}%, #34d399 ${redPct + yellowPct}% ${redPct + yellowPct + stablePct}%, #6b7280 ${redPct + yellowPct + stablePct}% ${redPct + yellowPct + stablePct + deceasedPct}%, #9ca3af ${redPct + yellowPct + stablePct + deceasedPct}% 100%)`
     : "conic-gradient(#374151 0 100%)";
 
   return (
@@ -119,6 +130,7 @@ function DonutChart({ redCount, yellowCount, stableCount, deceasedCount, totalAn
           ["yellow", yellowCount],
           ["green", stableCount],
           ["deceased", deceasedCount],
+          ["archived", archivedCount],
         ].map(([status, value]) => (
           <div key={status} className="flex items-center justify-between rounded-xl border border-gray-700 bg-gray-800 px-3 py-2.5 sm:px-4 sm:py-3">
             <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-200">
@@ -138,6 +150,7 @@ export default function DashboardOverview({
   totalAnimals,
   totalActiveAnimals = totalAnimals,
   deceasedCount = 0,
+  archivedCount = 0,
   vaccinationsDue,
   upcomingVetVisits,
   careDueCount,
@@ -152,8 +165,8 @@ export default function DashboardOverview({
   const [tableFilter, setTableFilter] = useState("all");
 
   const analytics = useMemo(() => {
-    const redCount = animals.filter((animal) => animal.status !== "deceased" && animalUrgencies[animal.id] === "red").length;
-    const yellowCount = animals.filter((animal) => animal.status !== "deceased" && animalUrgencies[animal.id] === "yellow").length;
+    const redCount = animals.filter((animal) => !isInactiveAnimalStatus(animal.status) && animalUrgencies[animal.id] === "red").length;
+    const yellowCount = animals.filter((animal) => !isInactiveAnimalStatus(animal.status) && animalUrgencies[animal.id] === "yellow").length;
     const stableCount = Math.max(0, totalActiveAnimals - redCount - yellowCount);
     const stablePct = totalActiveAnimals ? Math.round((stableCount / totalActiveAnimals) * 100) : 0;
 
@@ -197,7 +210,7 @@ export default function DashboardOverview({
 
     const tableRows = animals
       .map((animal) => {
-        const status = animal.status === "deceased" ? "deceased" : animalUrgencies[animal.id] || "green";
+        const status = isInactiveAnimalStatus(animal.status) ? animal.status : animalUrgencies[animal.id] || "green";
         return {
           ...animal,
           status,
@@ -206,7 +219,7 @@ export default function DashboardOverview({
         };
       })
       .sort((a, b) => {
-        const priority = { red: 0, yellow: 1, green: 2, deceased: 3 };
+        const priority = { red: 0, yellow: 1, green: 2, deceased: 3, archived: 4 };
         return priority[a.status] - priority[b.status] || String(a.name || "").localeCompare(String(b.name || ""));
       });
 
@@ -227,7 +240,7 @@ export default function DashboardOverview({
   const filteredRows = analytics.tableRows.filter((animal) => tableFilter === "all" || animal.status === tableFilter);
   const visibleAttentionAnimals = attentionAnimals.length
     ? attentionAnimals
-    : analytics.tableRows.filter((animal) => animal.status !== "green" && animal.status !== "deceased").slice(0, 4);
+    : analytics.tableRows.filter((animal) => animal.status !== "green" && !isInactiveAnimalStatus(animal.status)).slice(0, 4);
   const getAnimalPrimaryLabel = (animal) => {
     if (primaryAnimalIdentifier === "tag") return animal.tag_id || animal.name || "Unnamed animal";
     return animal.name || animal.tag_id || "Unnamed animal";
@@ -241,6 +254,7 @@ export default function DashboardOverview({
     { label: "Total animals", value: totalAnimals, helper: selectedHerd?.name || "Current herd" },
     { label: "Stable rate", value: `${analytics.stablePct}%`, helper: `${analytics.stableCount} with no active flags` },
     { label: "Deceased", value: deceasedCount, helper: "Kept in records" },
+    { label: "Archived", value: archivedCount, helper: "Sold or inactive" },
     { label: "Vaccine care", value: vaccinationsDue, helper: "Overdue or due soon" },
     { label: "Vet care", value: upcomingVetVisits, helper: "Upcoming visits and follow-ups" },
   ];
@@ -254,7 +268,7 @@ export default function DashboardOverview({
             <h2 className="mt-1 text-2xl font-semibold text-white">Farm overview</h2>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
           {kpis.map((item) => (
             <div key={item.label} className="rounded-xl border border-gray-800 bg-gray-950 px-4 py-3">
               <p className="text-xs uppercase tracking-[0.12em] text-gray-500">{item.label}</p>
@@ -301,6 +315,7 @@ export default function DashboardOverview({
             yellowCount={analytics.yellowCount}
             stableCount={analytics.stableCount}
             deceasedCount={deceasedCount}
+            archivedCount={archivedCount}
             totalAnimals={totalAnimals}
           />
         </div>
@@ -316,7 +331,7 @@ export default function DashboardOverview({
           <div className="space-y-3">
             {visibleAttentionAnimals.length > 0 ? (
               visibleAttentionAnimals.slice(0, 4).map((animal) => {
-                const status = animal.status === "deceased" ? "deceased" : animalUrgencies[animal.id] || "green";
+                const status = isInactiveAnimalStatus(animal.status) ? animal.status : animalUrgencies[animal.id] || "green";
                 return (
                   <button
                     key={animal.id}
@@ -410,6 +425,7 @@ export default function DashboardOverview({
               ["yellow", "Due soon"],
               ["green", "Stable"],
               ["deceased", "Deceased"],
+              ["archived", "Archived"],
             ].map(([value, label]) => (
               <button
                 key={value}

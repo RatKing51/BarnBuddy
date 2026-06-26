@@ -5,6 +5,14 @@ const { ensurePremiumRecordSchema } = require("../services/ensureAppSchema");
 
 const router = express.Router();
 
+const animalResponseColumns = `
+  id, user_id, herd_id, name, species, sex, birthdate, age, comments,
+  weight, behavior, tag_id, image_url, birth_weight, birth_notes,
+  tracking_years, dam_id, sire_id, status, deceased_date, deceased_notes,
+  created_at, image_mime_type,
+  (image_key IS NOT NULL OR image_data IS NOT NULL) AS has_image
+`;
+
 function ensurePremiumSchema() {
   return ensurePremiumRecordSchema();
 }
@@ -45,6 +53,37 @@ function getHerdAnimalFilter(herdId, alias = "a") {
 
 function getHerdParams(userId, herdId) {
   return herdId === "unassigned" ? [userId] : [userId, herdId];
+}
+
+function isAnimalSaleCategory(category) {
+  return String(category || "").trim().toLowerCase() === "animal sales";
+}
+
+async function archiveSoldAnimal(userId, animalId, category) {
+  if (!animalId || !isAnimalSaleCategory(category)) return null;
+
+  const result = await pool.query(
+    `UPDATE animals
+     SET status = 'archived',
+         deceased_date = NULL,
+         deceased_notes = NULL
+     WHERE id = $1
+       AND user_id = $2
+       AND COALESCE(status, 'active') <> 'deceased'
+     RETURNING id`,
+    [animalId, userId]
+  );
+
+  if (!result.rows[0]) return null;
+
+  const animalResult = await pool.query(
+    `SELECT ${animalResponseColumns}
+     FROM animals
+     WHERE id = $1 AND user_id = $2`,
+    [animalId, userId]
+  );
+
+  return animalResult.rows[0] || null;
 }
 
 router.get("/finance/animal/:animalId", authMiddleware, async (req, res) => {
@@ -159,7 +198,8 @@ router.post("/finance", authMiddleware, async (req, res) => {
        RETURNING *`,
       [req.user.id, normalizedAnimalId, normalizedHerdId, record_date || null, category || "Expense", amount || 0, vendor || "", notes || ""]
     );
-    res.status(201).json(result.rows[0]);
+    const archivedAnimal = await archiveSoldAnimal(req.user.id, result.rows[0].animal_id, result.rows[0].category);
+    res.status(201).json({ ...result.rows[0], archived_animal: archivedAnimal });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to create finance record" });
@@ -202,7 +242,8 @@ router.put("/finance/:id", authMiddleware, async (req, res) => {
     );
 
     if (result.rowCount === 0) return res.status(404).json({ error: "Finance record not found" });
-    res.json(result.rows[0]);
+    const archivedAnimal = await archiveSoldAnimal(req.user.id, result.rows[0].animal_id, result.rows[0].category);
+    res.json({ ...result.rows[0], archived_animal: archivedAnimal });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to update finance record" });

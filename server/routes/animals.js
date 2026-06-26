@@ -21,9 +21,12 @@ const animalResponseColumns = `
 `;
 
 const normalizeAnimalStatus = (status) => {
+    if (status === "archived") return "archived";
     if (status === "deceased") return "deceased";
     return "active";
 };
+
+const isInactiveAnimalStatus = (status) => ["archived", "deceased"].includes(status);
 
 async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
     const animalFilter =
@@ -83,7 +86,7 @@ async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
             {
                 hasOverdue: false,
                 hasSoon: false,
-                urgency: animal.status === "deceased" ? "deceased" : "green",
+                urgency: isInactiveAnimalStatus(animal.status) ? animal.status : "green",
             },
         ])
     );
@@ -99,7 +102,7 @@ async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
 
     vaccinationResult.rows.forEach((vaccination) => {
         const state = animalStates.get(vaccination.animal_id);
-        if (!state || state.urgency === "deceased") return;
+        if (!state || state.urgency !== "green") return;
 
         const dueDate = parseDate(vaccination.next_due_date);
         if (!dueDate) return;
@@ -116,7 +119,7 @@ async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
 
     vetVisitResult.rows.forEach((visit) => {
         const state = animalStates.get(visit.animal_id);
-        if (!state || state.urgency === "deceased") return;
+        if (!state || state.urgency !== "green") return;
 
         const visitDate = parseDate(visit.visit_date);
         const followUpDate = parseDate(visit.follow_up_date);
@@ -145,7 +148,7 @@ async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
     const animalUrgencies = {};
     animalStates.forEach((state, animalId) => {
         animalUrgencies[animalId] =
-            state.urgency === "deceased" ? "deceased" : state.hasOverdue ? "red" : state.hasSoon ? "yellow" : "green";
+            state.urgency !== "green" ? state.urgency : state.hasOverdue ? "red" : state.hasSoon ? "yellow" : "green";
     });
 
     return {

@@ -34,6 +34,8 @@ const getAnimalCareSignature = (items) =>
     .map((animal) => `${animal.id}:${animal.status || "active"}:${animal.deceased_date || ""}`)
     .join("|");
 
+const isInactiveAnimalStatus = (status) => ["archived", "deceased"].includes(status);
+
 const getCareSummaryKey = (herd, items, careWindow, refreshKey) =>
   `${herd?.id || "none"}:${careWindow}:${refreshKey}:${getAnimalCareSignature(items)}`;
 
@@ -288,7 +290,7 @@ export default function Dashboard() {
       } catch (err) {
         console.error("Error fetching herd care summary:", err);
         setAnimalUrgencies(
-          Object.fromEntries(herdAnimals.map((animal) => [animal.id, animal.status === "deceased" ? "deceased" : "green"]))
+          Object.fromEntries(herdAnimals.map((animal) => [animal.id, isInactiveAnimalStatus(animal.status) ? animal.status : "green"]))
         );
         setVaccinationsDue(0);
         setVaccinationsDueSoon(0);
@@ -300,13 +302,15 @@ export default function Dashboard() {
   }, [animalCareSignature, selectedHerd, vaccinationRefresh, preferences.careWindow, animals]);
 
   const totalAnimals = animals.length;
-  const activeAnimals = animals.filter((animal) => animal.status !== "deceased");
+  const activeAnimals = animals.filter((animal) => !isInactiveAnimalStatus(animal.status));
   const deceasedAnimals = animals.filter((animal) => animal.status === "deceased");
+  const archivedAnimals = animals.filter((animal) => animal.status === "archived");
   const totalActiveAnimals = activeAnimals.length;
   const deceasedCount = deceasedAnimals.length;
+  const archivedCount = archivedAnimals.length;
   const careDueCount = vaccinationsDueSoon + upcomingVetVisits;
   const attentionAnimalsAll = animals
-    .filter((animal) => animal.status !== "deceased" && animalUrgencies[animal.id] !== "green")
+    .filter((animal) => !isInactiveAnimalStatus(animal.status) && animalUrgencies[animal.id] !== "green")
     .sort((a, b) => {
       const priority = { red: 0, yellow: 1, green: 2 };
       return (
@@ -323,19 +327,24 @@ export default function Dashboard() {
         counts.deceased += 1;
         return counts;
       }
+      if (animal.status === "archived") {
+        counts.archived += 1;
+        return counts;
+      }
       const urgency = animalUrgencies[animal.id] || "green";
       if (urgency === "red") counts.needsAttention += 1;
       else if (urgency === "yellow") counts.dueSoon += 1;
       else counts.current += 1;
       return counts;
     },
-    { current: 0, dueSoon: 0, needsAttention: 0, deceased: 0 }
+    { current: 0, dueSoon: 0, needsAttention: 0, deceased: 0, archived: 0 }
   );
   const careStatusSegments = [
     { key: "current", label: "Good", value: careStatusCounts.current, color: "#10b981" },
     { key: "dueSoon", label: "Due soon", value: careStatusCounts.dueSoon, color: "#f59e0b" },
     { key: "needsAttention", label: "Needs attention", value: careStatusCounts.needsAttention, color: "#ef4444" },
     { key: "deceased", label: "Deceased", value: careStatusCounts.deceased, color: "#6b7280" },
+    { key: "archived", label: "Archived", value: careStatusCounts.archived, color: "#9ca3af" },
   ];
   const generatedDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",
@@ -345,6 +354,7 @@ export default function Dashboard() {
 
   const getStatusLabel = (urgency) => {
     if (urgency === "deceased") return "Deceased";
+    if (urgency === "archived") return "Archived";
     if (urgency === "red") return "Needs attention";
     if (urgency === "yellow") return "Due soon";
     return "Current";
@@ -352,6 +362,7 @@ export default function Dashboard() {
 
   const getAnimalStatus = (animal) => {
     if (animal.status === "deceased") return "deceased";
+    if (animal.status === "archived") return "archived";
     return animalUrgencies[animal.id] || "green";
   };
 
@@ -780,6 +791,8 @@ export default function Dashboard() {
                           ? "bg-yellow-400"
                           : urgency === "deceased"
                           ? "bg-gray-500"
+                          : urgency === "archived"
+                          ? "bg-gray-500"
                           : "bg-emerald-400"
                       }`}
                     ></span>
@@ -924,6 +937,8 @@ export default function Dashboard() {
                           ? "bg-yellow-300"
                           : urgency === "deceased"
                           ? "bg-gray-500"
+                          : urgency === "archived"
+                          ? "bg-gray-500"
                           : "bg-emerald-400"
                       }`}
                     />
@@ -1022,6 +1037,7 @@ export default function Dashboard() {
                 animals={animals}
                 isPremium={subscription.isPremium}
                 onExportFinanceReport={handleExportHerdFinancePdf}
+                onAnimalSaved={handleAnimalSaved}
               />
             </div>
           ) : !selectedAnimal && activeTab === "bulk-entry" ? (
@@ -1049,6 +1065,7 @@ export default function Dashboard() {
               totalAnimals={totalAnimals}
               totalActiveAnimals={totalActiveAnimals}
               deceasedCount={deceasedCount}
+              archivedCount={archivedCount}
               vaccinationsDue={vaccinationsDue}
               upcomingVetVisits={upcomingVetVisits}
               careDueCount={careDueCount}
@@ -1126,6 +1143,7 @@ export default function Dashboard() {
                     isPremium={subscription.isPremium}
                     onExportAnimal={handleExportAnimalPdf}
                     exportLoading={exportLoading}
+                    onAnimalSaved={handleAnimalSaved}
                     view="finance"
                   />
                 )}
@@ -1559,6 +1577,10 @@ export default function Dashboard() {
             <div>
               <dt>Deceased</dt>
               <dd>{deceasedCount}</dd>
+            </div>
+            <div>
+              <dt>Archived</dt>
+              <dd>{archivedCount}</dd>
             </div>
           </dl>
         </section>

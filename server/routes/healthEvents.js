@@ -111,7 +111,8 @@ router.post("/bulk", authMiddleware, async (req, res) => {
             `SELECT id
              FROM animals
              WHERE user_id = $1
-               AND id = ANY($2::int[])`,
+               AND id = ANY($2::int[])
+               AND COALESCE(status, 'active') NOT IN ('archived', 'deceased')`,
             [req.user.id, animalIds]
         );
 
