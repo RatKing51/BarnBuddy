@@ -42,6 +42,7 @@ const getCareSummaryKey = (herd, items, careWindow, refreshKey) =>
 export default function Dashboard() {
   const { animalId: linkedAnimalId } = useParams();
   const [activeTab, setActiveTab] = useState("general");
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [dateTime, setDateTime] = useState("");
   const [selectedHerd, setSelectedHerd] = useState(null);
   const [herds, setHerds] = useState([]);
@@ -62,26 +63,31 @@ export default function Dashboard() {
   const [herdFinanceExportData, setHerdFinanceExportData] = useState(null);
 
   const handleFarmOverviewClick = () => {
+    setMobileMoreOpen(false);
     setActiveTab("general");
     setSelectedAnimal(null);
   };
 
   const handleHerdFeedClick = () => {
+    setMobileMoreOpen(false);
     setActiveTab("feed");
     setSelectedAnimal(null);
   };
 
   const handleHerdFinanceClick = () => {
+    setMobileMoreOpen(false);
     setActiveTab("herd-finance");
     setSelectedAnimal(null);
   };
 
   const handleBulkEntryClick = () => {
+    setMobileMoreOpen(false);
     setActiveTab("bulk-entry");
     setSelectedAnimal(null);
   };
 
   const handleInventoryClick = () => {
+    setMobileMoreOpen(false);
     setActiveTab("inventory");
     setSelectedAnimal(null);
   };
@@ -561,6 +567,7 @@ export default function Dashboard() {
   };
 
   const handleSelectAnimal = (animal) => {
+    setMobileMoreOpen(false);
     if (["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab)) setActiveTab("general");
     if (selectedAnimal?.id === animal.id && linkedAnimalId) {
       navigate("/dashboard", { replace: true });
@@ -571,6 +578,7 @@ export default function Dashboard() {
   };
 
   const handleCloseAnimal = () => {
+    setMobileMoreOpen(false);
     setSelectedAnimal(null);
     if (linkedAnimalId) navigate("/dashboard", { replace: true });
   };
@@ -578,6 +586,7 @@ export default function Dashboard() {
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === "Escape") {
+        setMobileMoreOpen(false);
         setSelectedAnimal(null);
       }
     };
@@ -635,6 +644,18 @@ export default function Dashboard() {
     { key: "reproduction", label: "Reproduction", mobileLabel: "Repro", compact: true },
     { key: "finance", label: "Money", mobileLabel: "Money" },
   ];
+  const animalPrimaryMobileTabs = animalRecordTabs.filter((tab) =>
+    ["general", "weight", "health", "vet"].includes(tab.key)
+  );
+  const animalMoreMobileTabs = animalRecordTabs.filter((tab) =>
+    ["reproduction", "finance"].includes(tab.key)
+  );
+  const herdMoreActive = ["bulk-entry", "inventory"].includes(activeTab);
+  const animalMoreActive = animalMoreMobileTabs.some((tab) => activeTab === tab.key);
+  const handleAnimalTabClick = (tabKey) => {
+    setMobileMoreOpen(false);
+    setActiveTab(tabKey);
+  };
 
   const setHerdFromValue = (value) => {
     if (value === "unassigned") {
@@ -1151,88 +1172,111 @@ export default function Dashboard() {
             </>
           )}
         </div>
-        <nav className="dashboard-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-gray-800 bg-gray-950/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_28px_rgba(0,0,0,0.3)] backdrop-blur xl:hidden">
+        <nav className="dashboard-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-gray-800/90 bg-gray-950/96 px-3 pt-2 shadow-[0_-12px_28px_rgba(0,0,0,0.32)] backdrop-blur xl:hidden">
           {selectedAnimal ? (
-            <div className="flex overflow-x-auto px-1">
-              {animalRecordTabs.map((tab) => (
+            <div className="relative mx-auto grid max-w-md grid-cols-5 gap-1.5">
+              {animalPrimaryMobileTabs.map((tab) => (
                 <button
                   key={tab.key}
                   type="button"
-                  onClick={() => setActiveTab(tab.key)}
+                  onClick={() => handleAnimalTabClick(tab.key)}
                   aria-label={tab.label}
-                  className={`relative min-h-14 min-w-[4.4rem] flex-1 shrink-0 px-2 text-[11px] font-semibold leading-none transition ${
-                    activeTab === tab.key ? "text-blue-300" : "text-gray-500"
+                  className={`dashboard-mobile-tab ${
+                    activeTab === tab.key ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"
                   }`}
                 >
-                  {activeTab === tab.key && (
-                    <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-blue-400" />
-                  )}
                   {tab.mobileLabel}
                 </button>
               ))}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setMobileMoreOpen((current) => !current)}
+                  aria-expanded={mobileMoreOpen}
+                  aria-haspopup="menu"
+                  className={`dashboard-mobile-tab w-full ${animalMoreActive || mobileMoreOpen ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"}`}
+                >
+                  More
+                </button>
+                {mobileMoreOpen && (
+                  <div className="dashboard-mobile-more-menu right-0" role="menu">
+                    {animalMoreMobileTabs.map((tab) => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => handleAnimalTabClick(tab.key)}
+                        className={`dashboard-mobile-more-item ${
+                          activeTab === tab.key ? "dashboard-mobile-more-item-active" : ""
+                        }`}
+                        role="menuitem"
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
-            <div className="grid grid-cols-5">
+            <div className="relative mx-auto grid max-w-md grid-cols-4 gap-1.5">
               <button
                 type="button"
                 onClick={handleFarmOverviewClick}
-                className={`relative min-h-14 px-1 text-[11px] font-semibold leading-none transition ${
-                  !["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab) ? "text-blue-300" : "text-gray-500"
+                className={`dashboard-mobile-tab ${
+                  !["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab) ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"
                 }`}
               >
-                {!["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab) && (
-                  <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-blue-400" />
-                )}
                 Home
               </button>
               <button
                 type="button"
                 onClick={handleHerdFeedClick}
-                className={`relative min-h-14 px-1 text-[11px] font-semibold leading-none transition ${
-                  activeTab === "feed" ? "text-blue-300" : "text-gray-500"
+                className={`dashboard-mobile-tab ${
+                  activeTab === "feed" ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"
                 }`}
               >
-                {activeTab === "feed" && (
-                  <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-blue-400" />
-                )}
                 Feed
               </button>
               <button
                 type="button"
                 onClick={handleHerdFinanceClick}
-                className={`relative min-h-14 px-1 text-[11px] font-semibold leading-none transition ${
-                  activeTab === "herd-finance" ? "text-blue-300" : "text-gray-500"
+                className={`dashboard-mobile-tab ${
+                  activeTab === "herd-finance" ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"
                 }`}
               >
-                {activeTab === "herd-finance" && (
-                  <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-blue-400" />
-                )}
                 Money
               </button>
-              <button
-                type="button"
-                onClick={handleBulkEntryClick}
-                className={`relative min-h-14 px-1 text-[11px] font-semibold leading-none transition ${
-                  activeTab === "bulk-entry" ? "text-blue-300" : "text-gray-500"
-                }`}
-              >
-                {activeTab === "bulk-entry" && (
-                  <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-blue-400" />
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setMobileMoreOpen((current) => !current)}
+                  aria-expanded={mobileMoreOpen}
+                  aria-haspopup="menu"
+                  className={`dashboard-mobile-tab w-full ${herdMoreActive || mobileMoreOpen ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"}`}
+                >
+                  More
+                </button>
+                {mobileMoreOpen && (
+                  <div className="dashboard-mobile-more-menu right-0" role="menu">
+                    <button
+                      type="button"
+                      onClick={handleBulkEntryClick}
+                      className={`dashboard-mobile-more-item ${activeTab === "bulk-entry" ? "dashboard-mobile-more-item-active" : ""}`}
+                      role="menuitem"
+                    >
+                      Bulk Entry
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleInventoryClick}
+                      className={`dashboard-mobile-more-item ${activeTab === "inventory" ? "dashboard-mobile-more-item-active" : ""}`}
+                      role="menuitem"
+                    >
+                      Inventory
+                    </button>
+                  </div>
                 )}
-                Bulk
-              </button>
-              <button
-                type="button"
-                onClick={handleInventoryClick}
-                className={`relative min-h-14 px-0.5 text-[10px] font-semibold leading-none transition ${
-                  activeTab === "inventory" ? "text-blue-300" : "text-gray-500"
-                }`}
-              >
-                {activeTab === "inventory" && (
-                  <span className="absolute inset-x-2 top-0 h-0.5 rounded-full bg-blue-400" />
-                )}
-                Inventory
-              </button>
+              </div>
             </div>
           )}
         </nav>
