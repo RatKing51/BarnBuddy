@@ -291,6 +291,7 @@ async function logAdminActivity({ userId, action, details = {} }) {
 }
 
 async function getAdminActivity({ limit = 30 } = {}) {
+  const normalizedLimit = Math.max(1, Math.min(Number.parseInt(limit, 10) || 30, 100));
   const result = await pool.query(
     `SELECT aal.id,
             aal.action,
@@ -303,11 +304,12 @@ async function getAdminActivity({ limit = 30 } = {}) {
      LEFT JOIN users u ON u.id = aal.user_id
      ORDER BY aal.created_at DESC
      LIMIT $1`,
-    [Math.max(1, Math.min(Number.parseInt(limit, 10) || 30, 100))]
+    [normalizedLimit]
   );
 
   return result.rows.map((row) => ({
-    id: row.id,
+    id: `admin-${row.id}`,
+    source: "admin",
     action: row.action,
     details: row.details || {},
     createdAt: row.created_at,

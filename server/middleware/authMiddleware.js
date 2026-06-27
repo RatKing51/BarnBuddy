@@ -2,6 +2,7 @@ const { clerkClient, getAuth } = require("@clerk/express");
 const pool = require("../data-source");
 const { findOrCreateLocalUserFromAuth } = require("../services/clerkUserSync");
 const { cleanupPremiumDataForUser } = require("../services/premiumDowngradeCleanup");
+const { attachActivityLogger } = require("../services/userActivity");
 
 const premiumPlanValues = new Set(["premium", "pro", "paid", "active"]);
 const activeStatusValues = new Set(["active", "trialing", "paid"]);
@@ -194,6 +195,7 @@ module.exports = async function authMiddleware(req, res, next) {
             clerkUserId: authenticatedUserId,
             subscription,
         };
+        attachActivityLogger(req, res);
         next();
     } catch (err) {
         console.error("Auth middleware failed:", {

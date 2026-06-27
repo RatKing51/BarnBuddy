@@ -3,6 +3,7 @@ const ensureAnimalSchema = require("./ensureAnimalSchema");
 const { ensureSchema: ensureUserSchema } = require("./clerkUserSync");
 const { ensurePreferenceSchema } = require("./userPreferences");
 const { ensureSiteContentSchema } = require("./siteContent");
+const { ensureUserActivitySchema } = require("./userActivity");
 
 let appSchemaReadyPromise;
 
@@ -163,6 +164,7 @@ async function ensureAppSchema() {
       await ensurePreferenceSchema();
       await ensureAnimalSchema();
       await ensureSiteContentSchema();
+      await ensureUserActivitySchema();
       await ensurePremiumRecordSchema();
       await ensureReproductionSchema();
       await ensureBirthSchema();

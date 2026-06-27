@@ -129,7 +129,38 @@ function activityLabel(action) {
     support_message_updated: 'Updated support message',
   }
 
-  return labels[action] || action.replace(/_/g, ' ')
+  const label = labels[action] || action.replace(/_/g, ' ')
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
+function formatActivityDetail(value) {
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'object') return Object.entries(value).map(([key, entry]) => `${key}: ${entry}`).join(', ')
+  return String(value)
+}
+
+function userActivityDescription(item) {
+  const action = activityLabel(item.action)
+  const path = item.details?.path || ''
+
+  if (path.includes('/weight-records')) return `${action} for an animal`
+  if (path.includes('/upload')) return `${action} for an animal`
+  if (path.includes('/birth-data')) return `${action} for an animal`
+  if (path.includes('/animals')) return action
+  if (path.includes('/herds')) return action
+  if (path.includes('/vaccinations')) return action
+  if (path.includes('/vetVisits')) return action
+  if (path.includes('/healthEvents')) return action
+  if (path.includes('/premium-records/finance')) return action
+  if (path.includes('/premium-records/feed')) return action
+  if (path.includes('/premium-records/inventory')) return action
+  if (path.includes('/reproductions')) return action
+  if (path.includes('/births')) return action
+  if (path.includes('/preferences')) return 'Updated account preferences'
+  if (path.includes('/newsletter')) return 'Updated newsletter settings'
+  if (path.includes('/notifications')) return 'Sent reminders'
+
+  return action
 }
 
 function broadcastAnnouncement(announcement) {
@@ -179,8 +210,12 @@ export default function AdminContent() {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [uploadingCarouselImage, setUploadingCarouselImage] = useState(false)
   const [uploadingBrandingField, setUploadingBrandingField] = useState('')
-  const [activity, setActivity] = useState([])
-  const [activityLoading, setActivityLoading] = useState(false)
+  const [adminActivity, setAdminActivity] = useState([])
+  const [adminActivityLoading, setAdminActivityLoading] = useState(false)
+  const [userActivity, setUserActivity] = useState([])
+  const [userActivityLoading, setUserActivityLoading] = useState(false)
+  const [activityUsers, setActivityUsers] = useState([])
+  const [selectedActivityUserId, setSelectedActivityUserId] = useState('')
   const [mediaLibrary, setMediaLibrary] = useState([])
   const [supportMessages, setSupportMessages] = useState([])
   const [newsletterSubscribers, setNewsletterSubscribers] = useState([])
@@ -189,9 +224,9 @@ export default function AdminContent() {
   const [notAuthenticated, setNotAuthenticated] = useState(false)
   const [loadError, setLoadError] = useState('')
 
-  const loadActivity = useCallback(async function loadActivity() {
+  const loadAdminActivity = useCallback(async function loadAdminActivity() {
     try {
-      setActivityLoading(true)
+      setAdminActivityLoading(true)
       const res = await authFetch(`${API_BASE_URL}/site-content/admin/activity?limit=40`)
       const data = await res.json().catch(() => ({}))
 
@@ -199,13 +234,53 @@ export default function AdminContent() {
         throw new Error(data.error || data.message || 'Failed to load admin activity.')
       }
 
-      setActivity(Array.isArray(data.activity) ? data.activity : [])
+      setAdminActivity(Array.isArray(data.activity) ? data.activity : [])
     } catch (err) {
       console.warn('Failed to load admin activity:', err.message)
     } finally {
-      setActivityLoading(false)
+      setAdminActivityLoading(false)
     }
   }, [authFetch])
+
+  const loadActivityUsers = useCallback(async function loadActivityUsers() {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/site-content/admin/user-activity/users?limit=200`)
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Failed to load users.')
+      }
+
+      const users = Array.isArray(data.users) ? data.users : []
+      setActivityUsers(users)
+      setSelectedActivityUserId((current) => current || String(users[0]?.id || ''))
+    } catch (err) {
+      console.warn('Failed to load activity users:', err.message)
+    }
+  }, [authFetch])
+
+  const loadUserActivity = useCallback(async function loadUserActivity(userId = selectedActivityUserId) {
+    if (!userId) {
+      setUserActivity([])
+      return
+    }
+
+    try {
+      setUserActivityLoading(true)
+      const res = await authFetch(`${API_BASE_URL}/site-content/admin/user-activity?limit=80&userId=${encodeURIComponent(userId)}`)
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Failed to load user activity.')
+      }
+
+      setUserActivity(Array.isArray(data.activity) ? data.activity : [])
+    } catch (err) {
+      console.warn('Failed to load user activity:', err.message)
+    } finally {
+      setUserActivityLoading(false)
+    }
+  }, [authFetch, selectedActivityUserId])
 
   const loadAdminTools = useCallback(async function loadAdminTools() {
     try {
@@ -273,13 +348,18 @@ export default function AdminContent() {
     }
 
     loadContent()
-    loadActivity()
+    loadAdminActivity()
+    loadActivityUsers()
     loadAdminTools()
 
     return () => {
       cancelled = true
     }
-  }, [authFetch, loadActivity, loadAdminTools])
+  }, [authFetch, loadAdminActivity, loadActivityUsers, loadAdminTools])
+
+  useEffect(() => {
+    loadUserActivity(selectedActivityUserId)
+  }, [loadUserActivity, selectedActivityUserId])
 
   useEffect(() => {
     if (selectedPostIndex > content.newsPosts.length - 1) {
@@ -315,10 +395,11 @@ export default function AdminContent() {
       { label: 'Carousel', value: publishedCarouselSlides },
       { label: 'Services', value: content.status.services?.length || 0 },
       { label: 'Support', value: supportMessages.length },
-      { label: 'Activity items', value: activity.length },
+      { label: 'Admin activity', value: adminActivity.length },
+      { label: 'Tracked users', value: activityUsers.length },
       { label: 'Needs attention', value: flaggedServices },
     ]
-  }, [activity.length, content, supportMessages.length])
+  }, [activityUsers.length, adminActivity.length, content, supportMessages.length])
 
   const selectedPost = content.newsPosts[selectedPostIndex] || null
   const selectedReview = (content.reviews || [])[selectedReviewIndex] || null
@@ -523,7 +604,7 @@ export default function AdminContent() {
         appleTouchIcon.href = `${API_BASE_URL}/site-content/branding/apple-touch-icon?t=${brandingRefreshKey}`
       }
       toast.success('Website content saved.')
-      await loadActivity()
+      await loadAdminActivity()
       await loadAdminTools()
     } catch (err) {
       toast.error(err.message || 'Failed to save website content.')
@@ -574,7 +655,7 @@ export default function AdminContent() {
         imageFit: selectedPost.imageFit || 'cover',
       })
       toast.success('Image uploaded. Save changes to publish it.')
-      await loadActivity()
+      await loadAdminActivity()
       await loadAdminTools()
     } catch (err) {
       toast.error(err.message || 'Failed to upload image.')
@@ -619,7 +700,7 @@ export default function AdminContent() {
         alt: selectedCarouselSlide.alt || selectedCarouselSlide.title || file.name,
       })
       toast.success('Carousel image uploaded. Save changes to publish it.')
-      await loadActivity()
+      await loadAdminActivity()
       await loadAdminTools()
     } catch (err) {
       toast.error(err.message || 'Failed to upload image.')
@@ -671,7 +752,7 @@ export default function AdminContent() {
 
       setSupportMessages((current) => current.map((message) => (message.id === id ? data.message : message)))
       toast.success('Support message updated.')
-      await loadActivity()
+      await loadAdminActivity()
     } catch (err) {
       toast.error(err.message || 'Failed to update support message.')
     }
@@ -770,7 +851,8 @@ export default function AdminContent() {
               ['media', 'Media'],
               ['links', 'Links'],
               ['support', 'Support'],
-              ['activity', 'Activity'],
+              ['activity', 'Admin activity'],
+              ['userActivity', 'User activity'],
             ].map(([id, label]) => (
               <button
                 key={id}
@@ -845,7 +927,7 @@ export default function AdminContent() {
 
           {activeTab === 'overview' && (
             <div className="mt-6 space-y-6">
-              <div className="grid grid-cols-2 gap-3 xl:grid-cols-8">
+              <div className="grid grid-cols-2 gap-3 xl:grid-cols-9">
                 {dashboardStats.map((stat) => (
                   <div key={stat.label} className="rounded-lg border border-slate-800 bg-slate-900 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{stat.label}</p>
@@ -914,7 +996,7 @@ export default function AdminContent() {
                 <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
                   <div>
                     <h3 className="font-semibold">Recent admin activity</h3>
-                    <p className="mt-1 text-sm text-slate-400">Latest saves and uploads.</p>
+                    <p className="mt-1 text-sm text-slate-400">Latest website saves, uploads, and support changes.</p>
                   </div>
                   <button
                     type="button"
@@ -925,7 +1007,7 @@ export default function AdminContent() {
                   </button>
                 </div>
                 <div className="divide-y divide-slate-800">
-                  {activity.slice(0, 5).map((item) => (
+                  {adminActivity.slice(0, 5).map((item) => (
                     <div key={item.id} className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="font-semibold text-white">{activityLabel(item.action)}</p>
@@ -936,9 +1018,9 @@ export default function AdminContent() {
                       </time>
                     </div>
                   ))}
-                  {!activity.length && (
+                  {!adminActivity.length && (
                     <div className="px-5 py-6 text-sm text-slate-400">
-                      {activityLoading ? 'Loading activity...' : 'No admin activity recorded yet.'}
+                      {adminActivityLoading ? 'Loading activity...' : 'No admin activity recorded yet.'}
                     </div>
                   )}
                 </div>
@@ -1819,19 +1901,19 @@ export default function AdminContent() {
               <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-xl font-semibold">Admin activity</h3>
-                  <p className="mt-1 text-sm text-slate-400">A running log of website content changes and uploads.</p>
+                  <p className="mt-1 text-sm text-slate-400">A running log of website content changes, uploads, and support updates.</p>
                 </div>
                 <button
                   type="button"
-                  onClick={loadActivity}
+                  onClick={loadAdminActivity}
                   className="rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
                 >
-                  {activityLoading ? 'Refreshing...' : 'Refresh'}
+                  {adminActivityLoading ? 'Refreshing...' : 'Refresh'}
                 </button>
               </div>
 
               <div className="divide-y divide-slate-800">
-                {activity.map((item) => (
+                {adminActivity.map((item) => (
                   <article key={item.id} className="grid grid-cols-1 gap-4 px-5 py-5 xl:grid-cols-[14rem_1fr_13rem]">
                     <div>
                       <p className="text-sm font-semibold text-white">{item.actor?.name || 'Unknown admin'}</p>
@@ -1844,7 +1926,7 @@ export default function AdminContent() {
                         {Object.entries(item.details || {}).map(([key, value]) => (
                           <span key={key} className="rounded-md border border-slate-800 bg-slate-950/55 px-2.5 py-1 text-xs text-slate-300">
                             <span className="text-slate-500">{key}: </span>
-                            {String(value)}
+                            {formatActivityDetail(value)}
                           </span>
                         ))}
                       </div>
@@ -1856,15 +1938,105 @@ export default function AdminContent() {
                   </article>
                 ))}
 
-                {!activity.length && (
+                {!adminActivity.length && (
                   <div className="px-5 py-10">
                     <EmptyState
-                      title={activityLoading ? 'Loading activity' : 'No activity yet'}
-                      text={activityLoading ? 'Checking the latest admin actions.' : 'Saves and image uploads will appear here once they happen.'}
+                      title={adminActivityLoading ? 'Loading activity' : 'No admin activity yet'}
+                      text={adminActivityLoading ? 'Checking the latest admin actions.' : 'Website saves and uploads will appear here once they happen.'}
                     />
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {activeTab === 'userActivity' && (
+            <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[20rem_1fr]">
+              <aside className="rounded-lg border border-slate-800 bg-slate-900">
+                <div className="border-b border-slate-800 px-5 py-4">
+                  <h3 className="text-xl font-semibold">Users</h3>
+                  <p className="mt-1 text-sm text-slate-400">Select a user to see what they have done.</p>
+                </div>
+
+                <div className="p-5">
+                  <select
+                    className={inputClass()}
+                    value={selectedActivityUserId}
+                    onChange={(event) => setSelectedActivityUserId(event.target.value)}
+                  >
+                    {activityUsers.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name || user.email || `User ${user.id}`}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="mt-4 max-h-[32rem] space-y-2 overflow-y-auto pr-1">
+                    {activityUsers.map((user) => (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() => setSelectedActivityUserId(String(user.id))}
+                        className={`w-full rounded-md border px-3 py-3 text-left transition ${
+                          String(user.id) === String(selectedActivityUserId)
+                            ? 'border-sky-300/50 bg-sky-500/15'
+                            : 'border-slate-800 bg-slate-950/45 hover:bg-slate-800'
+                        }`}
+                      >
+                        <p className="truncate text-sm font-semibold text-white">{user.name || 'Unknown user'}</p>
+                        <p className="mt-1 truncate text-xs text-slate-500">{user.email || user.clerkUserId || 'No email'}</p>
+                        <p className="mt-2 text-xs text-slate-400">{user.activityCount} actions</p>
+                      </button>
+                    ))}
+
+                    {!activityUsers.length && (
+                      <p className="text-sm text-slate-500">No users found yet.</p>
+                    )}
+                  </div>
+                </div>
+              </aside>
+
+              <section className="rounded-lg border border-slate-800 bg-slate-900">
+                <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold">User activity</h3>
+                    <p className="mt-1 text-sm text-slate-400">
+                      {activityUsers.find((user) => String(user.id) === String(selectedActivityUserId))?.email || 'Choose a user to inspect their activity.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => loadUserActivity(selectedActivityUserId)}
+                    className="rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
+                  >
+                    {userActivityLoading ? 'Refreshing...' : 'Refresh'}
+                  </button>
+                </div>
+
+                <div className="divide-y divide-slate-800">
+                  {userActivity.map((item) => (
+                    <article key={item.id} className="grid grid-cols-1 gap-4 px-5 py-5 xl:grid-cols-[1fr_13rem]">
+                      <div>
+                        <p className="font-semibold text-white">{userActivityDescription(item)}</p>
+                        <p className="mt-1 text-sm text-slate-400">Successful action</p>
+                      </div>
+
+                      <time className="text-sm text-slate-500 xl:text-right" dateTime={item.createdAt}>
+                        {formatDateTime(item.createdAt)}
+                      </time>
+                    </article>
+                  ))}
+
+                  {!userActivity.length && (
+                    <div className="px-5 py-10">
+                      <EmptyState
+                        title={userActivityLoading ? 'Loading activity' : 'No user activity yet'}
+                        text={userActivityLoading ? 'Checking this user now.' : 'Successful record changes for the selected user will show here.'}
+                      />
+                    </div>
+                  )}
+                </div>
+              </section>
             </div>
           )}
         </section>

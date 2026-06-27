@@ -20,6 +20,7 @@ const {
   logAdminActivity,
   updateSiteContent,
 } = require("../services/siteContent");
+const { getUserActivity, getUserActivityUsers } = require("../services/userActivity");
 
 const router = express.Router();
 const validTones = new Set(["green", "blue", "yellow", "red"]);
@@ -341,6 +342,29 @@ router.get("/admin/activity", authMiddleware, requireAdmin, async (req, res) => 
   } catch (err) {
     console.error("Failed to load admin activity:", err);
     res.status(500).json({ error: "Failed to load admin activity" });
+  }
+});
+
+router.get("/admin/user-activity/users", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const users = await getUserActivityUsers({ limit: req.query.limit });
+    res.json({ users });
+  } catch (err) {
+    console.error("Failed to load activity users:", err);
+    res.status(500).json({ error: "Failed to load activity users" });
+  }
+});
+
+router.get("/admin/user-activity", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const activity = await getUserActivity({
+      limit: req.query.limit,
+      userId: req.query.userId,
+    });
+    res.json({ activity });
+  } catch (err) {
+    console.error("Failed to load user activity:", err);
+    res.status(500).json({ error: "Failed to load user activity" });
   }
 });
 
