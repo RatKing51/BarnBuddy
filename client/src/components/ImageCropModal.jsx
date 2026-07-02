@@ -2,6 +2,44 @@ import React, { useEffect, useRef, useState } from "react";
 
 const DEFAULT_OUTPUT_WIDTH = 1200;
 const DEFAULT_OUTPUT_HEIGHT = 900;
+const DEFAULT_ASPECT_RATIO_OPTIONS = [
+  { label: "Wide", aspectRatio: "16 / 10", outputWidth: 1600, outputHeight: 1000 },
+  { label: "Landscape", aspectRatio: "4 / 3", outputWidth: 1200, outputHeight: 900 },
+  { label: "Square", aspectRatio: "1 / 1", outputWidth: 1200, outputHeight: 1200 },
+  { label: "Portrait", aspectRatio: "4 / 5", outputWidth: 1200, outputHeight: 1500 },
+  { label: "Mobile", aspectRatio: "9 / 16", outputWidth: 1080, outputHeight: 1920 },
+  { label: "Original", aspectRatio: "original" },
+];
+
+function getRatioValue(aspectRatio) {
+  if (typeof aspectRatio === "number" && Number.isFinite(aspectRatio) && aspectRatio > 0) {
+    return aspectRatio;
+  }
+
+  const match = String(aspectRatio || "").match(/^\s*(\d+(?:\.\d+)?)\s*(?:\/|:)\s*(\d+(?:\.\d+)?)\s*$/);
+  if (!match) return DEFAULT_OUTPUT_WIDTH / DEFAULT_OUTPUT_HEIGHT;
+
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  return width > 0 && height > 0 ? width / height : DEFAULT_OUTPUT_WIDTH / DEFAULT_OUTPUT_HEIGHT;
+}
+
+function getOutputSizeForRatio(aspectRatio, fallbackWidth = DEFAULT_OUTPUT_WIDTH, fallbackHeight = DEFAULT_OUTPUT_HEIGHT) {
+  const ratio = getRatioValue(aspectRatio);
+  const longSide = Math.max(fallbackWidth, fallbackHeight, 1200);
+
+  if (ratio >= 1) {
+    return {
+      width: longSide,
+      height: Math.max(1, Math.round(longSide / ratio)),
+    };
+  }
+
+  return {
+    width: Math.max(1, Math.round(longSide * ratio)),
+    height: longSide,
+  };
+}
 
 function clampOffset(offset, imageSize, viewportSize, zoom) {
   if (!imageSize.width || !viewportSize.width) return { x: 0, y: 0 };
@@ -25,6 +63,7 @@ export default function ImageCropModal({
   outputType = "image/jpeg",
   outputQuality = 0.9,
   outputFileSuffix = "cropped",
+  aspectRatioOptions = DEFAULT_ASPECT_RATIO_OPTIONS,
   confirmLabel = "Use photo",
   onCancel,
   onConfirm,
@@ -40,6 +79,12 @@ export default function ImageCropModal({
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isSaving, setIsSaving] = useState(false);
   const [cropError, setCropError] = useState("");
+  const [cropConfig, setCropConfig] = useState({
+    aspectRatio,
+    outputWidth,
+    outputHeight,
+  });
+  const [customRatio, setCustomRatio] = useState({ width: "9", height: "16" });
 
   useEffect(() => {
     const url = URL.createObjectURL(file);
@@ -65,6 +110,12 @@ export default function ImageCropModal({
   }, [imageSize, viewportSize, zoom]);
 
   useEffect(() => {
+    setCropConfig({ aspectRatio, outputWidth, outputHeight });
+    setZoom(1);
+    setOffset({ x: 0, y: 0 });
+  }, [aspectRatio, outputHeight, outputWidth, file]);
+
+  useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "Escape" && !isSaving) onCancel();
     };
@@ -75,6 +126,52 @@ export default function ImageCropModal({
   function resetCrop() {
     setZoom(1);
     setOffset({ x: 0, y: 0 });
+  }
+
+  function getOriginalCropConfig() {
+    const ratioText = imageSize.width && imageSize.height
+      ? `${imageSize.width} / ${imageSize.height}`
+      : aspectRatio;
+    const size = getOutputSizeForRatio(ratioText, outputWidth, outputHeight);
+
+    return {
+      aspectRatio: ratioText,
+      outputWidth: size.width,
+      outputHeight: size.height,
+    };
+  }
+
+  function selectAspectRatio(option) {
+    const generatedSize = getOutputSizeForRatio(option.aspectRatio, outputWidth, outputHeight);
+    const nextConfig = option.aspectRatio === "original"
+      ? getOriginalCropConfig()
+      : {
+          aspectRatio: option.aspectRatio,
+          outputWidth: option.outputWidth || generatedSize.width,
+          outputHeight: option.outputHeight || generatedSize.height,
+        };
+
+    setCropConfig(nextConfig);
+    resetCrop();
+  }
+
+  function applyCustomAspectRatio() {
+    const ratioWidth = Number(customRatio.width);
+    const ratioHeight = Number(customRatio.height);
+    if (!ratioWidth || !ratioHeight || ratioWidth <= 0 || ratioHeight <= 0) {
+      setCropError("Enter a valid custom crop ratio.");
+      return;
+    }
+
+    const customAspectRatio = `${ratioWidth} / ${ratioHeight}`;
+    const size = getOutputSizeForRatio(customAspectRatio, outputWidth, outputHeight);
+    setCropError("");
+    setCropConfig({
+      aspectRatio: customAspectRatio,
+      outputWidth: size.width,
+      outputHeight: size.height,
+    });
+    resetCrop();
   }
 
   function updateZoom(nextZoom, focalPoint = null) {
@@ -143,14 +240,14 @@ export default function ImageCropModal({
     setCropError("");
     try {
       const canvas = document.createElement("canvas");
-      canvas.width = outputWidth;
-      canvas.height = outputHeight;
+      canvas.width = cropConfig.outputWidth;
+      canvas.height = cropConfig.outputHeight;
       const context = canvas.getContext("2d");
       const coverScale = Math.max(viewportSize.width / imageSize.width, viewportSize.height / imageSize.height);
       const displayedWidth = imageSize.width * coverScale * zoom;
       const displayedHeight = imageSize.height * coverScale * zoom;
-      const scaleX = outputWidth / viewportSize.width;
-      const scaleY = outputHeight / viewportSize.height;
+      const scaleX = cropConfig.outputWidth / viewportSize.width;
+      const scaleY = cropConfig.outputHeight / viewportSize.height;
 
       context.imageSmoothingEnabled = true;
       context.imageSmoothingQuality = "high";
@@ -199,7 +296,7 @@ export default function ImageCropModal({
           <div
             ref={viewportRef}
             className="relative mx-auto w-full max-w-2xl cursor-move touch-none overflow-hidden rounded-2xl bg-black shadow-inner"
-            style={{ aspectRatio }}
+            style={{ aspectRatio: cropConfig.aspectRatio }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerEnd}
@@ -233,6 +330,59 @@ export default function ImageCropModal({
             <input type="range" min="1" max="3" step="0.01" value={zoom} onChange={(event) => updateZoom(Number(event.target.value))} className="h-11 min-w-0 flex-1 cursor-pointer accent-blue-500" aria-label="Photo zoom" />
             <span className="text-sm font-medium text-gray-400" aria-hidden="true">+</span>
             <button type="button" onClick={resetCrop} className="min-h-11 rounded-xl border border-gray-600 px-4 text-sm font-semibold text-gray-200 transition hover:bg-gray-800">Reset</button>
+          </div>
+          <div className="mx-auto mt-4 max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Crop shape</p>
+            <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {aspectRatioOptions.map((option) => {
+                const optionRatio = option.aspectRatio === "original" ? getOriginalCropConfig().aspectRatio : option.aspectRatio;
+                const isSelected = cropConfig.aspectRatio === optionRatio;
+
+                return (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => selectAspectRatio(option)}
+                    disabled={option.aspectRatio === "original" && !imageSize.width}
+                    className={`min-h-10 rounded-lg border px-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                      isSelected
+                        ? "border-blue-300 bg-blue-500/20 text-blue-100"
+                        : "border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-500 hover:text-white"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-3 grid grid-cols-[1fr_auto_1fr_auto] items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                step="0.1"
+                value={customRatio.width}
+                onChange={(event) => setCustomRatio((current) => ({ ...current, width: event.target.value }))}
+                className="min-h-10 rounded-lg border border-gray-700 bg-gray-950 px-3 text-sm text-white outline-none focus:border-blue-300"
+                aria-label="Custom crop ratio width"
+              />
+              <span className="text-sm font-semibold text-gray-500">:</span>
+              <input
+                type="number"
+                min="1"
+                step="0.1"
+                value={customRatio.height}
+                onChange={(event) => setCustomRatio((current) => ({ ...current, height: event.target.value }))}
+                className="min-h-10 rounded-lg border border-gray-700 bg-gray-950 px-3 text-sm text-white outline-none focus:border-blue-300"
+                aria-label="Custom crop ratio height"
+              />
+              <button
+                type="button"
+                onClick={applyCustomAspectRatio}
+                className="min-h-10 rounded-lg border border-gray-700 bg-gray-800 px-3 text-sm font-semibold text-gray-200 transition hover:border-gray-500 hover:text-white"
+              >
+                Apply
+              </button>
+            </div>
           </div>
           {cropError && (
             <p className="mx-auto mt-3 max-w-2xl rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">
