@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-toastify'
 import { API_BASE_URL, API_URL } from '../config/env'
 import { useAuth } from '../context/AuthContext'
+import ImageCropModal from '../components/ImageCropModal'
 import ReviewLandingCard from '../components/ReviewLandingCard'
 import { defaultSiteContent } from '../data/siteContent'
 import { getSiteAssetUrl, resolveSiteImageUrl } from '../config/siteImages'
@@ -210,6 +211,7 @@ export default function AdminContent() {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [uploadingCarouselImage, setUploadingCarouselImage] = useState(false)
   const [uploadingBrandingField, setUploadingBrandingField] = useState('')
+  const [imageToCrop, setImageToCrop] = useState(null)
   const [adminActivity, setAdminActivity] = useState([])
   const [adminActivityLoading, setAdminActivityLoading] = useState(false)
   const [userActivity, setUserActivity] = useState([])
@@ -618,11 +620,11 @@ export default function AdminContent() {
     toast.info('Unsaved changes discarded.')
   }
 
-  async function uploadPostImage(event) {
+  function queueSiteImageCrop(event, target) {
     const file = event.target.files?.[0]
     event.target.value = ''
 
-    if (!file || !selectedPost) return
+    if (!file) return
 
     if (!file.type.startsWith('image/')) {
       toast.error('Upload a JPG, PNG, WebP, or another image file.')
@@ -634,8 +636,62 @@ export default function AdminContent() {
       return
     }
 
+    setImageToCrop({ file, ...target })
+  }
+
+  function selectPostImage(event) {
+    if (!selectedPost) return
+    queueSiteImageCrop(event, {
+      type: 'post',
+      index: selectedPostIndex,
+      title: `Crop ${selectedPost.title || 'news'} image`,
+      aspectRatio: '16 / 10',
+      outputWidth: 1600,
+      outputHeight: 1000,
+      outputType: 'image/jpeg',
+      confirmLabel: 'Upload image',
+    })
+  }
+
+  function selectCarouselImage(event) {
+    if (!selectedCarouselSlide) return
+    queueSiteImageCrop(event, {
+      type: 'carousel',
+      index: selectedCarouselIndex,
+      title: `Crop ${selectedCarouselSlide.title || 'carousel'} image`,
+      aspectRatio: '16 / 10',
+      outputWidth: 1600,
+      outputHeight: 1000,
+      outputType: 'image/jpeg',
+      confirmLabel: 'Upload image',
+    })
+  }
+
+  function selectBrandingImage(event, field, label) {
+    queueSiteImageCrop(event, {
+      type: 'branding',
+      field,
+      title: `Crop ${label}`,
+      aspectRatio: '1 / 1',
+      outputWidth: 1024,
+      outputHeight: 1024,
+      outputType: 'image/png',
+      confirmLabel: 'Upload image',
+    })
+  }
+
+  function getUploadedImageUrl(data) {
+    return data.url?.startsWith('/api/') ? `${API_URL}${data.url}` : data.url
+  }
+
+  async function uploadCroppedSiteImage(file) {
+    if (!imageToCrop) return
+
     try {
-      setUploadingImage(true)
+      if (imageToCrop.type === 'post') setUploadingImage(true)
+      if (imageToCrop.type === 'carousel') setUploadingCarouselImage(true)
+      if (imageToCrop.type === 'branding') setUploadingBrandingField(imageToCrop.field)
+
       const formData = new FormData()
       formData.append('image', file)
 
@@ -649,91 +705,36 @@ export default function AdminContent() {
         throw new Error(data.error || data.message || 'Failed to upload image.')
       }
 
-      updatePost(selectedPostIndex, {
-        image: data.url?.startsWith('/api/') ? `${API_URL}${data.url}` : data.url,
-        imageAlt: selectedPost.imageAlt || selectedPost.title || file.name,
-        imageFit: selectedPost.imageFit || 'cover',
-      })
-      toast.success('Image uploaded. Save changes to publish it.')
+      const uploadedUrl = getUploadedImageUrl(data)
+
+      if (imageToCrop.type === 'post') {
+        const post = content.newsPosts[imageToCrop.index] || selectedPost
+        updatePost(imageToCrop.index, {
+          image: uploadedUrl,
+          imageAlt: post?.imageAlt || post?.title || file.name,
+          imageFit: post?.imageFit || 'cover',
+        })
+        toast.success('Image uploaded. Save changes to publish it.')
+      } else if (imageToCrop.type === 'carousel') {
+        const slide = (content.carouselSlides || [])[imageToCrop.index] || selectedCarouselSlide
+        updateCarouselSlide(imageToCrop.index, {
+          image: uploadedUrl,
+          alt: slide?.alt || slide?.title || file.name,
+        })
+        toast.success('Carousel image uploaded. Save changes to publish it.')
+      } else if (imageToCrop.type === 'branding') {
+        updateBranding({ [imageToCrop.field]: uploadedUrl })
+        toast.success('Brand image uploaded. Save changes to publish it.')
+      }
+
+      setImageToCrop(null)
       await loadAdminActivity()
       await loadAdminTools()
     } catch (err) {
       toast.error(err.message || 'Failed to upload image.')
     } finally {
       setUploadingImage(false)
-    }
-  }
-
-  async function uploadCarouselImage(event) {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-
-    if (!file || !selectedCarouselSlide) return
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Upload a JPG, PNG, WebP, or another image file.')
-      return
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image is too large. Max size is 5MB.')
-      return
-    }
-
-    try {
-      setUploadingCarouselImage(true)
-      const formData = new FormData()
-      formData.append('image', file)
-
-      const res = await authFetch(`${API_BASE_URL}/site-content/admin/media`, {
-        method: 'POST',
-        body: formData,
-      })
-      const data = await res.json().catch(() => ({}))
-
-      if (!res.ok) {
-        throw new Error(data.error || data.message || 'Failed to upload image.')
-      }
-
-      updateCarouselSlide(selectedCarouselIndex, {
-        image: data.url?.startsWith('/api/') ? `${API_URL}${data.url}` : data.url,
-        alt: selectedCarouselSlide.alt || selectedCarouselSlide.title || file.name,
-      })
-      toast.success('Carousel image uploaded. Save changes to publish it.')
-      await loadAdminActivity()
-      await loadAdminTools()
-    } catch (err) {
-      toast.error(err.message || 'Failed to upload image.')
-    } finally {
       setUploadingCarouselImage(false)
-    }
-  }
-
-  async function uploadBrandingImage(event, field) {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-    if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
-      toast.error('Choose an image up to 5MB.')
-      return
-    }
-
-    try {
-      setUploadingBrandingField(field)
-      const formData = new FormData()
-      formData.append('image', file)
-      const res = await authFetch(`${API_BASE_URL}/site-content/admin/media`, {
-        method: 'POST',
-        body: formData,
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || data.message || 'Failed to upload image.')
-      updateBranding({ [field]: data.url?.startsWith('/api/') ? `${API_URL}${data.url}` : data.url })
-      toast.success('Brand image uploaded. Save changes to publish it.')
-      await loadAdminTools()
-    } catch (err) {
-      toast.error(err.message || 'Failed to upload image.')
-    } finally {
       setUploadingBrandingField('')
     }
   }
@@ -813,6 +814,20 @@ export default function AdminContent() {
   }
 
   return (
+    <>
+    {imageToCrop && (
+      <ImageCropModal
+        file={imageToCrop.file}
+        title={imageToCrop.title}
+        aspectRatio={imageToCrop.aspectRatio}
+        outputWidth={imageToCrop.outputWidth}
+        outputHeight={imageToCrop.outputHeight}
+        outputType={imageToCrop.outputType}
+        confirmLabel={imageToCrop.confirmLabel}
+        onCancel={() => setImageToCrop(null)}
+        onConfirm={uploadCroppedSiteImage}
+      />
+    )}
     <main className="min-h-screen bg-slate-950 text-white">
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[16rem_1fr]">
         <aside className="border-b border-slate-800 bg-slate-900/90 px-4 py-4 lg:border-b-0 lg:border-r lg:px-5 lg:py-6">
@@ -1198,7 +1213,7 @@ export default function AdminContent() {
                           type="file"
                           accept="image/png,image/jpeg,image/webp,image/avif"
                           className="hidden"
-                          onChange={(event) => uploadBrandingImage(event, field)}
+                          onChange={(event) => selectBrandingImage(event, field, label)}
                           disabled={Boolean(uploadingBrandingField)}
                         />
                         {uploadingBrandingField === field ? 'Uploading...' : 'Choose image'}
@@ -1322,7 +1337,7 @@ export default function AdminContent() {
                               type="file"
                               accept="image/*"
                               className="hidden"
-                              onChange={uploadCarouselImage}
+                              onChange={selectCarouselImage}
                               disabled={uploadingCarouselImage}
                             />
                             {uploadingCarouselImage ? 'Uploading...' : 'Choose image'}
@@ -1510,7 +1525,7 @@ export default function AdminContent() {
                                 type="file"
                                 accept="image/*"
                                 className="hidden"
-                                onChange={uploadPostImage}
+                                onChange={selectPostImage}
                                 disabled={uploadingImage}
                               />
                               {uploadingImage ? 'Uploading...' : 'Choose image'}
@@ -2042,5 +2057,6 @@ export default function AdminContent() {
         </section>
       </div>
     </main>
+    </>
   )
 }

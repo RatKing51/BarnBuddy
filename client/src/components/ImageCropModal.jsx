@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 
-const OUTPUT_WIDTH = 1200;
-const OUTPUT_HEIGHT = 900;
+const DEFAULT_OUTPUT_WIDTH = 1200;
+const DEFAULT_OUTPUT_HEIGHT = 900;
 
 function clampOffset(offset, imageSize, viewportSize, zoom) {
   if (!imageSize.width || !viewportSize.width) return { x: 0, y: 0 };
@@ -14,7 +14,21 @@ function clampOffset(offset, imageSize, viewportSize, zoom) {
   };
 }
 
-export default function ImageCropModal({ file, animalName, onCancel, onConfirm }) {
+export default function ImageCropModal({
+  file,
+  animalName,
+  title,
+  description = "Drag to reposition. Pinch or scroll to zoom.",
+  aspectRatio = "4 / 3",
+  outputWidth = DEFAULT_OUTPUT_WIDTH,
+  outputHeight = DEFAULT_OUTPUT_HEIGHT,
+  outputType = "image/jpeg",
+  outputQuality = 0.9,
+  outputFileSuffix = "cropped",
+  confirmLabel = "Use photo",
+  onCancel,
+  onConfirm,
+}) {
   const viewportRef = useRef(null);
   const imageRef = useRef(null);
   const pointersRef = useRef(new Map());
@@ -129,17 +143,21 @@ export default function ImageCropModal({ file, animalName, onCancel, onConfirm }
     setCropError("");
     try {
       const canvas = document.createElement("canvas");
-      canvas.width = OUTPUT_WIDTH;
-      canvas.height = OUTPUT_HEIGHT;
+      canvas.width = outputWidth;
+      canvas.height = outputHeight;
       const context = canvas.getContext("2d");
       const coverScale = Math.max(viewportSize.width / imageSize.width, viewportSize.height / imageSize.height);
       const displayedWidth = imageSize.width * coverScale * zoom;
       const displayedHeight = imageSize.height * coverScale * zoom;
-      const scaleX = OUTPUT_WIDTH / viewportSize.width;
-      const scaleY = OUTPUT_HEIGHT / viewportSize.height;
+      const scaleX = outputWidth / viewportSize.width;
+      const scaleY = outputHeight / viewportSize.height;
 
       context.imageSmoothingEnabled = true;
       context.imageSmoothingQuality = "high";
+      if (outputType === "image/jpeg") {
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      }
       context.drawImage(
         imageRef.current,
         ((viewportSize.width - displayedWidth) / 2 + offset.x) * scaleX,
@@ -148,10 +166,11 @@ export default function ImageCropModal({ file, animalName, onCancel, onConfirm }
         displayedHeight * scaleY
       );
 
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, outputType, outputQuality));
       if (!blob) throw new Error("Could not prepare the cropped photo.");
-      const baseName = file.name.replace(/\.[^/.]+$/, "") || "animal-photo";
-      await onConfirm(new File([blob], `${baseName}-cropped.jpg`, { type: "image/jpeg" }));
+      const baseName = file.name.replace(/\.[^/.]+$/, "") || "photo";
+      const extension = outputType === "image/png" ? "png" : "jpg";
+      await onConfirm(new File([blob], `${baseName}-${outputFileSuffix}.${extension}`, { type: outputType }));
     } catch (error) {
       setCropError(error.message || "Could not prepare this photo. Please try another image.");
     } finally {
@@ -170,8 +189,8 @@ export default function ImageCropModal({ file, animalName, onCancel, onConfirm }
       <div className="flex max-h-[100dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-gray-700 bg-gray-900 shadow-2xl sm:max-h-[calc(100dvh-2.5rem)] sm:max-w-3xl sm:rounded-3xl">
         <div className="flex items-start justify-between gap-4 border-b border-gray-700 px-4 py-4 sm:px-6">
           <div>
-            <h2 id="crop-photo-title" className="text-lg font-bold text-white sm:text-xl">Adjust {animalName || "animal"} photo</h2>
-            <p className="mt-1 text-sm text-gray-400">Drag to reposition. Pinch or scroll to zoom.</p>
+            <h2 id="crop-photo-title" className="text-lg font-bold text-white sm:text-xl">{title || `Adjust ${animalName || "animal"} photo`}</h2>
+            <p className="mt-1 text-sm text-gray-400">{description}</p>
           </div>
           <button type="button" onClick={onCancel} disabled={isSaving} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gray-800 text-2xl text-gray-300 transition hover:bg-gray-700 hover:text-white disabled:opacity-50" aria-label="Close photo editor">×</button>
         </div>
@@ -179,7 +198,8 @@ export default function ImageCropModal({ file, animalName, onCancel, onConfirm }
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           <div
             ref={viewportRef}
-            className="relative mx-auto aspect-[4/3] w-full max-w-2xl cursor-move touch-none overflow-hidden rounded-2xl bg-black shadow-inner"
+            className="relative mx-auto w-full max-w-2xl cursor-move touch-none overflow-hidden rounded-2xl bg-black shadow-inner"
+            style={{ aspectRatio }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerEnd}
@@ -224,7 +244,7 @@ export default function ImageCropModal({ file, animalName, onCancel, onConfirm }
         <div className="grid grid-cols-2 gap-3 border-t border-gray-700 bg-gray-900 px-4 py-4 sm:flex sm:justify-end sm:px-6">
           <button type="button" onClick={onCancel} disabled={isSaving} className="min-h-12 rounded-xl border border-gray-600 px-5 font-semibold text-gray-200 transition hover:bg-gray-800 disabled:opacity-50">Cancel</button>
           <button type="button" onClick={createCroppedFile} disabled={isSaving || !imageSize.width} className="min-h-12 rounded-xl bg-blue-600 px-5 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50">
-            {isSaving ? "Saving..." : "Use photo"}
+            {isSaving ? "Saving..." : confirmLabel}
           </button>
         </div>
       </div>
