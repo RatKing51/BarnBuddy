@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { DashboardOverviewSkeleton } from "./LoadingSpinner";
+import { formatAnimalAge, getAgeYears } from "../utils/age";
 
 const statusMeta = {
   red: {
@@ -51,15 +52,8 @@ function formatWeight(value) {
 
 function getAge(animal) {
   if (animal.birthdate) {
-    const birthDate = new Date(animal.birthdate);
-    if (!Number.isNaN(birthDate.getTime())) {
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      const dayDiff = today.getDate() - birthDate.getDate();
-      if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1;
-      return Math.max(0, age);
-    }
+    const years = getAgeYears(animal.birthdate);
+    if (years !== null) return years;
   }
 
   const age = Number.parseInt(animal.age, 10);
@@ -215,6 +209,7 @@ export default function DashboardOverview({
           ...animal,
           status,
           age: getAge(animal),
+          ageLabel: formatAnimalAge(animal),
           weightLabel: formatWeight(animal.weight),
         };
       })
@@ -464,7 +459,7 @@ export default function DashboardOverview({
                   </span>
                 </div>
                 <div className="mt-2 flex min-w-0 gap-2 overflow-hidden text-xs">
-                  <span className="rounded-lg bg-gray-950 px-2 py-1.5 text-gray-300">Age {animal.age === null ? "-" : animal.age}</span>
+                  <span className="rounded-lg bg-gray-950 px-2 py-1.5 text-gray-300">Age {animal.ageLabel || "-"}</span>
                   <span className="rounded-lg bg-gray-950 px-2 py-1.5 text-gray-300">{animal.weightLabel}</span>
                   <span className="min-w-0 truncate rounded-lg bg-gray-950 px-2 py-1.5 text-gray-300">{animal.behavior || "No behavior"}</span>
                 </div>
@@ -509,7 +504,7 @@ export default function DashboardOverview({
                       </span>
                     </td>
                     <td className="px-5 py-4 text-gray-300">{animal.species || "Unknown"}</td>
-                    <td className="px-5 py-4 text-gray-300">{animal.age === null ? "Not set" : animal.age}</td>
+                    <td className="px-5 py-4 text-gray-300">{animal.ageLabel || "Not set"}</td>
                     <td className="px-5 py-4 text-gray-300">{animal.weightLabel}</td>
                     <td className="px-5 py-4 text-gray-300">{animal.behavior || "Not logged"}</td>
                   </tr>

@@ -11,6 +11,7 @@ import { ANIMAL_TYPES, SEX_OPTIONS_BY_SPECIES } from "../config/animalTypes";
 import { SkeletonBlock } from "./LoadingSpinner";
 import ImageCropModal from "./ImageCropModal";
 import { QRCodeSVG } from "qrcode.react";
+import { formatAgeFromBirthdate, getAgeYears } from "../utils/age";
 
 function AnimalGeneralDataSkeleton() {
   const cardClass = "rounded-2xl border border-gray-700 bg-gray-800 p-6 shadow-md";
@@ -185,20 +186,6 @@ export default function AnimalGeneralData({
   }
 
 
-  function calculateAge(dob) {
-    if (!dob) return "";
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let years = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    const dayDiff = today.getDate() - birthDate.getDate();
-
-    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-      years--;
-    }
-    return years;
-  }
-
   function hasWeightChanged(previousWeight, nextWeight) {
     const previous = Number.parseFloat(previousWeight);
     const next = Number.parseFloat(nextWeight);
@@ -219,7 +206,7 @@ export default function AnimalGeneralData({
 
     setName(animal.name || "");
     setDob(animal.birthdate ? animal.birthdate.slice(0, 10) : "");
-    setAge(animal.birthdate ? calculateAge(animal.birthdate) : animal.age || "");
+    setAge(animal.birthdate ? formatAgeFromBirthdate(animal.birthdate) : animal.age || "");
     setSex(animal.sex || "");
     setNotes(animal.comments || "");
     setSpecies(animal.species || "");
@@ -237,7 +224,7 @@ export default function AnimalGeneralData({
       species: animal.species || "",
       sex: animal.sex || "",
       birthdate: animal.birthdate ? animal.birthdate.slice(0, 10) : "",
-      age: animal.birthdate ? calculateAge(animal.birthdate) : animal.age || "",
+      age: animal.birthdate ? getAgeYears(animal.birthdate) : animal.age || "",
       comments: animal.comments || "",
       weight: animal.weight || "",
       behavior: animal.behavior || "",
@@ -476,7 +463,7 @@ export default function AnimalGeneralData({
       species,
       sex,
       birthdate: dob,
-      age,
+      age: dob ? getAgeYears(dob) : age,
       comments: notes,
       weight,
       behavior,
@@ -859,7 +846,7 @@ export default function AnimalGeneralData({
             onBlur={() => saveAnimal()}
             onChange={(e) => {
               setDob(e.target.value);
-              setAge(calculateAge(e.target.value));
+              setAge(formatAgeFromBirthdate(e.target.value));
 
             }}
             className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"

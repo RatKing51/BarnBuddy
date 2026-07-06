@@ -28,6 +28,7 @@ import { toast } from "react-toastify";
 import { UserButton, useUser } from "@clerk/clerk-react";
 import { usePreferences } from "../context/PreferencesContext";
 import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";
+import { formatAnimalAge } from "../utils/age";
 
 const getAnimalCareSignature = (items) =>
   items
@@ -1408,7 +1409,7 @@ export default function Dashboard() {
                   <tr><th>Birth Date</th><td>{selectedAnimal.birthdate ? selectedAnimal.birthdate.slice(0, 10) : ""}</td></tr>
                   <tr><th>Birth Weight</th><td>{selectedAnimal.birth_weight || ""}</td></tr>
                   <tr><th>Birth Notes</th><td>{selectedAnimal.birth_notes || ""}</td></tr>
-                  <tr><th>Age</th><td>{selectedAnimal.age || ""}</td></tr>
+                  <tr><th>Age</th><td>{formatAnimalAge(selectedAnimal)}</td></tr>
                   <tr><th>Weight</th><td>{selectedAnimal.weight || ""}</td></tr>
                   <tr><th>Temperament</th><td>{selectedAnimal.behavior || ""}</td></tr>
                   <tr><th>Deceased Date</th><td>{formatReportDate(selectedAnimal.deceased_date)}</td></tr>
