@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { SignedIn, SignedOut } from "@clerk/clerk-react";
 import { CheckoutButton, SubscriptionDetailsButton } from "@clerk/clerk-react/experimental";
-import { CLERK_PREMIUM_PLAN_ID } from "../config/env";
+import { CLERK_PREMIUM_PLAN_ID, HAS_VALID_CLERK_PREMIUM_PLAN_ID } from "../config/env";
 
 const baseClassName =
   "inline-flex items-center justify-center rounded-lg px-4 py-3 font-semibold transition disabled:cursor-wait disabled:opacity-70";
@@ -36,7 +36,7 @@ export default function BillingAction({
     );
   }
 
-  if (!CLERK_PREMIUM_PLAN_ID && checkoutFallbackToPricing) {
+  if (!HAS_VALID_CLERK_PREMIUM_PLAN_ID && checkoutFallbackToPricing) {
     return (
       <>
         <SignedIn>
