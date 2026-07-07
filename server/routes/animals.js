@@ -174,6 +174,22 @@ function normalizeWeightValue(value) {
     return number.toFixed(2);
 }
 
+function normalizeNullableInteger(value) {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number.parseInt(value, 10);
+    return Number.isFinite(number) ? number : null;
+}
+
+function normalizeNullableDecimal(value) {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number.parseFloat(value);
+    return Number.isFinite(number) ? number : null;
+}
+
+function normalizeNullableDate(value) {
+    return value === null || value === undefined || value === "" ? null : value;
+}
+
 async function ensureAnimalOwner(animalId, userId) {
     const result = await pool.query(
         "SELECT id FROM animals WHERE id = $1 AND user_id = $2",
@@ -713,7 +729,13 @@ router.post("/", authMiddleware, async (req, res) => {
     } = req.body;
 
     // Handle "unassigned" herd
-    herd_id = herd_id === "unassigned" ? null : herd_id;
+    herd_id = herd_id === "unassigned" || herd_id === "" ? null : herd_id;
+    age = normalizeNullableInteger(age);
+    weight = normalizeNullableDecimal(weight);
+    birth_weight = normalizeNullableDecimal(birth_weight);
+    birthdate = normalizeNullableDate(birthdate);
+    dam_id = normalizeNullableInteger(dam_id);
+    sire_id = normalizeNullableInteger(sire_id);
     status = normalizeAnimalStatus(status);
     if (status !== "deceased") {
         deceased_date = null;
@@ -726,7 +748,7 @@ router.post("/", authMiddleware, async (req, res) => {
             (user_id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url, birth_weight, birth_notes, status, deceased_date, deceased_notes, dam_id, sire_id)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) 
             RETURNING ${animalResponseColumns}`,
-            [req.user.id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url, birth_weight || null, birth_notes || null, status, deceased_date || null, deceased_notes || null, dam_id || null, sire_id || null]
+            [req.user.id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url, birth_weight, birth_notes || null, status, deceased_date || null, deceased_notes || null, dam_id, sire_id]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -758,7 +780,12 @@ router.put("/:id", authMiddleware, async (req, res) => {
     } = req.body;
 
     // Handle "unassigned" herd
-    herd_id = herd_id === "unassigned" ? null : herd_id;
+    herd_id = herd_id === "unassigned" || herd_id === "" ? null : herd_id;
+    age = normalizeNullableInteger(age);
+    weight = normalizeNullableDecimal(weight);
+    birthdate = normalizeNullableDate(birthdate);
+    dam_id = normalizeNullableInteger(dam_id);
+    sire_id = normalizeNullableInteger(sire_id);
     status = normalizeAnimalStatus(status);
     if (status !== "deceased") {
         deceased_date = null;
@@ -786,7 +813,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
                  sire_id=$18
              WHERE id=$11 AND user_id=$12
              RETURNING ${animalResponseColumns}`,
-            [herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, id, req.user.id, image_url, status, deceased_date || null, deceased_notes || null, dam_id || null, sire_id || null]
+            [herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, id, req.user.id, image_url, status, deceased_date || null, deceased_notes || null, dam_id, sire_id]
         );
 
         if (result.rows.length === 0) return res.status(404).json({ error: "Animal not found" });
@@ -800,7 +827,8 @@ router.put("/:id", authMiddleware, async (req, res) => {
 // Update birth data for an animal (separate endpoint)
 router.put("/:id/birth-data", authMiddleware, async (req, res) => {
     const { id } = req.params;
-    const { birth_weight, birth_notes } = req.body;
+    const { birth_notes } = req.body;
+    const birth_weight = normalizeNullableDecimal(req.body.birth_weight);
 
     try {
         const result = await pool.query(
