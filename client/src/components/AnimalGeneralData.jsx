@@ -196,6 +196,10 @@ export default function AnimalGeneralData({
     return Math.abs(previous - next) >= 0.01;
   }
 
+  function clearStarterValue(event, setter, starterValues) {
+    if (starterValues.includes(event.target.value)) setter("");
+  }
+
 
   // Setting values when animal changes
   useEffect(() => {
@@ -546,8 +550,10 @@ export default function AnimalGeneralData({
       </label>
       <input
         value={name}
+        onFocus={(e) => clearStarterValue(e, setName, ["NewAnimal", "New Animal", "New offspring"])}
         onBlur={() => saveAnimal()}
         onChange={(e) => setName(e.target.value)}
+        placeholder="Animal name"
         className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
       />
     </div>
@@ -557,8 +563,10 @@ export default function AnimalGeneralData({
       <label className="block text-gray-400 text-sm mb-1">Tag #</label>
       <input
         value={tag}
+        onFocus={(e) => clearStarterValue(e, setTag, ["0000"])}
         onBlur={() => saveAnimal()}
         onChange={(e) => setTag(e.target.value)}
+        placeholder="Tag number"
         className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
       />
     </div>
@@ -867,8 +875,10 @@ export default function AnimalGeneralData({
             <label className="block text-gray-400 text-sm mb-1">Weight</label>
             <input
               value={weight}
+              onFocus={(e) => clearStarterValue(e, setWeight, ["0.00", "0"])}
               onBlur={() => saveAnimal()}
               onChange={(e) => setWeight(e.target.value)}
+              placeholder="Weight"
               className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
             />
           </div>
@@ -979,8 +989,10 @@ export default function AnimalGeneralData({
           <label className="block text-gray-400 text-sm mb-1">Notes</label>
           <input
             value={notes}
+            onFocus={(e) => clearStarterValue(e, setNotes, ["None"])}
             onBlur={() => saveAnimal()}
             onChange={(e) => setNotes(e.target.value)}
+            placeholder="Notes"
             className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
           />
         </div>
@@ -1008,8 +1020,10 @@ export default function AnimalGeneralData({
           <label className="block text-gray-400 text-sm mb-1">Temperament</label>
           <input
             value={behavior}
+            onFocus={(e) => clearStarterValue(e, setBehavior, ["None"])}
             onBlur={() => saveAnimal()}
             onChange={(e) => setBehavior(e.target.value)}
+            placeholder="Temperament"
             className="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2"
           />
         </div>

@@ -398,7 +398,7 @@ export default function HerdInventory({ selectedHerd, isPremium = false }) {
                 );
               })()}
               <div className="grid gap-3 md:grid-cols-2">
-                <label className="text-xs text-gray-400">Item name<input value={selectedItem.item_name || ""} onChange={(e) => setSelectedItem({ ...selectedItem, item_name: e.target.value })} onBlur={saveItem} className={fieldClass} /></label>
+                <label className="text-xs text-gray-400">Item name<input value={selectedItem.item_name || ""} onFocus={(e) => { if (e.target.value === "New item") setSelectedItem({ ...selectedItem, item_name: "" }); }} onChange={(e) => setSelectedItem({ ...selectedItem, item_name: e.target.value })} onBlur={saveItem} placeholder="Item name" className={fieldClass} /></label>
                 <label className="text-xs text-gray-400">Category<select value={selectedItem.category || "Supplies"} onChange={(e) => setSelectedItem({ ...selectedItem, category: e.target.value })} onBlur={saveItem} className={fieldClass}>{categories.map((category) => <option key={category}>{category}</option>)}</select></label>
                 <label className="text-xs text-gray-400">Current quantity on hand<input type="number" min="0" step="0.01" value={selectedItem.quantity || ""} onChange={(e) => setSelectedItem({ ...selectedItem, quantity: e.target.value })} onBlur={saveItem} className={fieldClass} /></label>
                 <label className="text-xs text-gray-400">Unit<select value={selectedItem.unit || "each"} onChange={(e) => setSelectedItem({ ...selectedItem, unit: e.target.value })} onBlur={saveItem} className={fieldClass}>{units.map((unit) => <option key={unit}>{unit}</option>)}</select></label>

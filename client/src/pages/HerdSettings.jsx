@@ -153,7 +153,11 @@ export default function HerdSettings() {
                 </label>
                 <input
                   value={name}
+                  onFocus={(e) => {
+                    if (e.target.value === "New Herd") setName("");
+                  }}
                   onChange={(e) => setName(e.target.value)}
+                  placeholder="Herd name"
                   className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2"
                 />
               </div>

@@ -24,6 +24,7 @@ const emailRoutes = require("./routes/email");
 const newsletterRoutes = require("./routes/newsletter");
 const notificationRoutes = require("./routes/notifications");
 const siteContentRoutes = require("./routes/siteContent");
+const importAssistantRoutes = require("./routes/importAssistant");
 const { ensureAppSchema } = require("./services/ensureAppSchema");
 
 const app = express();
@@ -54,6 +55,7 @@ app.use("/api/email", emailRoutes);
 app.use("/api/newsletter", newsletterRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/site-content", siteContentRoutes);
+app.use("/api/import-assistant", importAssistantRoutes);
 app.use("/auth", authRoutes);
 app.use("/contact", contactRoutes);
 app.use("/api/reproductions", reproductionRoutes);
@@ -64,6 +66,9 @@ app.use((err, req, res, next) => {
   if (err) {
     if (err instanceof multer.MulterError) {
       if (err.code === "LIMIT_FILE_SIZE") {
+        if (err.field === "file") {
+          return res.status(400).json({ error: "File too large. Max size is 15MB." });
+        }
         return res.status(400).json({ error: "Image too large. Max size is 5MB." });
       }
     }
@@ -75,6 +80,12 @@ app.use((err, req, res, next) => {
     if (err.message === "Unsupported image type") {
       return res.status(400).json({
         error: "Unsupported image format. Please use JPG, PNG, GIF, WebP, or AVIF.",
+      });
+    }
+
+    if (err.message === "Unsupported import help file type") {
+      return res.status(400).json({
+        error: "Use a CSV, spreadsheet, PDF, Word document, text file, or photo.",
       });
     }
 

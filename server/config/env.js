@@ -59,6 +59,10 @@ const env = {
   notifications: {
     cronSecret: process.env.NOTIFICATION_CRON_SECRET || "",
   },
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || "",
+    importModel: process.env.OPENAI_IMPORT_MODEL || "gpt-5.5",
+  },
   r2: {
     accountId: process.env.R2_ACCOUNT_ID || "",
     accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
