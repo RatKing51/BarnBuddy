@@ -157,6 +157,49 @@ function ensureBirthSchema() {
   `);
 }
 
+function ensureImportAssistantSchema() {
+  return pool.query(`
+    CREATE TABLE IF NOT EXISTS import_assistant_requests (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      record_format TEXT NOT NULL,
+      transfer_priority TEXT NOT NULL,
+      notes TEXT DEFAULT '',
+      file_name TEXT,
+      file_mime_type TEXT,
+      file_size INTEGER,
+      file_key TEXT,
+      file_data BYTEA,
+      ai_extraction_status TEXT,
+      ai_extraction_result JSONB,
+      ai_extraction_error TEXT,
+      status TEXT NOT NULL DEFAULT 'new',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    ALTER TABLE import_assistant_requests
+      ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      ADD COLUMN IF NOT EXISTS record_format TEXT NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS transfer_priority TEXT NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS file_name TEXT,
+      ADD COLUMN IF NOT EXISTS file_mime_type TEXT,
+      ADD COLUMN IF NOT EXISTS file_size INTEGER,
+      ADD COLUMN IF NOT EXISTS file_key TEXT,
+      ADD COLUMN IF NOT EXISTS file_data BYTEA,
+      ADD COLUMN IF NOT EXISTS ai_extraction_status TEXT,
+      ADD COLUMN IF NOT EXISTS ai_extraction_result JSONB,
+      ADD COLUMN IF NOT EXISTS ai_extraction_error TEXT,
+      ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'new',
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+    CREATE INDEX IF NOT EXISTS idx_import_assistant_requests_user_created
+      ON import_assistant_requests (user_id, created_at DESC);
+  `);
+}
+
 async function ensureAppSchema() {
   if (!appSchemaReadyPromise) {
     appSchemaReadyPromise = (async () => {
@@ -168,6 +211,7 @@ async function ensureAppSchema() {
       await ensurePremiumRecordSchema();
       await ensureReproductionSchema();
       await ensureBirthSchema();
+      await ensureImportAssistantSchema();
     })();
   }
 
@@ -179,4 +223,5 @@ module.exports = {
   ensurePremiumRecordSchema,
   ensureReproductionSchema,
   ensureBirthSchema,
+  ensureImportAssistantSchema,
 };

@@ -299,6 +299,16 @@ export default function AccountSettings() {
             </button>
 
             <button
+              onClick={() => navigate("/settings/import-assistant")}
+              className="w-full rounded-2xl border border-blue-400/30 bg-blue-500/10 p-5 text-left transition hover:border-blue-300 hover:bg-blue-500/15"
+            >
+              <p className="font-semibold text-white">Import Assistant</p>
+              <p className="mt-2 text-sm text-blue-100/80">
+                Upload CSVs, photos, PDFs, paper records, and other files for animal record transfer.
+              </p>
+            </button>
+
+            <button
               onClick={() => navigate("/pricing")}
               className={`w-full rounded-2xl border p-5 text-left transition ${
                 subscription.isPremium

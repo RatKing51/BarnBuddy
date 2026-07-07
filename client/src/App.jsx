@@ -10,6 +10,7 @@ import About from "./pages/AboutUs";
 import PrivateRoute from "./routes/PrivateRoute";
 import HerdSettings from "./pages/HerdSettings";
 import AccountSettings from "./pages/AccountSettings";
+import SettingsImportAssistant from "./pages/SettingsImportAssistant";
 import TOSandPP from "./pages/TOSandPP";
 import News from "./pages/News";
 import Contact from "./pages/Contact";
@@ -70,7 +71,7 @@ function AppContent() {
   const [pageLoading, setPageLoading] = useState(false);
   const [announcement, setAnnouncement] = useState(defaultSiteContent.announcement);
   const [maintenance, setMaintenance] = useState(defaultSiteContent.maintenance);
-  const hiddenPaths = ["/dashboard", "/admin", "/settings/herd", "/settings/account"];
+  const hiddenPaths = ["/dashboard", "/admin", "/settings/herd", "/settings/account", "/settings/import-assistant"];
   const showShell = !hiddenPaths.some(
     (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
   );
@@ -209,6 +210,7 @@ function AppContent() {
           <Route path="/dashboard/animal/:animalId" element={<Dashboard />} />
           <Route path="/admin" element={<AdminContent />} />
           <Route path="/settings/account" element={<AccountSettings />} />
+          <Route path="/settings/import-assistant" element={<SettingsImportAssistant />} />
           <Route path="/settings/herd" element={<HerdSettings />} />
         </Route>
       </Routes>
