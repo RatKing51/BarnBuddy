@@ -102,6 +102,7 @@ export default function Dashboard() {
   const loadedCareSummaryKeyRef = React.useRef("");
   const loadedLinkedAnimalRef = React.useRef(null);
   const handledOnboardingStartRef = React.useRef(false);
+  const [dismissedDashboardCards, setDismissedDashboardCards] = useState([]);
   const navigate = useNavigate();
   const isCompact = preferences.dashboardDensity === "compact";
   const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
@@ -132,6 +133,32 @@ export default function Dashboard() {
     const match = animals.find((animal) => String(animal.id) === String(animalId));
     return match ? getAnimalPrimaryLabel(match) : "";
   };
+  const dashboardShortcutStorageKey = React.useMemo(
+    () => `barnbuddy:onboarding-shortcuts:${backendUser?.id || user?.id || "local"}`,
+    [backendUser?.id, user?.id]
+  );
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(dashboardShortcutStorageKey) || "[]");
+      setDismissedDashboardCards(Array.isArray(saved) ? saved : []);
+    } catch (err) {
+      console.warn("Could not load dismissed dashboard shortcuts:", err.message);
+      setDismissedDashboardCards([]);
+    }
+  }, [dashboardShortcutStorageKey]);
+
+  const dismissDashboardCard = React.useCallback((cardKey) => {
+    setDismissedDashboardCards((current) => {
+      const next = current.includes(cardKey) ? current : [...current, cardKey];
+      try {
+        window.localStorage.setItem(dashboardShortcutStorageKey, JSON.stringify(next));
+      } catch (err) {
+        console.warn("Could not save dismissed dashboard shortcut:", err.message);
+      }
+      return next;
+    });
+  }, [dashboardShortcutStorageKey]);
 
   // Update clock every second
   useEffect(() => {
@@ -764,8 +791,9 @@ export default function Dashboard() {
       addCard("breeding-goal", "Breeding & Births", "Jump straight into reproduction and birth record tracking.", "Open records", () => openFirstAnimalRecord("reproduction"));
     }
 
-    return cards.slice(0, 5);
+    return cards.filter((card) => !dismissedDashboardCards.includes(card.key)).slice(0, 5);
   }, [
+    dismissedDashboardCards,
     handleAddAnimal,
     onboarding.mainGoal,
     onboarding.setupMode,
@@ -773,6 +801,11 @@ export default function Dashboard() {
     openFirstAnimalRecord,
     navigate,
   ]);
+
+  const handleDashboardPriorityClick = React.useCallback((card) => {
+    dismissDashboardCard(card.key);
+    card.onClick();
+  }, [dismissDashboardCard]);
 
   return (
     <div className={`dashboard-page flex min-h-screen flex-col bg-gray-950 text-gray-100 xl:h-screen xl:flex-row xl:overflow-hidden ${isCompact ? "dashboard-compact" : "dashboard-comfortable"}`}>
@@ -1111,7 +1144,7 @@ export default function Dashboard() {
               <button
                 key={card.key}
                 type="button"
-                onClick={card.onClick}
+                onClick={() => handleDashboardPriorityClick(card)}
                 className="rounded-lg border border-gray-800 bg-gray-900 p-4 text-left shadow-lg shadow-black/10 transition hover:border-blue-500/60 hover:bg-gray-800"
               >
                 <h3 className="text-base font-semibold text-white">{card.title}</h3>
