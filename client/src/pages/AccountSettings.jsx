@@ -27,7 +27,7 @@ function reminderBadgeClass(urgency) {
 export default function AccountSettings() {
   const navigate = useNavigate();
   const { user } = useUser();
-  const { logout, deleteAccount, authFetch, subscription } = useAuth();
+  const { logout, deleteAccount, authFetch, refreshBackendUser, subscription } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -41,6 +41,7 @@ export default function AccountSettings() {
   const [reminderEmailEnabled, setReminderEmailEnabled] = useState(true);
   const [loadingReminders, setLoadingReminders] = useState(false);
   const [sendingReminderEmail, setSendingReminderEmail] = useState(false);
+  const [restartingOnboarding, setRestartingOnboarding] = useState(false);
   const { preferences, loadingPreferences, savingPreferences, updatePreference } = usePreferences();
   const [profileSaveStatus, setProfileSaveStatus] = useState("idle");
   const lastProfileSignature = useRef("");
@@ -252,6 +253,29 @@ export default function AccountSettings() {
     }
   };
 
+  const restartOnboarding = async () => {
+    try {
+      setRestartingOnboarding(true);
+      const res = await authFetch(`${API_BASE_URL}/auth/onboarding/restart`, {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to restart onboarding.");
+      }
+
+      await refreshBackendUser();
+      toast.success("Onboarding restarted.");
+      navigate("/dashboard/onboarding");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Failed to restart onboarding.");
+    } finally {
+      setRestartingOnboarding(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100">
       <header className="border-b border-gray-700 bg-gray-800">
@@ -306,6 +330,15 @@ export default function AccountSettings() {
               <p className="mt-2 text-sm text-blue-100/80">
                 Upload CSVs, photos, PDFs, paper records, and other files for animal record transfer.
               </p>
+            </button>
+
+            <button
+              onClick={restartOnboarding}
+              disabled={restartingOnboarding}
+              className="w-full rounded-2xl border border-gray-700 bg-gray-800 p-5 text-left transition hover:border-blue-400 hover:bg-gray-700 disabled:cursor-wait disabled:opacity-70"
+            >
+              <p className="font-semibold text-white">{restartingOnboarding ? "Starting onboarding..." : "Restart onboarding"}</p>
+              <p className="mt-2 text-sm text-gray-400">Run the BarnBuddy setup questions again and update your dashboard shortcuts.</p>
             </button>
 
             <button

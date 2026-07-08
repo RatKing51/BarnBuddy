@@ -10,7 +10,7 @@ import PremiumRecords from "../components/PremiumRecords";
 import VetVisits from "../components/VetVisits";
 import WeightRecords from "../components/WeightRecords";
 import { SkeletonBlock } from "../components/LoadingSpinner";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   createAnimal,
   getAnimalByID,
@@ -28,6 +28,7 @@ import { toast } from "react-toastify";
 import { UserButton, useUser } from "@clerk/clerk-react";
 import { usePreferences } from "../context/PreferencesContext";
 import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";
+import { API_URL } from "../config/env";
 import { formatAnimalAge } from "../utils/age";
 
 const getAnimalCareSignature = (items) =>
@@ -42,6 +43,7 @@ const getCareSummaryKey = (herd, items, careWindow, refreshKey) =>
 
 export default function Dashboard() {
   const { animalId: linkedAnimalId } = useParams();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("general");
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [dateTime, setDateTime] = useState("");
@@ -95,10 +97,11 @@ export default function Dashboard() {
 
   const { user } = useUser();
   const { preferences } = usePreferences();
-  const { subscription } = useBarnBuddyAuth();
+  const { subscription, backendUser, authFetch, refreshBackendUser } = useBarnBuddyAuth();
   const loadedHerdIdRef = React.useRef(null);
   const loadedCareSummaryKeyRef = React.useRef("");
   const loadedLinkedAnimalRef = React.useRef(null);
+  const handledOnboardingStartRef = React.useRef(false);
   const navigate = useNavigate();
   const isCompact = preferences.dashboardDensity === "compact";
   const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
@@ -531,7 +534,7 @@ export default function Dashboard() {
   };
 
   // Add new animal
-  const handleAddAnimal = async () => {
+  const handleAddAnimal = React.useCallback(async () => {
     if (!selectedHerd) return;
 
     try {
@@ -557,6 +560,15 @@ export default function Dashboard() {
         setAnimals((current) => [res.data, ...current]);
         setSelectedAnimal(res.data);
         setActiveTab("general");
+        try {
+          const onboardingRes = await authFetch(`${API_URL}/auth/onboarding`, {
+            method: "PATCH",
+            body: JSON.stringify({ createdFirstAnimal: true }),
+          });
+          if (onboardingRes.ok) await refreshBackendUser();
+        } catch (err) {
+          console.warn("Could not mark first animal onboarding step complete:", err.message);
+        }
       }
       toast.success("Created new animal!");
     } catch (err) {
@@ -565,7 +577,16 @@ export default function Dashboard() {
     } finally {
       setAddingAnimal(false);
     }
-  };
+  }, [authFetch, refreshBackendUser, selectedHerd]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("start") !== "add-animal") return;
+    if (handledOnboardingStartRef.current || !selectedHerd || addingAnimal) return;
+
+    handledOnboardingStartRef.current = true;
+    handleAddAnimal().finally(() => navigate("/dashboard", { replace: true }));
+  }, [addingAnimal, handleAddAnimal, location.search, navigate, selectedHerd]);
 
   const handleSelectAnimal = (animal) => {
     setMobileMoreOpen(false);
@@ -683,6 +704,75 @@ export default function Dashboard() {
   const currentViewSubtitle = selectedAnimal
     ? `${selectedAnimal.species || "Animal"} - ${getAnimalSecondaryLabel(selectedAnimal)}`
     : selectedHerd?.name || "Select a herd";
+
+  const openFirstAnimalRecord = React.useCallback((tabKey) => {
+    setMobileMoreOpen(false);
+    const firstAnimal = animals.find((animal) => !isInactiveAnimalStatus(animal.status)) || animals[0];
+    if (firstAnimal) {
+      setSelectedAnimal(firstAnimal);
+      setActiveTab(tabKey);
+      return;
+    }
+
+    handleAddAnimal();
+  }, [animals, handleAddAnimal]);
+
+  const onboarding = backendUser?.onboarding || {};
+  const dashboardPriorityCards = React.useMemo(() => {
+    const cards = [];
+    const addCard = (key, title, body, action, onClick) => {
+      if (cards.some((card) => card.key === key)) return;
+      cards.push({ key, title, body, action, onClick });
+    };
+
+    if (onboarding.setupMode === "Import existing records") {
+      addCard(
+        "import",
+        "Import Assistant",
+        "Bring existing animal records into BarnBuddy.",
+        "Open importer",
+        () => navigate("/settings/import-assistant")
+      );
+    }
+
+    if (onboarding.userType === "Small breeder") {
+      addCard("animals", "Animals", "Start with one animal profile and build from there.", "Add animal", handleAddAnimal);
+      addCard("breeding", "Breeding", "Keep breeding dates and pregnancy notes easy to find.", "Open breeding", () => openFirstAnimalRecord("reproduction"));
+      addCard("health", "Health Notes", "Record treatments, symptoms, and care reminders.", "Open health", () => openFirstAnimalRecord("health"));
+      addCard("birth", "Birth Records", "Track offspring, birth dates, and notes in one place.", "Open births", () => openFirstAnimalRecord("reproduction"));
+      addCard("sales", "Sales", "Keep buyer and sale records with your farm finances.", "Open sales", handleHerdFinanceClick);
+    } else if (onboarding.userType === "FFA / 4-H student") {
+      addCard("show", "Show Animals", "Keep project animals organized for school and shows.", "View animals", handleFarmOverviewClick);
+      addCard("weight", "Weight Tracking", "Track growth and progress over time.", "Open weights", () => openFirstAnimalRecord("weight"));
+      addCard("health", "Health Records", "Keep vaccines, vet visits, and notes together.", "Open health", () => openFirstAnimalRecord("health"));
+      addCard("notes", "Notes", "Save the details you need before fair season.", "Open notes", () => openFirstAnimalRecord("general"));
+    } else if (onboarding.userType === "Larger herd") {
+      addCard("bulk", "Bulk Entry", "Move faster when several animals need the same update.", "Open bulk entry", handleBulkEntryClick);
+      addCard("inventory", "Inventory", "Track supplies and herd resources.", "Open inventory", handleInventoryClick);
+      addCard("feed", "Herd Feed", "Watch feed records across the whole herd.", "Open feed", handleHerdFeedClick);
+    } else {
+      addCard("animals", "Animals", "Add profiles, IDs, and notes for your livestock.", "Add animal", handleAddAnimal);
+      addCard("health", "Health Records", "Keep treatments and visits close at hand.", "Open health", () => openFirstAnimalRecord("health"));
+      addCard("weights", "Weight Tracking", "Follow growth and performance over time.", "Open weights", () => openFirstAnimalRecord("weight"));
+    }
+
+    if (onboarding.mainGoal === "Remember health records") {
+      addCard("health-goal", "Health Tracking", "Your health tools are ready for treatments, vaccines, and vet notes.", "Open health", () => openFirstAnimalRecord("health"));
+    }
+
+    if (onboarding.mainGoal === "Track breeding and birth records") {
+      addCard("breeding-goal", "Breeding & Births", "Jump straight into reproduction and birth record tracking.", "Open records", () => openFirstAnimalRecord("reproduction"));
+    }
+
+    return cards.slice(0, 5);
+  }, [
+    handleAddAnimal,
+    onboarding.mainGoal,
+    onboarding.setupMode,
+    onboarding.userType,
+    openFirstAnimalRecord,
+    navigate,
+  ]);
 
   return (
     <div className={`dashboard-page flex min-h-screen flex-col bg-gray-950 text-gray-100 xl:h-screen xl:flex-row xl:overflow-hidden ${isCompact ? "dashboard-compact" : "dashboard-comfortable"}`}>
@@ -1014,6 +1104,23 @@ export default function Dashboard() {
             </button>
           </div>
         </header>
+
+        {!selectedAnimal && dashboardPriorityCards.length > 0 && (
+          <section className={`grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 ${isCompact ? "gap-3 mb-4" : "gap-4 mb-6"}`}>
+            {dashboardPriorityCards.map((card) => (
+              <button
+                key={card.key}
+                type="button"
+                onClick={card.onClick}
+                className="rounded-lg border border-gray-800 bg-gray-900 p-4 text-left shadow-lg shadow-black/10 transition hover:border-blue-500/60 hover:bg-gray-800"
+              >
+                <h3 className="text-base font-semibold text-white">{card.title}</h3>
+                <p className="mt-2 min-h-12 text-sm leading-relaxed text-gray-400">{card.body}</p>
+                <span className="mt-4 inline-flex text-sm font-semibold text-blue-300">{card.action}</span>
+              </button>
+            ))}
+          </section>
+        )}
 
         {/* QUICK STATS */}
         <section className={`hidden grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 xl:grid ${isCompact ? "gap-3 mb-4" : "gap-4 mb-6"}`}>

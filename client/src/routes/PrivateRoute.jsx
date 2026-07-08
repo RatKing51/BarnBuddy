@@ -6,7 +6,7 @@ import { LoadingSpinner } from "../components/LoadingSpinner";
 export default function PrivateRoute() {
     const location = useLocation();
     const { isLoaded, isSignedIn } = useClerkAuth();
-    const { backendAuthLoading, backendAuthError } = useBarnBuddyAuth();
+    const { backendAuthLoading, backendAuthError, backendUser } = useBarnBuddyAuth();
 
     if (!isLoaded) {
         return (
@@ -48,6 +48,17 @@ export default function PrivateRoute() {
                 </div>
             </div>
         );
+    }
+
+    const onboardingCompleted = backendUser?.onboarding?.completed === true;
+    const isOnboardingRoute = location.pathname === "/dashboard/onboarding";
+
+    if (!onboardingCompleted && !isOnboardingRoute) {
+        return <Navigate to="/dashboard/onboarding" replace />;
+    }
+
+    if (onboardingCompleted && isOnboardingRoute) {
+        return <Navigate to="/dashboard" replace />;
     }
 
     return <Outlet />;

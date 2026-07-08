@@ -5,6 +5,7 @@ import Navbar from "./components/Navbar";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
+import Onboarding from "./pages/Onboarding";
 import Pricing from "./pages/Pricing";
 import About from "./pages/AboutUs";
 import PrivateRoute from "./routes/PrivateRoute";
@@ -221,6 +222,7 @@ function AppContent() {
         <Route path="/docs" element={<DocsRedirect />} />
 
         <Route element={<PrivateRoute />}>
+          <Route path="/dashboard/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/animal/:animalId" element={<Dashboard />} />
           <Route path="/admin" element={<AdminContent />} />

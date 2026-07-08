@@ -43,6 +43,22 @@ export function AuthProvider({ children }) {
         });
     }, [getToken, isSignedIn]);
 
+    const refreshBackendUser = useCallback(async function refreshBackendUser() {
+        if (!isSignedIn) return null;
+
+        const res = await authFetch(`${API_URL}/auth/me`);
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            throw new Error(data.error || data.message || "Failed to sync account");
+        }
+
+        setBackendUser(data.user || null);
+        setBackendPreferences(data.preferences || null);
+        setBackendAuthError(null);
+        return data;
+    }, [authFetch, isSignedIn]);
+
     useEffect(() => {
         let cancelled = false;
 
@@ -61,12 +77,7 @@ export function AuthProvider({ children }) {
                 setBackendAuthLoading(true);
                 setBackendAuthError(null);
 
-                const res = await authFetch(`${API_URL}/auth/me`);
-                const data = await res.json().catch(() => ({}));
-
-                if (!res.ok) {
-                    throw new Error(data.error || data.message || "Failed to sync account");
-                }
+                const data = await refreshBackendUser();
 
                 if (!cancelled) {
                     setBackendUser(data.user || null);
@@ -91,7 +102,7 @@ export function AuthProvider({ children }) {
         return () => {
             cancelled = true;
         };
-    }, [authFetch, isLoaded, isSignedIn]);
+    }, [isLoaded, isSignedIn, refreshBackendUser]);
 
     const deleteAccount = useCallback(async function deleteAccount() {
         const res = await authFetch(`${API_URL}/auth/me`, {
@@ -150,6 +161,7 @@ export function AuthProvider({ children }) {
             deleteAccount,
             loading,
             authFetch,
+            refreshBackendUser,
         }),
         [
             user,
@@ -162,6 +174,7 @@ export function AuthProvider({ children }) {
             deleteAccount,
             loading,
             authFetch,
+            refreshBackendUser,
         ]
     );
 

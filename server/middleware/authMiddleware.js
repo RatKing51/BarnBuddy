@@ -200,6 +200,19 @@ module.exports = async function authMiddleware(req, res, next) {
                 user.id,
             ]
         );
+        const userStateResult = await pool.query(
+            `SELECT onboarding_completed,
+                    user_type,
+                    primary_species,
+                    herd_size_range,
+                    main_goal,
+                    setup_mode,
+                    created_first_animal
+             FROM users
+             WHERE id = $1`,
+            [user.id]
+        );
+        const userState = userStateResult.rows[0] || {};
 
         if (!subscription.isPremium) {
             await cleanupPremiumDataForUser(user.id);
@@ -211,6 +224,15 @@ module.exports = async function authMiddleware(req, res, next) {
             name: user.name,
             clerkUserId: authenticatedUserId,
             subscription,
+            onboarding: {
+                completed: userState.onboarding_completed === true,
+                userType: userState.user_type || "",
+                primarySpecies: Array.isArray(userState.primary_species) ? userState.primary_species : [],
+                herdSizeRange: userState.herd_size_range || "",
+                mainGoal: userState.main_goal || "",
+                setupMode: userState.setup_mode || "",
+                createdFirstAnimal: userState.created_first_animal === true,
+            },
         };
         attachActivityLogger(req, res);
         next();
