@@ -25,6 +25,7 @@ function ensureSchema() {
         ADD COLUMN IF NOT EXISTS clerk_user_id TEXT UNIQUE,
         ADD COLUMN IF NOT EXISTS subscription_plan TEXT DEFAULT 'free',
         ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'free',
+        ADD COLUMN IF NOT EXISTS onboarding_required BOOLEAN DEFAULT false,
         ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT false,
         ADD COLUMN IF NOT EXISTS user_type TEXT,
         ADD COLUMN IF NOT EXISTS primary_species TEXT[] DEFAULT ARRAY[]::TEXT[],
@@ -209,7 +210,9 @@ async function findOrCreateLocalUser({ clerkUserId, email, name }) {
     console.info("Updated existing Clerk-linked user:", { userId: user.id, clerkUserId });
   } else {
     const inserted = await pool.query(
-      "INSERT INTO users (clerk_user_id, name, email, password) VALUES ($1, $2, $3, $4) RETURNING id, name, email",
+      `INSERT INTO users (clerk_user_id, name, email, password, onboarding_required, onboarding_completed)
+       VALUES ($1, $2, $3, $4, true, false)
+       RETURNING id, name, email`,
       [clerkUserId, name, email, "clerk_managed"]
     );
     user = inserted.rows[0];

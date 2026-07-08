@@ -41,6 +41,162 @@ const isInactiveAnimalStatus = (status) => ["archived", "deceased"].includes(sta
 const getCareSummaryKey = (herd, items, careWindow, refreshKey) =>
   `${herd?.id || "none"}:${careWindow}:${refreshKey}:${getAnimalCareSignature(items)}`;
 
+function getVisibleTourTarget(target) {
+  const matches = Array.from(document.querySelectorAll(`[data-tour="${target}"]`));
+  return matches.find((element) => {
+    const rect = element.getBoundingClientRect();
+    const style = window.getComputedStyle(element);
+    return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+  }) || null;
+}
+
+function DashboardTour({ open, steps, onClose, onStepAction }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [targetRect, setTargetRect] = useState(null);
+  const [completedSteps, setCompletedSteps] = useState({});
+  const [runningAction, setRunningAction] = useState(false);
+  const activeStep = steps[activeIndex];
+
+  const updateTarget = React.useCallback(() => {
+    if (!open || !activeStep) return;
+    const element = getVisibleTourTarget(activeStep.target);
+
+    if (!element) {
+      setTargetRect(null);
+      return;
+    }
+
+    element.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    window.setTimeout(() => {
+      const rect = element.getBoundingClientRect();
+      setTargetRect({
+        top: Math.max(12, rect.top - 8),
+        left: Math.max(12, rect.left - 8),
+        width: rect.width + 16,
+        height: rect.height + 16,
+      });
+    }, 220);
+  }, [activeStep, open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    setActiveIndex(0);
+    setCompletedSteps({});
+    return undefined;
+  }, [open]);
+
+  useEffect(() => {
+    updateTarget();
+    window.addEventListener("resize", updateTarget);
+    window.addEventListener("scroll", updateTarget, true);
+    return () => {
+      window.removeEventListener("resize", updateTarget);
+      window.removeEventListener("scroll", updateTarget, true);
+    };
+  }, [updateTarget]);
+
+  if (!open || !activeStep) return null;
+
+  const isLastStep = activeIndex === steps.length - 1;
+  const actionComplete = completedSteps[activeStep.key] === true || !activeStep.requiresAction;
+  const tooltipClass = targetRect && targetRect.top < window.innerHeight / 2
+    ? "top-[calc(100%-14rem)] sm:top-auto sm:bottom-8"
+    : "bottom-8";
+
+  const runStepAction = async () => {
+    if (!activeStep || runningAction) return;
+
+    try {
+      setRunningAction(true);
+      await onStepAction(activeStep);
+      setCompletedSteps((current) => ({ ...current, [activeStep.key]: true }));
+      window.setTimeout(updateTarget, 250);
+    } finally {
+      setRunningAction(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] pointer-events-none">
+      <div className="absolute inset-0 bg-black/65" />
+      {targetRect && (
+        <div
+          className="absolute rounded-2xl border-2 border-[#5170FF] bg-[#5170FF]/10 shadow-[0_0_0_9999px_rgba(0,0,0,0.55),0_0_32px_rgba(81,112,255,0.45)] transition-all"
+          style={{
+            top: targetRect.top,
+            left: targetRect.left,
+            width: targetRect.width,
+            height: targetRect.height,
+          }}
+        />
+      )}
+
+      <section className={`pointer-events-auto absolute left-4 right-4 mx-auto max-w-md rounded-2xl border border-white/10 bg-[#101D42] p-5 text-white shadow-2xl shadow-black/40 sm:left-auto sm:right-8 ${tooltipClass}`}>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8da0ff]">
+            Dashboard tour {activeIndex + 1} of {steps.length}
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-slate-300 hover:bg-white/10"
+          >
+            Skip
+          </button>
+        </div>
+        <h2 className="mt-3 text-xl font-semibold">{activeStep.title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-slate-300">{activeStep.body}</p>
+        {activeStep.action && (
+          <p className="mt-3 rounded-lg border border-[#5170FF]/25 bg-[#5170FF]/10 px-3 py-2 text-sm text-blue-100">
+            {activeStep.action}
+          </p>
+        )}
+        {activeStep.requiresAction && (
+          <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Try it</p>
+            <button
+              type="button"
+              onClick={runStepAction}
+              disabled={runningAction || actionComplete}
+              className="mt-2 w-full rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-gray-950 hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {runningAction ? "Working..." : actionComplete ? "Done" : activeStep.actionLabel}
+            </button>
+            <p className="mt-2 text-xs leading-relaxed text-slate-400">
+              {actionComplete ? activeStep.completionText : "Complete this quick action to unlock the next step."}
+            </p>
+          </div>
+        )}
+
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setActiveIndex((current) => Math.max(0, current - 1))}
+            disabled={activeIndex === 0}
+            className="rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (isLastStep) {
+                onClose();
+                return;
+              }
+              setActiveIndex((current) => current + 1);
+            }}
+            disabled={!actionComplete}
+            className="rounded-lg bg-[#5170FF] px-5 py-2 text-sm font-semibold text-white hover:bg-[#6f86ff] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isLastStep ? "Finish tour" : "Next"}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { animalId: linkedAnimalId } = useParams();
   const location = useLocation();
@@ -64,6 +220,7 @@ export default function Dashboard() {
   const [exportLoading, setExportLoading] = useState(false);
   const [animalExportData, setAnimalExportData] = useState(null);
   const [herdFinanceExportData, setHerdFinanceExportData] = useState(null);
+  const [dashboardTourOpen, setDashboardTourOpen] = useState(false);
 
   const handleFarmOverviewClick = () => {
     setMobileMoreOpen(false);
@@ -97,12 +254,11 @@ export default function Dashboard() {
 
   const { user } = useUser();
   const { preferences } = usePreferences();
-  const { subscription, backendUser, authFetch, refreshBackendUser } = useBarnBuddyAuth();
+  const { subscription, authFetch, refreshBackendUser } = useBarnBuddyAuth();
   const loadedHerdIdRef = React.useRef(null);
   const loadedCareSummaryKeyRef = React.useRef("");
   const loadedLinkedAnimalRef = React.useRef(null);
   const handledOnboardingStartRef = React.useRef(false);
-  const [dismissedDashboardCards, setDismissedDashboardCards] = useState([]);
   const navigate = useNavigate();
   const isCompact = preferences.dashboardDensity === "compact";
   const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
@@ -133,33 +289,6 @@ export default function Dashboard() {
     const match = animals.find((animal) => String(animal.id) === String(animalId));
     return match ? getAnimalPrimaryLabel(match) : "";
   };
-  const dashboardShortcutStorageKey = React.useMemo(
-    () => `barnbuddy:onboarding-shortcuts:${backendUser?.id || user?.id || "local"}`,
-    [backendUser?.id, user?.id]
-  );
-
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(window.localStorage.getItem(dashboardShortcutStorageKey) || "[]");
-      setDismissedDashboardCards(Array.isArray(saved) ? saved : []);
-    } catch (err) {
-      console.warn("Could not load dismissed dashboard shortcuts:", err.message);
-      setDismissedDashboardCards([]);
-    }
-  }, [dashboardShortcutStorageKey]);
-
-  const dismissDashboardCard = React.useCallback((cardKey) => {
-    setDismissedDashboardCards((current) => {
-      const next = current.includes(cardKey) ? current : [...current, cardKey];
-      try {
-        window.localStorage.setItem(dashboardShortcutStorageKey, JSON.stringify(next));
-      } catch (err) {
-        console.warn("Could not save dismissed dashboard shortcut:", err.message);
-      }
-      return next;
-    });
-  }, [dashboardShortcutStorageKey]);
-
   // Update clock every second
   useEffect(() => {
     const updateTime = () => {
@@ -562,7 +691,7 @@ export default function Dashboard() {
 
   // Add new animal
   const handleAddAnimal = React.useCallback(async () => {
-    if (!selectedHerd) return;
+    if (!selectedHerd) return null;
 
     try {
       setAddingAnimal(true);
@@ -596,11 +725,14 @@ export default function Dashboard() {
         } catch (err) {
           console.warn("Could not mark first animal onboarding step complete:", err.message);
         }
+        toast.success("Created new animal!");
+        return res.data;
       }
-      toast.success("Created new animal!");
+      return null;
     } catch (err) {
       console.error(err);
       toast.error("Failed to create new animal!");
+      return null;
     } finally {
       setAddingAnimal(false);
     }
@@ -612,8 +744,21 @@ export default function Dashboard() {
     if (handledOnboardingStartRef.current || !selectedHerd || addingAnimal) return;
 
     handledOnboardingStartRef.current = true;
-    handleAddAnimal().finally(() => navigate("/dashboard", { replace: true }));
+    handleAddAnimal().finally(() => {
+      params.delete("start");
+      const nextSearch = params.toString();
+      navigate(`/dashboard${nextSearch ? `?${nextSearch}` : ""}`, { replace: true });
+    });
   }, [addingAnimal, handleAddAnimal, location.search, navigate, selectedHerd]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("tour") === "1") {
+      setSelectedAnimal(null);
+      setActiveTab("general");
+      setDashboardTourOpen(true);
+    }
+  }, [location.search]);
 
   const handleSelectAnimal = (animal) => {
     setMobileMoreOpen(false);
@@ -731,81 +876,159 @@ export default function Dashboard() {
   const currentViewSubtitle = selectedAnimal
     ? `${selectedAnimal.species || "Animal"} - ${getAnimalSecondaryLabel(selectedAnimal)}`
     : selectedHerd?.name || "Select a herd";
+  const dashboardTourSteps = React.useMemo(() => [
+    {
+      key: "overview",
+      target: "records-area",
+      title: "Start on Farm Overview",
+      body: "This is your home base. It gives you the broad view before you jump into a specific animal or record type.",
+      action: "BarnBuddy will reset the dashboard to Farm Overview so you can see the default layout.",
+      actionLabel: "Show Farm Overview",
+      completionText: "You are on Farm Overview now.",
+      requiresAction: true,
+    },
+    {
+      key: "herd",
+      target: "herd-switcher",
+      title: "Choose the herd you are working in",
+      body: "Use this selector when you have more than one herd or need to view unassigned animals.",
+      action: "Start here before adding records so new animals land in the right place.",
+      actionLabel: "Check current herd",
+      completionText: "Good. You know where herd switching lives.",
+      requiresAction: true,
+    },
+    {
+      key: "animal",
+      target: "add-animal",
+      title: "Create or open your first animal",
+      body: "Animal profiles are where you keep names, tag IDs, species, birth info, notes, and all animal-level records.",
+      action: "If you already have an animal, BarnBuddy will open it. If not, it will create a blank starter animal.",
+      actionLabel: animals.length > 0 ? "Open first animal" : "Create starter animal",
+      completionText: "Animal profile opened. This is where the detailed records start.",
+      requiresAction: true,
+    },
+    {
+      key: "list",
+      target: "animal-list",
+      title: "Use the animal list to switch records",
+      body: "Your animals show up here. Click one anytime to move from farm-wide tools into that animal's tabs.",
+      action: "The colored dot helps you spot animals that may need attention.",
+      actionLabel: "Show animal list",
+      completionText: "That list is your quick switcher between animals.",
+      requiresAction: true,
+    },
+    {
+      key: "health",
+      target: "records-area",
+      title: "Open a real record tab",
+      body: "Once an animal is selected, the record tabs become the main workflow: general info, weight, health, vet visits, reproduction, and money.",
+      action: "BarnBuddy will open the Health tab because it is one of the most common first records.",
+      actionLabel: "Open Health tab",
+      completionText: "Health is open. This is where treatments and notes can live.",
+      requiresAction: true,
+    },
+    {
+      key: "stats",
+      target: "quick-stats",
+      title: "Watch the farm overview numbers",
+      body: "These cards summarize animals, active records, vaccine care, and upcoming vet care.",
+      action: "If something looks off, open the overview below or click an animal to investigate.",
+      actionLabel: "Return to overview stats",
+      completionText: "Back on the farm overview. These numbers update as records grow.",
+      requiresAction: true,
+    },
+    {
+      key: "workspace",
+      target: "records-area",
+      title: "This is the main work area",
+      body: "Farm Overview, feed, finances, bulk entry, inventory, and animal record tabs all load in this panel.",
+      action: "BarnBuddy will briefly show Herd Feed so you can see how farm-wide tools replace the overview.",
+      actionLabel: "Open Herd Feed",
+      completionText: "Now you have seen how the main panel changes by workflow.",
+      requiresAction: true,
+    },
+    {
+      key: "settings",
+      target: "settings",
+      title: "Settings is where setup lives",
+      body: "Use Settings for herds, imports, preferences, subscription tools, and restarting this onboarding tour later.",
+      action: "You are ready to use BarnBuddy. Add a record whenever something happens on the farm.",
+      actionLabel: "Finish setup tour",
+      completionText: "Tour complete. You can restart it later from Account Settings.",
+      requiresAction: true,
+    },
+  ], [animals.length]);
 
-  const openFirstAnimalRecord = React.useCallback((tabKey) => {
-    setMobileMoreOpen(false);
+  const openFirstAnimalForTour = React.useCallback(async () => {
     const firstAnimal = animals.find((animal) => !isInactiveAnimalStatus(animal.status)) || animals[0];
     if (firstAnimal) {
       setSelectedAnimal(firstAnimal);
-      setActiveTab(tabKey);
+      setActiveTab("general");
+      return firstAnimal;
+    }
+
+    return handleAddAnimal();
+  }, [animals, handleAddAnimal]);
+
+  const handleDashboardTourAction = React.useCallback(async (step) => {
+    if (step.key === "overview") {
+      setSelectedAnimal(null);
+      setActiveTab("general");
+      setMobileMoreOpen(false);
       return;
     }
 
-    handleAddAnimal();
-  }, [animals, handleAddAnimal]);
-
-  const onboarding = backendUser?.onboarding || {};
-  const dashboardPriorityCards = React.useMemo(() => {
-    const cards = [];
-    const addCard = (key, title, body, action, onClick) => {
-      if (cards.some((card) => card.key === key)) return;
-      cards.push({ key, title, body, action, onClick });
-    };
-
-    if (onboarding.setupMode === "Import existing records") {
-      addCard(
-        "import",
-        "Import Assistant",
-        "Bring existing animal records into BarnBuddy.",
-        "Open importer",
-        () => navigate("/settings/import-assistant")
-      );
+    if (step.key === "herd") {
+      setMobileMoreOpen(false);
+      return;
     }
 
-    if (onboarding.userType === "Small breeder") {
-      addCard("animals", "Animals", "Start with one animal profile and build from there.", "Add animal", handleAddAnimal);
-      addCard("breeding", "Breeding", "Keep breeding dates and pregnancy notes easy to find.", "Open breeding", () => openFirstAnimalRecord("reproduction"));
-      addCard("health", "Health Notes", "Record treatments, symptoms, and care reminders.", "Open health", () => openFirstAnimalRecord("health"));
-      addCard("birth", "Birth Records", "Track offspring, birth dates, and notes in one place.", "Open births", () => openFirstAnimalRecord("reproduction"));
-      addCard("sales", "Sales", "Keep buyer and sale records with your farm finances.", "Open sales", handleHerdFinanceClick);
-    } else if (onboarding.userType === "FFA / 4-H student") {
-      addCard("show", "Show Animals", "Keep project animals organized for school and shows.", "View animals", handleFarmOverviewClick);
-      addCard("weight", "Weight Tracking", "Track growth and progress over time.", "Open weights", () => openFirstAnimalRecord("weight"));
-      addCard("health", "Health Records", "Keep vaccines, vet visits, and notes together.", "Open health", () => openFirstAnimalRecord("health"));
-      addCard("notes", "Notes", "Save the details you need before fair season.", "Open notes", () => openFirstAnimalRecord("general"));
-    } else if (onboarding.userType === "Larger herd") {
-      addCard("bulk", "Bulk Entry", "Move faster when several animals need the same update.", "Open bulk entry", handleBulkEntryClick);
-      addCard("inventory", "Inventory", "Track supplies and herd resources.", "Open inventory", handleInventoryClick);
-      addCard("feed", "Herd Feed", "Watch feed records across the whole herd.", "Open feed", handleHerdFeedClick);
-    } else {
-      addCard("animals", "Animals", "Add profiles, IDs, and notes for your livestock.", "Add animal", handleAddAnimal);
-      addCard("health", "Health Records", "Keep treatments and visits close at hand.", "Open health", () => openFirstAnimalRecord("health"));
-      addCard("weights", "Weight Tracking", "Follow growth and performance over time.", "Open weights", () => openFirstAnimalRecord("weight"));
+    if (step.key === "animal") {
+      await openFirstAnimalForTour();
+      return;
     }
 
-    if (onboarding.mainGoal === "Remember health records") {
-      addCard("health-goal", "Health Tracking", "Your health tools are ready for treatments, vaccines, and vet notes.", "Open health", () => openFirstAnimalRecord("health"));
+    if (step.key === "list") {
+      setSelectedAnimal(null);
+      setActiveTab("general");
+      setMobileMoreOpen(false);
+      return;
     }
 
-    if (onboarding.mainGoal === "Track breeding and birth records") {
-      addCard("breeding-goal", "Breeding & Births", "Jump straight into reproduction and birth record tracking.", "Open records", () => openFirstAnimalRecord("reproduction"));
+    if (step.key === "health") {
+      const animal = selectedAnimal || await openFirstAnimalForTour();
+      if (animal) {
+        setSelectedAnimal(animal);
+        setActiveTab("health");
+      }
+      return;
     }
 
-    return cards.filter((card) => !dismissedDashboardCards.includes(card.key)).slice(0, 5);
-  }, [
-    dismissedDashboardCards,
-    handleAddAnimal,
-    onboarding.mainGoal,
-    onboarding.setupMode,
-    onboarding.userType,
-    openFirstAnimalRecord,
-    navigate,
-  ]);
+    if (step.key === "stats") {
+      setSelectedAnimal(null);
+      setActiveTab("general");
+      return;
+    }
 
-  const handleDashboardPriorityClick = React.useCallback((card) => {
-    dismissDashboardCard(card.key);
-    card.onClick();
-  }, [dismissDashboardCard]);
+    if (step.key === "workspace") {
+      setSelectedAnimal(null);
+      setActiveTab("feed");
+      return;
+    }
+
+    if (step.key === "settings") {
+      setSelectedAnimal(null);
+      setActiveTab("general");
+    }
+  }, [openFirstAnimalForTour, selectedAnimal]);
+
+  const closeDashboardTour = React.useCallback(() => {
+    setDashboardTourOpen(false);
+    const params = new URLSearchParams(location.search);
+    params.delete("tour");
+    const nextSearch = params.toString();
+    navigate(`/dashboard${nextSearch ? `?${nextSearch}` : ""}`, { replace: true });
+  }, [location.search, navigate]);
 
   return (
     <div className={`dashboard-page flex min-h-screen flex-col bg-gray-950 text-gray-100 xl:h-screen xl:flex-row xl:overflow-hidden ${isCompact ? "dashboard-compact" : "dashboard-comfortable"}`}>
@@ -826,6 +1049,7 @@ export default function Dashboard() {
 
         <div className="px-4 py-3 border-b border-gray-700">
           <select
+            data-tour="herd-switcher"
             value={selectedHerd ? selectedHerd.id : ""}
             disabled={loadingHerds}
             onChange={(e) => setHerdFromValue(e.target.value)}
@@ -847,6 +1071,7 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={handleFarmOverviewClick}
+            data-tour="farm-overview"
             className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition border cursor-pointer ${
               !selectedAnimal && !["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab)
                 ? "bg-blue-600 border-blue-500 text-white shadow"
@@ -908,7 +1133,7 @@ export default function Dashboard() {
             Animals
           </div>
 
-        <div className="mt-2 space-y-2">
+        <div data-tour="animal-list" className="mt-2 space-y-2">
             {loadingAnimals ? (
               <div className="space-y-2">
                 {[0, 1, 2, 3, 4].map((item) => (
@@ -953,6 +1178,7 @@ export default function Dashboard() {
 
           <div className="mt-4 flex flex-col gap-2 px-4">
             <button
+              data-tour="add-animal"
               onClick={handleAddAnimal}
               disabled={!selectedHerd || addingAnimal}
               className="w-full px-3 py-2 bg-blue-600 rounded-lg text-white font-semibold hover:bg-blue-500 disabled:cursor-wait disabled:opacity-70"
@@ -988,6 +1214,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => navigate("/settings/account")}
+                data-tour="settings"
                 className="rounded-full border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white"
               >
                 Settings
@@ -1019,6 +1246,7 @@ export default function Dashboard() {
               ) : null}
             </div>
             <select
+              data-tour="herd-switcher"
               value={selectedHerd ? selectedHerd.id : ""}
               disabled={loadingHerds}
               onChange={(e) => setHerdFromValue(e.target.value)}
@@ -1043,6 +1271,7 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={handleAddAnimal}
+              data-tour="add-animal"
               disabled={!selectedHerd || addingAnimal}
               className="w-full rounded-xl bg-emerald-500 px-3 py-2 text-sm font-semibold text-gray-950 disabled:opacity-60"
             >
@@ -1051,7 +1280,7 @@ export default function Dashboard() {
           </div>
 
           {!["bulk-entry", "inventory"].includes(activeTab) && (
-          <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1 md:gap-3">
+          <div data-tour="animal-list" className="mt-2.5 flex gap-2 overflow-x-auto pb-1 md:gap-3">
             {loadingAnimals ? (
               [0, 1, 2].map((item) => (
                 <SkeletonBlock key={item} className="h-14 w-32 shrink-0 rounded-xl" />
@@ -1130,6 +1359,7 @@ export default function Dashboard() {
               {exportLoading ? "Preparing..." : subscription.isPremium && selectedAnimal ? "Export Animal" : subscription.isPremium ? "Export Farm" : "Export PDF - Premium"}
             </button>
             <button
+              data-tour="settings"
               className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition"
               onClick={() => navigate("/settings/account")}
             >
@@ -1138,25 +1368,8 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {!selectedAnimal && dashboardPriorityCards.length > 0 && (
-          <section className={`grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 ${isCompact ? "gap-3 mb-4" : "gap-4 mb-6"}`}>
-            {dashboardPriorityCards.map((card) => (
-              <button
-                key={card.key}
-                type="button"
-                onClick={() => handleDashboardPriorityClick(card)}
-                className="rounded-lg border border-gray-800 bg-gray-900 p-4 text-left shadow-lg shadow-black/10 transition hover:border-blue-500/60 hover:bg-gray-800"
-              >
-                <h3 className="text-base font-semibold text-white">{card.title}</h3>
-                <p className="mt-2 min-h-12 text-sm leading-relaxed text-gray-400">{card.body}</p>
-                <span className="mt-4 inline-flex text-sm font-semibold text-blue-300">{card.action}</span>
-              </button>
-            ))}
-          </section>
-        )}
-
         {/* QUICK STATS */}
-        <section className={`hidden grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 xl:grid ${isCompact ? "gap-3 mb-4" : "gap-4 mb-6"}`}>
+        <section data-tour="quick-stats" className={`hidden grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 xl:grid ${isCompact ? "gap-3 mb-4" : "gap-4 mb-6"}`}>
           {[
             { title: "Animals", value: animals.length },
             { title: "Active", value: totalActiveAnimals },
@@ -1183,7 +1396,7 @@ export default function Dashboard() {
         </section>
 
         {/* ANIMAL DATA */}
-        <div className="dashboard-content-card bg-gray-950 md:rounded-2xl md:border md:border-gray-800 md:bg-gray-900 md:shadow-md">
+        <div data-tour="records-area" className="dashboard-content-card bg-gray-950 md:rounded-2xl md:border md:border-gray-800 md:bg-gray-900 md:shadow-md">
           {!selectedAnimal && activeTab === "feed" ? (
             <div className="p-3 sm:p-6">
               <HerdFeedRecords
@@ -1422,6 +1635,12 @@ export default function Dashboard() {
           )}
         </nav>
       </main>
+      <DashboardTour
+        open={dashboardTourOpen}
+        steps={dashboardTourSteps}
+        onClose={closeDashboardTour}
+        onStepAction={handleDashboardTourAction}
+      />
 
       <section id="dashboard-pdf" className="hidden">
         <header>

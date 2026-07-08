@@ -40,6 +40,7 @@ function asSpeciesList(value) {
 
 function onboardingResponse(row = {}) {
     return {
+        required: row.onboarding_required === true,
         completed: row.onboarding_completed === true,
         userType: row.user_type || "",
         primarySpecies: Array.isArray(row.primary_species) ? row.primary_species : [],
@@ -77,6 +78,7 @@ router.patch("/onboarding", authMiddleware, async (req, res) => {
         const result = await pool.query(
             `UPDATE users
              SET onboarding_completed = CASE WHEN $1::boolean THEN true ELSE onboarding_completed END,
+                 onboarding_required = CASE WHEN $1::boolean THEN false ELSE onboarding_required END,
                  user_type = COALESCE(NULLIF($2, ''), user_type),
                  primary_species = CASE WHEN cardinality($3::text[]) > 0 THEN $3::text[] ELSE primary_species END,
                  herd_size_range = COALESCE(NULLIF($4, ''), herd_size_range),
@@ -84,7 +86,7 @@ router.patch("/onboarding", authMiddleware, async (req, res) => {
                  setup_mode = COALESCE(NULLIF($6, ''), setup_mode),
                  created_first_animal = CASE WHEN $7::boolean THEN true ELSE created_first_animal END
              WHERE id = $8
-             RETURNING onboarding_completed, user_type, primary_species, herd_size_range, main_goal, setup_mode, created_first_animal`,
+             RETURNING onboarding_required, onboarding_completed, user_type, primary_species, herd_size_range, main_goal, setup_mode, created_first_animal`,
             [
                 completed,
                 asOption(req.body.userType, userTypeOptions),
@@ -108,9 +110,10 @@ router.post("/onboarding/restart", authMiddleware, async (req, res) => {
     try {
         const result = await pool.query(
             `UPDATE users
-             SET onboarding_completed = false
+             SET onboarding_required = true,
+                 onboarding_completed = false
              WHERE id = $1
-             RETURNING onboarding_completed, user_type, primary_species, herd_size_range, main_goal, setup_mode, created_first_animal`,
+             RETURNING onboarding_required, onboarding_completed, user_type, primary_species, herd_size_range, main_goal, setup_mode, created_first_animal`,
             [req.user.id]
         );
 

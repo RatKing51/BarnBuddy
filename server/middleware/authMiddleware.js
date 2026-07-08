@@ -201,7 +201,8 @@ module.exports = async function authMiddleware(req, res, next) {
             ]
         );
         const userStateResult = await pool.query(
-            `SELECT onboarding_completed,
+            `SELECT onboarding_required,
+                    onboarding_completed,
                     user_type,
                     primary_species,
                     herd_size_range,
@@ -225,6 +226,7 @@ module.exports = async function authMiddleware(req, res, next) {
             clerkUserId: authenticatedUserId,
             subscription,
             onboarding: {
+                required: userState.onboarding_required === true,
                 completed: userState.onboarding_completed === true,
                 userType: userState.user_type || "",
                 primarySpecies: Array.isArray(userState.primary_species) ? userState.primary_species : [],

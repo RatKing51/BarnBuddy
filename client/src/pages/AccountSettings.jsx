@@ -5,7 +5,7 @@ import { toast, ToastContainer } from "react-toastify";
 import BillingAction from "../components/BillingAction";
 import { useAuth } from "../context/AuthContext";
 import { usePreferences } from "../context/PreferencesContext";
-import { API_BASE_URL } from "../config/env";
+import { API_BASE_URL, API_URL } from "../config/env";
 import { PREMIUM_FEATURES, PLANS, PLAN_IDS } from "../config/subscription";
 
 function reminderBadgeClass(urgency) {
@@ -256,7 +256,7 @@ export default function AccountSettings() {
   const restartOnboarding = async () => {
     try {
       setRestartingOnboarding(true);
-      const res = await authFetch(`${API_BASE_URL}/auth/onboarding/restart`, {
+      const res = await authFetch(`${API_URL}/auth/onboarding/restart`, {
         method: "POST",
       });
       const data = await res.json().catch(() => ({}));

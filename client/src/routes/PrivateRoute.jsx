@@ -50,14 +50,15 @@ export default function PrivateRoute() {
         );
     }
 
+    const onboardingRequired = backendUser?.onboarding?.required === true;
     const onboardingCompleted = backendUser?.onboarding?.completed === true;
     const isOnboardingRoute = location.pathname === "/dashboard/onboarding";
 
-    if (!onboardingCompleted && !isOnboardingRoute) {
+    if (onboardingRequired && !onboardingCompleted && !isOnboardingRoute) {
         return <Navigate to="/dashboard/onboarding" replace />;
     }
 
-    if (onboardingCompleted && isOnboardingRoute) {
+    if ((!onboardingRequired || onboardingCompleted) && isOnboardingRoute) {
         return <Navigate to="/dashboard" replace />;
     }
 
