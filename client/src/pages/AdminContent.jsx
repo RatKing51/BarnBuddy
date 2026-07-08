@@ -252,6 +252,7 @@ export default function AdminContent() {
   const [premiumCustomDate, setPremiumCustomDate] = useState('')
   const [adminUserDetails, setAdminUserDetails] = useState(null)
   const [adminUserDetailsLoading, setAdminUserDetailsLoading] = useState(false)
+  const [adminUserDetailsError, setAdminUserDetailsError] = useState('')
   const [adminFlagsDraft, setAdminFlagsDraft] = useState([])
   const [adminNoteDraft, setAdminNoteDraft] = useState('')
   const [savingAdminFlags, setSavingAdminFlags] = useState(false)
@@ -347,11 +348,13 @@ export default function AdminContent() {
   const loadAdminUserDetails = useCallback(async function loadAdminUserDetails(clerkUserId) {
     if (!clerkUserId) {
       setAdminUserDetails(null)
+      setAdminUserDetailsError('')
       return
     }
 
     try {
       setAdminUserDetailsLoading(true)
+      setAdminUserDetailsError('')
       const res = await authFetch(`${API_BASE_URL}/site-content/admin/users/${encodeURIComponent(clerkUserId)}/details`)
       const data = await res.json().catch(() => ({}))
 
@@ -367,6 +370,7 @@ export default function AdminContent() {
       setAdminUserDetails(data.details || null)
     } catch (err) {
       console.warn('Failed to load admin user details:', err.message)
+      setAdminUserDetailsError(err.message || 'Failed to load user details.')
       setAdminUserDetails(null)
     } finally {
       setAdminUserDetailsLoading(false)
@@ -2304,6 +2308,10 @@ export default function AdminContent() {
 
                         {adminUserDetailsLoading && !adminUserDetails ? (
                           <p className="mt-4 text-sm text-slate-400">Loading user details...</p>
+                        ) : adminUserDetailsError ? (
+                          <div className="mt-4 rounded-md border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">
+                            {adminUserDetailsError}
+                          </div>
                         ) : (
                           <>
                             <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">

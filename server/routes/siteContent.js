@@ -181,16 +181,29 @@ async function upsertLocalSubscriptionFromClerkUser(clerkUser) {
   const normalized = normalizeClerkUser(clerkUser);
   const isPremium = hasPremiumMetadata(normalized.publicMetadata);
   const email = normalized.email || `clerk-${normalized.clerkUserId}@users.barnbuddy.local`;
-  const existing = await pool.query(
+  const existingByClerkId = await pool.query(
     `SELECT id
      FROM users
-     WHERE clerk_user_id = $1 OR LOWER(email) = LOWER($2)
-     ORDER BY CASE WHEN clerk_user_id = $1 THEN 0 ELSE 1 END
+     WHERE clerk_user_id = $1
      LIMIT 1`,
-    [normalized.clerkUserId, email]
+    [normalized.clerkUserId]
   );
+  const existingByEmail = await pool.query(
+    `SELECT id
+     FROM users
+     WHERE LOWER(email) = LOWER($1)
+     LIMIT 1`,
+    [email]
+  );
+  const clerkLinkedUser = existingByClerkId.rows[0];
+  const emailMatchedUser = existingByEmail.rows[0];
+  const targetUserId = emailMatchedUser?.id || clerkLinkedUser?.id || null;
 
-  if (existing.rows[0]) {
+  if (clerkLinkedUser && emailMatchedUser && clerkLinkedUser.id !== emailMatchedUser.id) {
+    await pool.query("UPDATE users SET clerk_user_id = NULL WHERE id = $1", [clerkLinkedUser.id]);
+  }
+
+  if (targetUserId) {
     await pool.query(
       `UPDATE users
        SET clerk_user_id = $1,
@@ -207,7 +220,7 @@ async function upsertLocalSubscriptionFromClerkUser(clerkUser) {
         isPremium ? "premium" : "free",
         isPremium ? "active" : "free",
         isPremium,
-        existing.rows[0].id,
+        targetUserId,
       ]
     );
   } else {
@@ -240,6 +253,26 @@ async function listClerkUsers({ query = "", limit = 25 } = {}) {
   return Array.isArray(response) ? response : response.data || [];
 }
 
+async function tableExists(tableName) {
+  const result = await pool.query("SELECT to_regclass($1) AS table_name", [tableName]);
+  return Boolean(result.rows[0]?.table_name);
+}
+
+async function getCountIfTableExists(tableName, query, params = []) {
+  if (!(await tableExists(tableName))) return 0;
+
+  const result = await pool.query(query, params);
+  return Number(result.rows[0]?.count) || 0;
+}
+
+async function getCountIfTablesExist(tableNames, query, params = []) {
+  const exists = await Promise.all(tableNames.map((tableName) => tableExists(tableName)));
+  if (exists.some((value) => !value)) return 0;
+
+  const result = await pool.query(query, params);
+  return Number(result.rows[0]?.count) || 0;
+}
+
 async function getUserDetailsForAdmin(clerkUserId) {
   const localUser = await getLocalUserByClerkId(clerkUserId);
 
@@ -262,55 +295,85 @@ async function getUserDetailsForAdmin(clerkUserId) {
     };
   }
 
-  const [countsResult, herdsResult, activity] = await Promise.all([
-    pool.query(
-      `SELECT
-         (SELECT COUNT(*)::int FROM herds WHERE user_id = $1) AS herds,
-         (SELECT COUNT(*)::int FROM animals WHERE user_id = $1) AS animals,
-         (SELECT COUNT(*)::int FROM animals WHERE user_id = $1 AND COALESCE(status, 'active') NOT IN ('archived', 'deceased')) AS active_animals,
-         (SELECT COUNT(*)::int FROM animals WHERE user_id = $1 AND status = 'archived') AS archived_animals,
-         (SELECT COUNT(*)::int FROM animals WHERE user_id = $1 AND status = 'deceased') AS deceased_animals,
-         (SELECT COUNT(*)::int FROM health_events WHERE user_id = $1) AS health_events,
-         (SELECT COUNT(*)::int FROM vet_visits vv JOIN animals a ON a.id = vv.animal_id WHERE a.user_id = $1) AS vet_visits,
-         (SELECT COUNT(*)::int FROM vaccinations v JOIN animals a ON a.id = v.animal_id WHERE a.user_id = $1) AS vaccinations,
-         (
-           (SELECT COUNT(*)::int FROM finance_records WHERE user_id = $1) +
-           (SELECT COUNT(*)::int FROM feed_records WHERE user_id = $1) +
-           (SELECT COUNT(*)::int FROM inventory_records WHERE user_id = $1) +
-           (SELECT COUNT(*)::int FROM reproductions WHERE user_id = $1) +
-           (SELECT COUNT(*)::int FROM births WHERE user_id = $1)
-         ) AS premium_records`,
-      [localUser.id]
-    ),
-    pool.query(
-      `SELECT h.id,
-              h.name,
-              h.location,
-              COUNT(a.id)::int AS animal_count
-       FROM herds h
-       LEFT JOIN animals a ON a.herd_id = h.id
-       WHERE h.user_id = $1
-       GROUP BY h.id, h.name, h.location
-       ORDER BY h.name ASC
-       LIMIT 12`,
-      [localUser.id]
-    ),
-    getUserActivity({ userId: localUser.id, limit: 8 }),
+  const [
+    herdCount,
+    animalCount,
+    activeAnimalCount,
+    archivedAnimalCount,
+    deceasedAnimalCount,
+    healthEventCount,
+    vetVisitCount,
+    vaccinationCount,
+    financeCount,
+    feedCount,
+    inventoryCount,
+    reproductionCount,
+    birthCount,
+    herdsResult,
+    activity,
+  ] = await Promise.all([
+    getCountIfTableExists("herds", "SELECT COUNT(*)::int AS count FROM herds WHERE user_id = $1", [localUser.id]),
+    getCountIfTableExists("animals", "SELECT COUNT(*)::int AS count FROM animals WHERE user_id = $1", [localUser.id]),
+    getCountIfTableExists("animals", "SELECT COUNT(*)::int AS count FROM animals WHERE user_id = $1 AND COALESCE(status, 'active') NOT IN ('archived', 'deceased')", [localUser.id]),
+    getCountIfTableExists("animals", "SELECT COUNT(*)::int AS count FROM animals WHERE user_id = $1 AND status = 'archived'", [localUser.id]),
+    getCountIfTableExists("animals", "SELECT COUNT(*)::int AS count FROM animals WHERE user_id = $1 AND status = 'deceased'", [localUser.id]),
+    getCountIfTablesExist(["health_events", "animals"], "SELECT COUNT(*)::int AS count FROM health_events he JOIN animals a ON a.id = he.animal_id WHERE a.user_id = $1", [localUser.id]),
+    getCountIfTablesExist(["vet_visits", "animals"], "SELECT COUNT(*)::int AS count FROM vet_visits vv JOIN animals a ON a.id = vv.animal_id WHERE a.user_id = $1", [localUser.id]),
+    getCountIfTablesExist(["vaccinations", "animals"], "SELECT COUNT(*)::int AS count FROM vaccinations v JOIN animals a ON a.id = v.animal_id WHERE a.user_id = $1", [localUser.id]),
+    getCountIfTableExists("finance_records", "SELECT COUNT(*)::int AS count FROM finance_records WHERE user_id = $1", [localUser.id]),
+    getCountIfTableExists("feed_records", "SELECT COUNT(*)::int AS count FROM feed_records WHERE user_id = $1", [localUser.id]),
+    getCountIfTableExists("inventory_records", "SELECT COUNT(*)::int AS count FROM inventory_records WHERE user_id = $1", [localUser.id]),
+    getCountIfTableExists("reproductions", "SELECT COUNT(*)::int AS count FROM reproductions WHERE user_id = $1", [localUser.id]),
+    getCountIfTableExists("births", "SELECT COUNT(*)::int AS count FROM births WHERE user_id = $1", [localUser.id]),
+    Promise.all([tableExists("herds"), tableExists("animals")]).then(([hasHerds, hasAnimals]) => {
+      if (!hasHerds) return { rows: [] };
+
+      if (!hasAnimals) {
+        return pool.query(
+          `SELECT h.id,
+                  h.name,
+                  h.location,
+                  0::int AS animal_count
+           FROM herds h
+           WHERE h.user_id = $1
+           ORDER BY h.name ASC
+           LIMIT 12`,
+          [localUser.id]
+        );
+      }
+
+      return pool.query(
+        `SELECT h.id,
+                h.name,
+                h.location,
+                COUNT(a.id)::int AS animal_count
+         FROM herds h
+         LEFT JOIN animals a ON a.herd_id = h.id
+         WHERE h.user_id = $1
+         GROUP BY h.id, h.name, h.location
+         ORDER BY h.name ASC
+         LIMIT 12`,
+        [localUser.id]
+      );
+    }),
+    getUserActivity({ userId: localUser.id, limit: 8 }).catch((err) => {
+      console.warn("Failed to load recent user activity for admin details:", err.message);
+      return [];
+    }),
   ]);
-  const counts = countsResult.rows[0] || {};
 
   return {
     localUser,
     counts: {
-      herds: counts.herds || 0,
-      animals: counts.animals || 0,
-      activeAnimals: counts.active_animals || 0,
-      archivedAnimals: counts.archived_animals || 0,
-      deceasedAnimals: counts.deceased_animals || 0,
-      healthEvents: counts.health_events || 0,
-      vetVisits: counts.vet_visits || 0,
-      vaccinations: counts.vaccinations || 0,
-      premiumRecords: counts.premium_records || 0,
+      herds: herdCount,
+      animals: animalCount,
+      activeAnimals: activeAnimalCount,
+      archivedAnimals: archivedAnimalCount,
+      deceasedAnimals: deceasedAnimalCount,
+      healthEvents: healthEventCount,
+      vetVisits: vetVisitCount,
+      vaccinations: vaccinationCount,
+      premiumRecords: financeCount + feedCount + inventoryCount + reproductionCount + birthCount,
     },
     herds: herdsResult.rows,
     recentActivity: activity,
@@ -710,7 +773,10 @@ router.get("/admin/users/:clerkUserId/details", authMiddleware, requireAdmin, as
     });
   } catch (err) {
     console.error("Failed to load admin user details:", err);
-    res.status(500).json({ error: "Failed to load user details" });
+    res.status(500).json({
+      error: "Failed to load user details",
+      message: env.nodeEnv === "production" ? undefined : err.message,
+    });
   }
 });
 
