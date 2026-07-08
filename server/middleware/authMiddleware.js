@@ -48,6 +48,20 @@ function readBooleanFromSources(sources, keys) {
     return sources.some((source) => keys.some((key) => source[key] === true));
 }
 
+function readDateFromSources(sources, keys) {
+    for (const source of sources) {
+        for (const key of keys) {
+            const value = source[key];
+            if (typeof value === "string" && value.trim()) {
+                const parsed = Date.parse(value);
+                if (!Number.isNaN(parsed)) return parsed;
+            }
+        }
+    }
+
+    return 0;
+}
+
 function readEnvList(name, fallback = []) {
     const values = (process.env[name] || "")
         .split(",")
@@ -97,11 +111,14 @@ function getSubscriptionFromClaims(claims = {}, hasPremiumAccess = false, clerkM
         "status",
     ]));
     const hasPremiumFlag = readBooleanFromSources(sources, ["premium", "isPremium", "hasPremium"]);
+    const premiumExpiresAt = readDateFromSources(sources, ["premiumExpiresAt", "premium_expires_at", "subscriptionExpiresAt"]);
+    const premiumExpired = Boolean(premiumExpiresAt && premiumExpiresAt <= Date.now());
     const isPremium = Boolean(
-        Boolean(hasPremiumAccess) ||
-        hasPremiumFlag ||
-        premiumPlanValues.has(plan) ||
-        Boolean(plan && plan !== "free" && activeStatusValues.has(status))
+        !premiumExpired &&
+        (Boolean(hasPremiumAccess) ||
+            hasPremiumFlag ||
+            premiumPlanValues.has(plan) ||
+            Boolean(plan && plan !== "free" && activeStatusValues.has(status)))
     );
 
     return {

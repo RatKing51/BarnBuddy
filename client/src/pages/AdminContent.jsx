@@ -128,6 +128,9 @@ function activityLabel(action) {
     website_content_updated: 'Saved website content',
     site_media_uploaded: 'Uploaded site image',
     support_message_updated: 'Updated support message',
+    user_premium_granted: 'Granted premium',
+    user_premium_revoked: 'Revoked premium',
+    user_admin_flags_updated: 'Updated admin flags',
   }
 
   const label = labels[action] || action.replace(/_/g, ' ')
@@ -188,6 +191,28 @@ const quickLinks = [
   { label: 'Live Site', url: 'https://barnbuddy.pro' },
 ]
 
+const announcementAudienceOptions = [
+  ['all', 'Everyone'],
+  ['free', 'Free users'],
+  ['premium', 'Premium users'],
+  ['admins', 'Admins only'],
+]
+
+const adminFlagOptions = [
+  ['beta_tester', 'Beta tester'],
+  ['support_priority', 'Support priority'],
+  ['manual_premium', 'Manual premium'],
+  ['do_not_delete_premium_data', 'Keep premium data'],
+]
+
+const premiumDurationOptions = [
+  ['lifetime', 'Lifetime'],
+  ['30', '30 days'],
+  ['90', '90 days'],
+  ['365', '1 year'],
+  ['custom', 'Custom date'],
+]
+
 function EmptyState({ title, text, action }) {
   return (
     <div className="rounded-lg border border-dashed border-slate-700 bg-slate-950/35 p-8 text-center">
@@ -218,6 +243,18 @@ export default function AdminContent() {
   const [userActivityLoading, setUserActivityLoading] = useState(false)
   const [activityUsers, setActivityUsers] = useState([])
   const [selectedActivityUserId, setSelectedActivityUserId] = useState('')
+  const [adminUsers, setAdminUsers] = useState([])
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false)
+  const [userSearch, setUserSearch] = useState('')
+  const [selectedAdminUserId, setSelectedAdminUserId] = useState('')
+  const [updatingUserId, setUpdatingUserId] = useState('')
+  const [premiumDuration, setPremiumDuration] = useState('lifetime')
+  const [premiumCustomDate, setPremiumCustomDate] = useState('')
+  const [adminUserDetails, setAdminUserDetails] = useState(null)
+  const [adminUserDetailsLoading, setAdminUserDetailsLoading] = useState(false)
+  const [adminFlagsDraft, setAdminFlagsDraft] = useState([])
+  const [adminNoteDraft, setAdminNoteDraft] = useState('')
+  const [savingAdminFlags, setSavingAdminFlags] = useState(false)
   const [mediaLibrary, setMediaLibrary] = useState([])
   const [supportMessages, setSupportMessages] = useState([])
   const [newsletterSubscribers, setNewsletterSubscribers] = useState([])
@@ -283,6 +320,58 @@ export default function AdminContent() {
       setUserActivityLoading(false)
     }
   }, [authFetch, selectedActivityUserId])
+
+  const loadAdminUsers = useCallback(async function loadAdminUsers(query = '') {
+    try {
+      setAdminUsersLoading(true)
+      const params = new URLSearchParams({ limit: '50' })
+      if (query.trim()) params.set('query', query.trim())
+      const res = await authFetch(`${API_BASE_URL}/site-content/admin/users?${params.toString()}`)
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Failed to load users.')
+      }
+
+      const users = Array.isArray(data.users) ? data.users : []
+      setAdminUsers(users)
+      setSelectedAdminUserId((current) => current || users[0]?.clerkUserId || '')
+    } catch (err) {
+      console.warn('Failed to load admin users:', err.message)
+      toast.error(err.message || 'Failed to load users.')
+    } finally {
+      setAdminUsersLoading(false)
+    }
+  }, [authFetch])
+
+  const loadAdminUserDetails = useCallback(async function loadAdminUserDetails(clerkUserId) {
+    if (!clerkUserId) {
+      setAdminUserDetails(null)
+      return
+    }
+
+    try {
+      setAdminUserDetailsLoading(true)
+      const res = await authFetch(`${API_BASE_URL}/site-content/admin/users/${encodeURIComponent(clerkUserId)}/details`)
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Failed to load user details.')
+      }
+
+      if (data.user) {
+        setAdminUsers((current) =>
+          current.map((user) => (user.clerkUserId === clerkUserId ? { ...user, ...data.user } : user))
+        )
+      }
+      setAdminUserDetails(data.details || null)
+    } catch (err) {
+      console.warn('Failed to load admin user details:', err.message)
+      setAdminUserDetails(null)
+    } finally {
+      setAdminUserDetailsLoading(false)
+    }
+  }, [authFetch])
 
   const loadAdminTools = useCallback(async function loadAdminTools() {
     try {
@@ -352,16 +441,22 @@ export default function AdminContent() {
     loadContent()
     loadAdminActivity()
     loadActivityUsers()
+    loadAdminUsers('')
     loadAdminTools()
 
     return () => {
       cancelled = true
     }
-  }, [authFetch, loadAdminActivity, loadActivityUsers, loadAdminTools])
+  }, [authFetch, loadAdminActivity, loadActivityUsers, loadAdminUsers, loadAdminTools])
 
   useEffect(() => {
     loadUserActivity(selectedActivityUserId)
   }, [loadUserActivity, selectedActivityUserId])
+
+  useEffect(() => {
+    if (!selectedAdminUserId) return
+    loadAdminUserDetails(selectedAdminUserId)
+  }, [loadAdminUserDetails, selectedAdminUserId])
 
   useEffect(() => {
     if (selectedPostIndex > content.newsPosts.length - 1) {
@@ -397,20 +492,28 @@ export default function AdminContent() {
       { label: 'Carousel', value: publishedCarouselSlides },
       { label: 'Services', value: content.status.services?.length || 0 },
       { label: 'Support', value: supportMessages.length },
+      { label: 'Users', value: adminUsers.length },
       { label: 'Admin activity', value: adminActivity.length },
       { label: 'Tracked users', value: activityUsers.length },
       { label: 'Needs attention', value: flaggedServices },
     ]
-  }, [activityUsers.length, adminActivity.length, content, supportMessages.length])
+  }, [activityUsers.length, adminActivity.length, adminUsers.length, content, supportMessages.length])
 
   const selectedPost = content.newsPosts[selectedPostIndex] || null
   const selectedReview = (content.reviews || [])[selectedReviewIndex] || null
   const selectedCarouselSlide = (content.carouselSlides || [])[selectedCarouselIndex] || null
+  const selectedAdminUser = adminUsers.find((user) => user.clerkUserId === selectedAdminUserId) || adminUsers[0] || null
+  const selectedAdminUserFlags = useMemo(() => selectedAdminUser?.adminFlags || [], [selectedAdminUser?.adminFlags])
   const featuredPostId = content.newsPosts.find((post) => post.featured)?.id || ''
   const hasUnsavedChanges = useMemo(
     () => JSON.stringify(content) !== JSON.stringify(lastSavedContent),
     [content, lastSavedContent]
   )
+
+  useEffect(() => {
+    setAdminFlagsDraft(selectedAdminUserFlags)
+    setAdminNoteDraft(selectedAdminUser?.adminNote || '')
+  }, [selectedAdminUser?.adminNote, selectedAdminUserFlags])
 
   function updatePost(index, changes) {
     setContent((current) => {
@@ -618,6 +721,76 @@ export default function AdminContent() {
   function discardChanges() {
     setContent(lastSavedContent)
     toast.info('Unsaved changes discarded.')
+  }
+
+  async function updateUserPremium(clerkUserId, enabled) {
+    if (!clerkUserId) return
+
+    try {
+      setUpdatingUserId(clerkUserId)
+      const expiresAt = premiumDuration === 'custom' ? premiumCustomDate : premiumDuration
+      const res = await authFetch(`${API_BASE_URL}/site-content/admin/users/${encodeURIComponent(clerkUserId)}/subscription`, {
+        method: 'PATCH',
+        body: JSON.stringify({ enabled, expiresAt }),
+      })
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Failed to update user.')
+      }
+
+      setAdminUsers((current) =>
+        current.map((user) => (user.clerkUserId === clerkUserId ? { ...user, ...(data.user || {}) } : user))
+      )
+      await loadAdminUserDetails(clerkUserId)
+      toast.success(enabled ? 'Premium granted.' : 'Premium removed.')
+      await loadAdminActivity()
+    } catch (err) {
+      toast.error(err.message || 'Failed to update user.')
+    } finally {
+      setUpdatingUserId('')
+    }
+  }
+
+  function toggleAdminFlag(flag) {
+    setAdminFlagsDraft((current) =>
+      current.includes(flag) ? current.filter((item) => item !== flag) : [...current, flag]
+    )
+  }
+
+  async function saveAdminFlags() {
+    if (!selectedAdminUser?.clerkUserId) return
+
+    try {
+      setSavingAdminFlags(true)
+      const res = await authFetch(`${API_BASE_URL}/site-content/admin/users/${encodeURIComponent(selectedAdminUser.clerkUserId)}/flags`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          adminFlags: adminFlagsDraft,
+          adminNote: adminNoteDraft,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Failed to save admin flags.')
+      }
+
+      setAdminUsers((current) =>
+        current.map((user) => (user.clerkUserId === selectedAdminUser.clerkUserId ? { ...user, ...(data.user || {}) } : user))
+      )
+      toast.success('Admin flags saved.')
+      await loadAdminActivity()
+    } catch (err) {
+      toast.error(err.message || 'Failed to save admin flags.')
+    } finally {
+      setSavingAdminFlags(false)
+    }
+  }
+
+  async function searchAdminUsers(event) {
+    event.preventDefault()
+    await loadAdminUsers(userSearch)
   }
 
   function queueSiteImageCrop(event, target) {
@@ -866,6 +1039,7 @@ export default function AdminContent() {
               ['media', 'Media'],
               ['links', 'Links'],
               ['support', 'Support'],
+              ['users', 'Users'],
               ['activity', 'Admin activity'],
               ['userActivity', 'User activity'],
             ].map(([id, label]) => (
@@ -942,7 +1116,7 @@ export default function AdminContent() {
 
           {activeTab === 'overview' && (
             <div className="mt-6 space-y-6">
-              <div className="grid grid-cols-2 gap-3 xl:grid-cols-9">
+              <div className="grid grid-cols-2 gap-3 xl:grid-cols-10">
                 {dashboardStats.map((stat) => (
                   <div key={stat.label} className="rounded-lg border border-slate-800 bg-slate-900 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{stat.label}</p>
@@ -1095,6 +1269,13 @@ export default function AdminContent() {
                       ))}
                     </select>
                   </Field>
+                  <Field label="Audience">
+                    <select className={inputClass()} value={content.announcement?.targetAudience || 'all'} onChange={(event) => updateAnnouncement({ targetAudience: event.target.value })}>
+                      {announcementAudienceOptions.map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </Field>
                   <Field label="Message" span="md:col-span-2">
                     <textarea className={inputClass('min-h-40 resize-y text-base leading-relaxed')} value={content.announcement?.message || ''} onChange={(event) => updateAnnouncement({ message: event.target.value })} />
                   </Field>
@@ -1124,6 +1305,9 @@ export default function AdminContent() {
                     </p>
                   )}
                 </div>
+                <p className="mt-4 text-sm text-slate-400">
+                  Audience: {announcementAudienceOptions.find(([value]) => value === (content.announcement?.targetAudience || 'all'))?.[1] || 'Everyone'}
+                </p>
               </aside>
             </div>
           )}
@@ -1911,6 +2095,322 @@ export default function AdminContent() {
             </div>
           )}
 
+          {activeTab === 'users' && (
+            <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[22rem_1fr]">
+              <aside className="rounded-lg border border-slate-800 bg-slate-900">
+                <div className="border-b border-slate-800 px-5 py-4">
+                  <h3 className="text-xl font-semibold">Users</h3>
+                  <p className="mt-1 text-sm text-slate-400">Search Clerk accounts and manage BarnBuddy access.</p>
+                </div>
+
+                <form onSubmit={searchAdminUsers} className="border-b border-slate-800 p-5">
+                  <Field label="Search">
+                    <input
+                      className={inputClass()}
+                      value={userSearch}
+                      onChange={(event) => setUserSearch(event.target.value)}
+                      placeholder="Name, email, or Clerk ID"
+                    />
+                  </Field>
+                  <button
+                    type="submit"
+                    className="mt-3 w-full rounded-md bg-sky-500 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={adminUsersLoading}
+                  >
+                    {adminUsersLoading ? 'Searching...' : 'Search users'}
+                  </button>
+                </form>
+
+                <div className="max-h-[36rem] space-y-2 overflow-y-auto p-5">
+                  {adminUsers.map((user) => (
+                    <button
+                      key={user.clerkUserId}
+                      type="button"
+                      onClick={() => setSelectedAdminUserId(user.clerkUserId)}
+                      className={`w-full rounded-md border px-3 py-3 text-left transition ${
+                        user.clerkUserId === selectedAdminUser?.clerkUserId
+                          ? 'border-sky-300/50 bg-sky-500/15'
+                          : 'border-slate-800 bg-slate-950/45 hover:bg-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-white">{user.name || 'Unknown user'}</p>
+                          <p className="mt-1 truncate text-xs text-slate-500">{user.email || user.clerkUserId}</p>
+                        </div>
+                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                          user.isPremium
+                            ? 'border-emerald-300/25 bg-emerald-400/10 text-emerald-100'
+                            : 'border-slate-700 bg-slate-950 text-slate-400'
+                        }`}>
+                          {user.isPremium ? 'Premium' : 'Free'}
+                        </span>
+                      </div>
+                      {!!user.adminFlags?.length && (
+                        <p className="mt-2 truncate text-xs text-sky-200">{user.adminFlags.join(', ')}</p>
+                      )}
+                    </button>
+                  ))}
+
+                  {!adminUsers.length && (
+                    <EmptyState
+                      title={adminUsersLoading ? 'Loading users' : 'No users found'}
+                      text={adminUsersLoading ? 'Checking Clerk now.' : 'Try searching by email, name, or Clerk user ID.'}
+                    />
+                  )}
+                </div>
+              </aside>
+
+              <section className="rounded-lg border border-slate-800 bg-slate-900">
+                <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold">User management</h3>
+                    <p className="mt-1 text-sm text-slate-400">
+                      {selectedAdminUser?.email || selectedAdminUser?.clerkUserId || 'Choose a user to manage.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => loadAdminUsers(userSearch)}
+                    className="rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
+                  >
+                    {adminUsersLoading ? 'Refreshing...' : 'Refresh'}
+                  </button>
+                </div>
+
+                {selectedAdminUser ? (
+                  <div className="grid grid-cols-1 gap-5 p-5 xl:grid-cols-[1fr_22rem]">
+                    <div className="space-y-5">
+                      <div className="rounded-lg border border-slate-800 bg-slate-950/45 p-5">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Selected user</p>
+                            <h4 className="mt-2 text-2xl font-semibold text-white">{selectedAdminUser.name || 'Unknown user'}</h4>
+                            <p className="mt-1 text-sm text-slate-400">{selectedAdminUser.email || 'No email on file'}</p>
+                            <p className="mt-1 break-all text-xs text-slate-500">{selectedAdminUser.clerkUserId}</p>
+                          </div>
+                          <span className={`w-fit rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                            selectedAdminUser.isPremium
+                              ? 'border-emerald-300/25 bg-emerald-400/10 text-emerald-100'
+                              : 'border-slate-700 bg-slate-950 text-slate-300'
+                          }`}>
+                            {selectedAdminUser.isPremium ? 'Premium active' : 'Free plan'}
+                          </span>
+                        </div>
+
+                        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-[14rem_1fr]">
+                          <Field label="Premium length">
+                            <select className={inputClass()} value={premiumDuration} onChange={(event) => setPremiumDuration(event.target.value)}>
+                              {premiumDurationOptions.map(([value, label]) => (
+                                <option key={value} value={value}>{label}</option>
+                              ))}
+                            </select>
+                          </Field>
+                          {premiumDuration === 'custom' && (
+                            <Field label="Custom expiration">
+                              <input
+                                className={inputClass()}
+                                type="date"
+                                value={premiumCustomDate}
+                                onChange={(event) => setPremiumCustomDate(event.target.value)}
+                              />
+                            </Field>
+                          )}
+                        </div>
+
+                        {selectedAdminUser.premiumExpiresAt && (
+                          <p className={`mt-3 text-sm ${selectedAdminUser.premiumExpired ? 'text-red-200' : 'text-slate-400'}`}>
+                            Premium expires {formatDateTime(selectedAdminUser.premiumExpiresAt)}
+                          </p>
+                        )}
+
+                        <div className="mt-5 flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={() => updateUserPremium(selectedAdminUser.clerkUserId, true)}
+                            disabled={updatingUserId === selectedAdminUser.clerkUserId || (premiumDuration === 'custom' && !premiumCustomDate)}
+                            className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {updatingUserId === selectedAdminUser.clerkUserId ? 'Updating...' : 'Grant premium'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateUserPremium(selectedAdminUser.clerkUserId, false)}
+                            disabled={updatingUserId === selectedAdminUser.clerkUserId || !selectedAdminUser.isPremium}
+                            className="rounded-md border border-red-300/20 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Remove premium
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg border border-slate-800 bg-slate-950/45 p-5">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <h4 className="font-semibold">Admin flags</h4>
+                            <p className="mt-1 text-sm text-slate-400">Internal labels and notes for support decisions.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={saveAdminFlags}
+                            disabled={savingAdminFlags}
+                            className="rounded-md bg-sky-500 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {savingAdminFlags ? 'Saving...' : 'Save flags'}
+                          </button>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {adminFlagOptions.map(([value, label]) => (
+                            <label key={value} className={`flex items-center gap-3 rounded-md border px-3 py-2 text-sm font-semibold ${
+                              adminFlagsDraft.includes(value)
+                                ? 'border-sky-300/40 bg-sky-500/15 text-sky-100'
+                                : 'border-slate-800 bg-slate-950/45 text-slate-300'
+                            }`}>
+                              <input
+                                type="checkbox"
+                                checked={adminFlagsDraft.includes(value)}
+                                onChange={() => toggleAdminFlag(value)}
+                              />
+                              {label}
+                            </label>
+                          ))}
+                        </div>
+
+                        <Field label="Internal note" span="mt-4">
+                          <textarea
+                            className={inputClass('min-h-28 resize-y')}
+                            value={adminNoteDraft}
+                            onChange={(event) => setAdminNoteDraft(event.target.value)}
+                            placeholder="Notes only admins should see."
+                          />
+                        </Field>
+                      </div>
+
+                      <div className="rounded-lg border border-slate-800 bg-slate-950/45 p-5">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <h4 className="font-semibold">User details</h4>
+                            <p className="mt-1 text-sm text-slate-400">BarnBuddy account usage at a glance.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => loadAdminUserDetails(selectedAdminUser.clerkUserId)}
+                            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
+                          >
+                            {adminUserDetailsLoading ? 'Refreshing...' : 'Refresh'}
+                          </button>
+                        </div>
+
+                        {adminUserDetailsLoading && !adminUserDetails ? (
+                          <p className="mt-4 text-sm text-slate-400">Loading user details...</p>
+                        ) : (
+                          <>
+                            <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                              {[
+                                ['Herds', adminUserDetails?.counts?.herds || 0],
+                                ['Animals', adminUserDetails?.counts?.animals || 0],
+                                ['Active', adminUserDetails?.counts?.activeAnimals || 0],
+                                ['Archived', adminUserDetails?.counts?.archivedAnimals || 0],
+                                ['Health', adminUserDetails?.counts?.healthEvents || 0],
+                                ['Vet visits', adminUserDetails?.counts?.vetVisits || 0],
+                                ['Vaccines', adminUserDetails?.counts?.vaccinations || 0],
+                                ['Premium records', adminUserDetails?.counts?.premiumRecords || 0],
+                              ].map(([label, value]) => (
+                                <div key={label} className="rounded-md border border-slate-800 bg-slate-900 p-3">
+                                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
+                                  <p className="mt-2 text-2xl font-semibold">{value}</p>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                              <div>
+                                <h5 className="text-sm font-semibold text-white">Herds</h5>
+                                <div className="mt-2 space-y-2">
+                                  {(adminUserDetails?.herds || []).map((herd) => (
+                                    <div key={herd.id} className="rounded-md border border-slate-800 bg-slate-900 px-3 py-2">
+                                      <p className="text-sm font-semibold text-white">{herd.name}</p>
+                                      <p className="mt-1 text-xs text-slate-500">{herd.animal_count} animals{herd.location ? ` - ${herd.location}` : ''}</p>
+                                    </div>
+                                  ))}
+                                  {!adminUserDetails?.herds?.length && <p className="text-sm text-slate-500">No herds found.</p>}
+                                </div>
+                              </div>
+
+                              <div>
+                                <h5 className="text-sm font-semibold text-white">Recent activity</h5>
+                                <div className="mt-2 space-y-2">
+                                  {(adminUserDetails?.recentActivity || []).map((item) => (
+                                    <div key={item.id} className="rounded-md border border-slate-800 bg-slate-900 px-3 py-2">
+                                      <p className="text-sm font-semibold text-white">{userActivityDescription(item)}</p>
+                                      <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.createdAt)}</p>
+                                    </div>
+                                  ))}
+                                  {!adminUserDetails?.recentActivity?.length && <p className="text-sm text-slate-500">No recent activity.</p>}
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="rounded-lg border border-slate-800 bg-slate-950/45 p-5">
+                        <h4 className="font-semibold">Clerk public metadata</h4>
+                        <p className="mt-1 text-sm text-slate-400">Grant premium writes the exact values BarnBuddy checks for access.</p>
+                        <pre className="mt-4 overflow-x-auto rounded-md border border-slate-800 bg-slate-950 p-4 text-xs leading-relaxed text-slate-200">
+{JSON.stringify(selectedAdminUser.publicMetadata || {}, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+
+                    <aside className="rounded-lg border border-slate-800 bg-slate-950/45 p-5">
+                      <h4 className="font-semibold">BarnBuddy account</h4>
+                      <div className="mt-4 space-y-3 text-sm">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Local user ID</p>
+                          <p className="mt-1 text-slate-200">{selectedAdminUser.localUser?.id || 'Not synced yet'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Local plan</p>
+                          <p className="mt-1 text-slate-200">{selectedAdminUser.localUser?.subscription_plan || 'free'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Local status</p>
+                          <p className="mt-1 text-slate-200">{selectedAdminUser.localUser?.subscription_status || 'free'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Created</p>
+                          <p className="mt-1 text-slate-200">{formatDateTime(selectedAdminUser.createdAt)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Last sign-in</p>
+                          <p className="mt-1 text-slate-200">{formatDateTime(selectedAdminUser.lastSignInAt)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Admin flags</p>
+                          <p className="mt-1 text-slate-200">{selectedAdminUserFlags.length ? selectedAdminUserFlags.join(', ') : 'None'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Required metadata</p>
+                          <pre className="mt-2 overflow-x-auto rounded-md border border-slate-800 bg-slate-950 p-3 text-xs text-slate-200">{`{
+  "plan": "premium",
+  "subscriptionStatus": "active",
+  "premiumExpiresAt": ""
+}`}</pre>
+                        </div>
+                      </div>
+                    </aside>
+                  </div>
+                ) : (
+                  <div className="p-5">
+                    <EmptyState title="No user selected" text="Search or choose a user from the list to manage premium access." />
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
+
           {activeTab === 'activity' && (
             <div className="mt-6 rounded-lg border border-slate-800 bg-slate-900">
               <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -2059,4 +2559,5 @@ export default function AdminContent() {
     </main>
     </>
   )
+
 }

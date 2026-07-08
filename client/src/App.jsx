@@ -21,6 +21,8 @@ import { ToastContainer } from "react-toastify";
 import { PageLoadingBar } from "./components/LoadingSpinner";
 import { getSiteContent } from "./api/siteContent";
 import { defaultSiteContent } from "./data/siteContent";
+import { useAuth } from "./context/AuthContext";
+import { ADMIN_CLERK_USER_IDS, ADMIN_EMAILS } from "./config/env";
 
 const DOCS_URL = "https://doc.barnbuddy.pro";
 const ANNOUNCEMENT_EVENT = "barnbuddy:announcement-updated";
@@ -68,6 +70,7 @@ function DocsRedirect() {
 
 function AppContent() {
   const location = useLocation();
+  const { user, subscription } = useAuth();
   const [pageLoading, setPageLoading] = useState(false);
   const [announcement, setAnnouncement] = useState(defaultSiteContent.announcement);
   const [maintenance, setMaintenance] = useState(defaultSiteContent.maintenance);
@@ -80,7 +83,19 @@ function AppContent() {
     maintenance?.enabled &&
       !maintenanceAllowedPaths.some((path) => location.pathname === path || location.pathname.startsWith(`${path}/`))
   );
-  const showAnnouncement = showShell && announcement?.enabled && (announcement.title || announcement.message);
+  const primaryEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || "";
+  const isAdmin = Boolean(
+    user &&
+      ((primaryEmail && ADMIN_EMAILS.includes(primaryEmail)) ||
+        (user?.id && ADMIN_CLERK_USER_IDS.includes(user.id)))
+  );
+  const announcementAudience = announcement?.targetAudience || "all";
+  const announcementMatchesAudience =
+    announcementAudience === "all" ||
+    (announcementAudience === "free" && !subscription?.isPremium && !isAdmin) ||
+    (announcementAudience === "premium" && subscription?.isPremium) ||
+    (announcementAudience === "admins" && isAdmin);
+  const showAnnouncement = showShell && announcement?.enabled && announcementMatchesAudience && (announcement.title || announcement.message);
   const announcementStyle = announcementStyles[announcement?.tone] || announcementStyles.blue;
 
   useEffect(() => {

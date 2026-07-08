@@ -84,6 +84,7 @@ const defaultSiteContent = {
     message: "",
     linkText: "",
     linkUrl: "",
+    targetAudience: "all",
   },
   maintenance: {
     enabled: false,

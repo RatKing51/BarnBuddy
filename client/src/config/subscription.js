@@ -75,6 +75,20 @@ function readFirstBoolean(source, keys) {
   return keys.some((key) => source[key] === true);
 }
 
+function readFirstDate(source, keys) {
+  if (!source || typeof source !== "object") return 0;
+
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "string" && value.trim()) {
+      const parsed = Date.parse(value);
+      if (!Number.isNaN(parsed)) return parsed;
+    }
+  }
+
+  return 0;
+}
+
 export function getSubscriptionFromClerk({ user, sessionClaims, backendUser, hasPremiumAccess = false } = {}) {
   const publicMetadata = user?.publicMetadata || {};
   const unsafeMetadata = user?.unsafeMetadata || {};
@@ -99,12 +113,19 @@ export function getSubscriptionFromClerk({ user, sessionClaims, backendUser, has
     readFirstBoolean(publicMetadata, ["premium", "isPremium", "hasPremium"]) ||
     readFirstBoolean(unsafeMetadata, ["premium", "isPremium", "hasPremium"]) ||
     readFirstBoolean(backendSubscription, ["premium", "isPremium", "hasPremium"]);
+  const premiumExpiresAt =
+    readFirstDate(sessionClaims, ["premiumExpiresAt", "premium_expires_at", "subscriptionExpiresAt"]) ||
+    readFirstDate(publicMetadata, ["premiumExpiresAt", "premium_expires_at", "subscriptionExpiresAt"]) ||
+    readFirstDate(unsafeMetadata, ["premiumExpiresAt", "premium_expires_at", "subscriptionExpiresAt"]) ||
+    readFirstDate(backendSubscription, ["premiumExpiresAt", "premium_expires_at", "subscriptionExpiresAt"]);
+  const premiumExpired = Boolean(premiumExpiresAt && premiumExpiresAt <= Date.now());
 
   const isPremium = Boolean(
-    Boolean(hasPremiumAccess) ||
-    hasPremiumFlag ||
-    premiumPlanValues.has(plan) ||
-    Boolean(plan && plan !== PLAN_IDS.free && activeStatusValues.has(status))
+    !premiumExpired &&
+      (Boolean(hasPremiumAccess) ||
+        hasPremiumFlag ||
+        premiumPlanValues.has(plan) ||
+        Boolean(plan && plan !== PLAN_IDS.free && activeStatusValues.has(status)))
   );
 
   const planId = isPremium ? PLAN_IDS.premium : PLAN_IDS.free;
@@ -115,5 +136,7 @@ export function getSubscriptionFromClerk({ user, sessionClaims, backendUser, has
     planName: PLANS[planId].name,
     status: status || (isPremium ? "active" : "free"),
     statusLabel: isPremium ? "Active" : "Free",
+    premiumExpiresAt: premiumExpiresAt ? new Date(premiumExpiresAt).toISOString() : "",
+    premiumExpired,
   };
 }

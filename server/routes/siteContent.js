@@ -1,5 +1,6 @@
 const express = require("express");
 const multer = require("multer");
+const { clerkClient } = require("@clerk/express");
 const env = require("../config/env");
 const authMiddleware = require("../middleware/authMiddleware");
 const pool = require("../data-source");
@@ -24,6 +25,7 @@ const { getUserActivity, getUserActivityUsers } = require("../services/userActiv
 
 const router = express.Router();
 const validTones = new Set(["green", "blue", "yellow", "red"]);
+const validAnnouncementAudiences = new Set(["all", "free", "premium", "admins"]);
 const supportedSiteImageTypes = new Set([
   "image/jpeg",
   "image/png",
@@ -70,6 +72,249 @@ function requireAdmin(req, res, next) {
 
 function asTrimmedString(value, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
+}
+
+function getEmailAddressValue(emailAddress) {
+  return emailAddress?.email_address || emailAddress?.emailAddress || "";
+}
+
+function getPrimaryEmailFromClerkUser(clerkUser) {
+  const emailAddresses = clerkUser.email_addresses || clerkUser.emailAddresses || [];
+  const primaryEmailId = clerkUser.primary_email_address_id || clerkUser.primaryEmailAddressId;
+  const primaryEmail =
+    clerkUser.primaryEmailAddress ||
+    emailAddresses.find((email) => email.id === primaryEmailId);
+
+  return getEmailAddressValue(primaryEmail) || getEmailAddressValue(emailAddresses[0]) || "";
+}
+
+function normalizeClerkUser(clerkUser) {
+  const publicMetadata = clerkUser.publicMetadata || clerkUser.public_metadata || {};
+  const privateMetadata = clerkUser.privateMetadata || clerkUser.private_metadata || {};
+  const email = getPrimaryEmailFromClerkUser(clerkUser);
+  const premiumExpiresAt = asTrimmedString(publicMetadata.premiumExpiresAt);
+  const premiumExpiresTime = premiumExpiresAt ? Date.parse(premiumExpiresAt) : 0;
+  const premiumExpired = Boolean(premiumExpiresTime && premiumExpiresTime <= Date.now());
+  const name =
+    clerkUser.fullName ||
+    clerkUser.full_name ||
+    [clerkUser.firstName || clerkUser.first_name, clerkUser.lastName || clerkUser.last_name].filter(Boolean).join(" ") ||
+    clerkUser.username ||
+    email ||
+    clerkUser.id;
+
+  return {
+    clerkUserId: clerkUser.id,
+    name,
+    email,
+    imageUrl: clerkUser.imageUrl || clerkUser.image_url || "",
+    createdAt: clerkUser.createdAt || clerkUser.created_at || null,
+    lastSignInAt: clerkUser.lastSignInAt || clerkUser.last_sign_in_at || null,
+    publicMetadata,
+    adminFlags: Array.isArray(privateMetadata.adminFlags) ? privateMetadata.adminFlags : [],
+    adminNote: asTrimmedString(privateMetadata.adminNote),
+    plan: publicMetadata.plan || "free",
+    subscriptionStatus: publicMetadata.subscriptionStatus || publicMetadata.subscription_status || "free",
+    premiumExpiresAt,
+    premiumExpired,
+  };
+}
+
+function hasPremiumMetadata(publicMetadata = {}) {
+  const premiumExpiresAt = asTrimmedString(publicMetadata.premiumExpiresAt);
+  const premiumExpiresTime = premiumExpiresAt ? Date.parse(premiumExpiresAt) : 0;
+  const premiumExpired = Boolean(premiumExpiresTime && premiumExpiresTime <= Date.now());
+  return publicMetadata.plan === "premium" && publicMetadata.subscriptionStatus === "active" && !premiumExpired;
+}
+
+function addDays(date, days) {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
+function getPremiumExpiration(value) {
+  const normalized = asTrimmedString(value);
+  const now = new Date();
+
+  if (!normalized || normalized === "lifetime") return "";
+  if (normalized === "30") return addDays(now, 30).toISOString();
+  if (normalized === "90") return addDays(now, 90).toISOString();
+  if (normalized === "365") return addDays(now, 365).toISOString();
+
+  const parsed = Date.parse(normalized);
+  if (!Number.isNaN(parsed) && parsed > Date.now()) {
+    return new Date(parsed).toISOString();
+  }
+
+  return "";
+}
+
+function sanitizeAdminFlags(flags = []) {
+  if (!Array.isArray(flags)) return [];
+
+  return [...new Set(flags
+    .map((flag) => asTrimmedString(flag).toLowerCase())
+    .filter(Boolean)
+    .slice(0, 12))];
+}
+
+async function getLocalUserByClerkId(clerkUserId) {
+  const result = await pool.query(
+    `SELECT id,
+            name,
+            email,
+            clerk_user_id,
+            subscription_plan,
+            subscription_status,
+            subscription_is_premium
+     FROM users
+     WHERE clerk_user_id = $1
+     LIMIT 1`,
+    [clerkUserId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function upsertLocalSubscriptionFromClerkUser(clerkUser) {
+  const normalized = normalizeClerkUser(clerkUser);
+  const isPremium = hasPremiumMetadata(normalized.publicMetadata);
+  const email = normalized.email || `clerk-${normalized.clerkUserId}@users.barnbuddy.local`;
+  const existing = await pool.query(
+    `SELECT id
+     FROM users
+     WHERE clerk_user_id = $1 OR LOWER(email) = LOWER($2)
+     ORDER BY CASE WHEN clerk_user_id = $1 THEN 0 ELSE 1 END
+     LIMIT 1`,
+    [normalized.clerkUserId, email]
+  );
+
+  if (existing.rows[0]) {
+    await pool.query(
+      `UPDATE users
+       SET clerk_user_id = $1,
+           name = COALESCE(NULLIF($2, ''), name),
+           email = COALESCE(NULLIF($3, ''), email),
+           subscription_plan = $4,
+           subscription_status = $5,
+           subscription_is_premium = $6
+       WHERE id = $7`,
+      [
+        normalized.clerkUserId,
+        normalized.name,
+        email,
+        isPremium ? "premium" : "free",
+        isPremium ? "active" : "free",
+        isPremium,
+        existing.rows[0].id,
+      ]
+    );
+  } else {
+    await pool.query(
+      `INSERT INTO users (clerk_user_id, name, email, password, subscription_plan, subscription_status, subscription_is_premium)
+       VALUES ($1, $2, $3, 'clerk_managed', $4, $5, $6)`,
+      [
+        normalized.clerkUserId,
+        normalized.name,
+        email,
+        isPremium ? "premium" : "free",
+        isPremium ? "active" : "free",
+        isPremium,
+      ]
+    );
+  }
+
+  return {
+    ...normalized,
+    localUser: await getLocalUserByClerkId(normalized.clerkUserId),
+  };
+}
+
+async function listClerkUsers({ query = "", limit = 25 } = {}) {
+  const normalizedLimit = Math.max(1, Math.min(Number.parseInt(limit, 10) || 25, 100));
+  const params = { limit: normalizedLimit, orderBy: "-created_at" };
+  if (query) params.query = query;
+
+  const response = await clerkClient.users.getUserList(params);
+  return Array.isArray(response) ? response : response.data || [];
+}
+
+async function getUserDetailsForAdmin(clerkUserId) {
+  const localUser = await getLocalUserByClerkId(clerkUserId);
+
+  if (!localUser?.id) {
+    return {
+      localUser: null,
+      counts: {
+        herds: 0,
+        animals: 0,
+        activeAnimals: 0,
+        archivedAnimals: 0,
+        deceasedAnimals: 0,
+        healthEvents: 0,
+        vetVisits: 0,
+        vaccinations: 0,
+        premiumRecords: 0,
+      },
+      herds: [],
+      recentActivity: [],
+    };
+  }
+
+  const [countsResult, herdsResult, activity] = await Promise.all([
+    pool.query(
+      `SELECT
+         (SELECT COUNT(*)::int FROM herds WHERE user_id = $1) AS herds,
+         (SELECT COUNT(*)::int FROM animals WHERE user_id = $1) AS animals,
+         (SELECT COUNT(*)::int FROM animals WHERE user_id = $1 AND COALESCE(status, 'active') NOT IN ('archived', 'deceased')) AS active_animals,
+         (SELECT COUNT(*)::int FROM animals WHERE user_id = $1 AND status = 'archived') AS archived_animals,
+         (SELECT COUNT(*)::int FROM animals WHERE user_id = $1 AND status = 'deceased') AS deceased_animals,
+         (SELECT COUNT(*)::int FROM health_events WHERE user_id = $1) AS health_events,
+         (SELECT COUNT(*)::int FROM vet_visits vv JOIN animals a ON a.id = vv.animal_id WHERE a.user_id = $1) AS vet_visits,
+         (SELECT COUNT(*)::int FROM vaccinations v JOIN animals a ON a.id = v.animal_id WHERE a.user_id = $1) AS vaccinations,
+         (
+           (SELECT COUNT(*)::int FROM finance_records WHERE user_id = $1) +
+           (SELECT COUNT(*)::int FROM feed_records WHERE user_id = $1) +
+           (SELECT COUNT(*)::int FROM inventory_records WHERE user_id = $1) +
+           (SELECT COUNT(*)::int FROM reproductions WHERE user_id = $1) +
+           (SELECT COUNT(*)::int FROM births WHERE user_id = $1)
+         ) AS premium_records`,
+      [localUser.id]
+    ),
+    pool.query(
+      `SELECT h.id,
+              h.name,
+              h.location,
+              COUNT(a.id)::int AS animal_count
+       FROM herds h
+       LEFT JOIN animals a ON a.herd_id = h.id
+       WHERE h.user_id = $1
+       GROUP BY h.id, h.name, h.location
+       ORDER BY h.name ASC
+       LIMIT 12`,
+      [localUser.id]
+    ),
+    getUserActivity({ userId: localUser.id, limit: 8 }),
+  ]);
+  const counts = countsResult.rows[0] || {};
+
+  return {
+    localUser,
+    counts: {
+      herds: counts.herds || 0,
+      animals: counts.animals || 0,
+      activeAnimals: counts.active_animals || 0,
+      archivedAnimals: counts.archived_animals || 0,
+      deceasedAnimals: counts.deceased_animals || 0,
+      healthEvents: counts.health_events || 0,
+      vetVisits: counts.vet_visits || 0,
+      vaccinations: counts.vaccinations || 0,
+      premiumRecords: counts.premium_records || 0,
+    },
+    herds: herdsResult.rows,
+    recentActivity: activity,
+  };
 }
 
 function slugify(value) {
@@ -186,6 +431,7 @@ function sanitizeAnnouncement(announcement = {}) {
     message: asTrimmedString(announcement.message),
     linkText: asTrimmedString(announcement.linkText),
     linkUrl: asTrimmedString(announcement.linkUrl),
+    targetAudience: validAnnouncementAudiences.has(announcement.targetAudience) ? announcement.targetAudience : "all",
   };
 }
 
@@ -405,6 +651,153 @@ router.get("/admin/support", authMiddleware, requireAdmin, async (req, res) => {
   } catch (err) {
     console.error("Failed to load support inbox:", err);
     res.status(500).json({ error: "Failed to load support inbox" });
+  }
+});
+
+router.get("/admin/users", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const clerkUsers = await listClerkUsers({
+      query: asTrimmedString(req.query.query),
+      limit: req.query.limit,
+    });
+    const clerkUserIds = clerkUsers.map((user) => user.id).filter(Boolean);
+    const localUsersByClerkId = new Map();
+
+    if (clerkUserIds.length) {
+      const localResult = await pool.query(
+        `SELECT id,
+                name,
+                email,
+                clerk_user_id,
+                subscription_plan,
+                subscription_status,
+                subscription_is_premium
+         FROM users
+         WHERE clerk_user_id = ANY($1::text[])`,
+        [clerkUserIds]
+      );
+      localResult.rows.forEach((user) => localUsersByClerkId.set(user.clerk_user_id, user));
+    }
+
+    res.json({
+      users: clerkUsers.map((clerkUser) => {
+        const user = normalizeClerkUser(clerkUser);
+        return {
+          ...user,
+          isPremium: hasPremiumMetadata(user.publicMetadata),
+          localUser: localUsersByClerkId.get(user.clerkUserId) || null,
+        };
+      }),
+    });
+  } catch (err) {
+    console.error("Failed to load admin users:", err);
+    res.status(500).json({ error: "Failed to load users from Clerk" });
+  }
+});
+
+router.get("/admin/users/:clerkUserId/details", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const clerkUser = await clerkClient.users.getUser(req.params.clerkUserId);
+    const user = await upsertLocalSubscriptionFromClerkUser(clerkUser);
+    const details = await getUserDetailsForAdmin(req.params.clerkUserId);
+
+    res.json({
+      user: {
+        ...user,
+        isPremium: hasPremiumMetadata(user.publicMetadata),
+      },
+      details,
+    });
+  } catch (err) {
+    console.error("Failed to load admin user details:", err);
+    res.status(500).json({ error: "Failed to load user details" });
+  }
+});
+
+router.patch("/admin/users/:clerkUserId/subscription", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const enabled = req.body.enabled !== false;
+    const clerkUser = await clerkClient.users.getUser(req.params.clerkUserId);
+    const existingPublicMetadata = clerkUser.publicMetadata || clerkUser.public_metadata || {};
+    const premiumExpiresAt = getPremiumExpiration(req.body.expiresAt || req.body.duration);
+    const publicMetadata = enabled
+      ? {
+          ...existingPublicMetadata,
+          plan: "premium",
+          subscriptionStatus: "active",
+          premiumSource: "manual_admin",
+          premiumExpiresAt,
+        }
+      : {
+          ...existingPublicMetadata,
+          plan: "free",
+          subscriptionStatus: "free",
+          premiumSource: "",
+          premiumExpiresAt: "",
+        };
+
+    const updatedClerkUser = await clerkClient.users.updateUser(req.params.clerkUserId, {
+      publicMetadata,
+    });
+    const user = await upsertLocalSubscriptionFromClerkUser(updatedClerkUser);
+
+    await logAdminActivity({
+      userId: req.user.id,
+      action: enabled ? "user_premium_granted" : "user_premium_revoked",
+      details: {
+        clerkUserId: user.clerkUserId,
+        email: user.email,
+        plan: user.plan,
+        subscriptionStatus: user.subscriptionStatus,
+        premiumExpiresAt,
+      },
+    });
+
+    res.json({
+      user: {
+        ...user,
+        isPremium: hasPremiumMetadata(user.publicMetadata),
+      },
+    });
+  } catch (err) {
+    console.error("Failed to update user subscription:", err);
+    res.status(500).json({ error: "Failed to update Clerk public metadata" });
+  }
+});
+
+router.patch("/admin/users/:clerkUserId/flags", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const clerkUser = await clerkClient.users.getUser(req.params.clerkUserId);
+    const existingPrivateMetadata = clerkUser.privateMetadata || clerkUser.private_metadata || {};
+    const privateMetadata = {
+      ...existingPrivateMetadata,
+      adminFlags: sanitizeAdminFlags(req.body.adminFlags),
+      adminNote: asTrimmedString(req.body.adminNote).slice(0, 600),
+    };
+    const updatedClerkUser = await clerkClient.users.updateUser(req.params.clerkUserId, {
+      privateMetadata,
+    });
+    const user = await upsertLocalSubscriptionFromClerkUser(updatedClerkUser);
+
+    await logAdminActivity({
+      userId: req.user.id,
+      action: "user_admin_flags_updated",
+      details: {
+        clerkUserId: user.clerkUserId,
+        email: user.email,
+        adminFlags: user.adminFlags,
+      },
+    });
+
+    res.json({
+      user: {
+        ...user,
+        isPremium: hasPremiumMetadata(user.publicMetadata),
+      },
+    });
+  } catch (err) {
+    console.error("Failed to update admin user flags:", err);
+    res.status(500).json({ error: "Failed to update admin flags" });
   }
 });
 
