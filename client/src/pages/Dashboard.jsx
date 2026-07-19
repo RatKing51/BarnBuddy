@@ -1245,23 +1245,43 @@ export default function Dashboard() {
                 </span>
               ) : null}
             </div>
-            <select
-              data-tour="herd-switcher"
-              value={selectedHerd ? selectedHerd.id : ""}
-              disabled={loadingHerds}
-              onChange={(e) => setHerdFromValue(e.target.value)}
-              className="w-full rounded-xl border border-gray-700 bg-gray-900 px-3 py-2.5 text-base text-gray-100 outline-none disabled:opacity-70 md:self-end"
-            >
-              <option value="" disabled>
-                {loadingHerds ? "Loading herds..." : "Select Herd"}
-              </option>
-              <option value="unassigned">Unassigned Animals</option>
-              {herds.map((herd) => (
-                <option key={herd.id} value={String(herd.id)}>
-                  {herd.name}
+            {selectedAnimal ? (
+              <select
+                aria-label="Select animal"
+                value={String(selectedAnimal.id)}
+                disabled={loadingAnimals}
+                onChange={(e) => {
+                  const animal = animals.find((item) => String(item.id) === e.target.value);
+                  if (animal) handleSelectAnimal(animal);
+                }}
+                className="w-full rounded-xl border border-gray-700 bg-gray-900 px-3 py-2.5 text-base text-gray-100 outline-none disabled:opacity-70 md:self-end"
+              >
+                {animals.map((animal) => (
+                  <option key={animal.id} value={String(animal.id)}>
+                    {getAnimalPrimaryLabel(animal)}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <select
+                data-tour="herd-switcher"
+                aria-label="Select herd"
+                value={selectedHerd ? selectedHerd.id : ""}
+                disabled={loadingHerds}
+                onChange={(e) => setHerdFromValue(e.target.value)}
+                className="w-full rounded-xl border border-gray-700 bg-gray-900 px-3 py-2.5 text-base text-gray-100 outline-none disabled:opacity-70 md:self-end"
+              >
+                <option value="" disabled>
+                  {loadingHerds ? "Loading herds..." : "Select Herd"}
                 </option>
-              ))}
-            </select>
+                <option value="unassigned">Unassigned Animals</option>
+                {herds.map((herd) => (
+                  <option key={herd.id} value={String(herd.id)}>
+                    {herd.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </section>
 
