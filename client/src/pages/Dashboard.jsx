@@ -1185,6 +1185,12 @@ export default function Dashboard() {
             >
               {addingAnimal ? "Adding..." : "Add"}
             </button>
+            <a
+              href="/contact?topic=Bug%20report"
+              className="text-center text-xs text-gray-500 underline-offset-4 transition hover:text-gray-300 hover:underline"
+            >
+              Report a bug
+            </a>
           </div>
         </nav>
       </aside>
@@ -1300,6 +1306,7 @@ export default function Dashboard() {
           </div>
 
           {!["bulk-entry", "inventory"].includes(activeTab) && (
+          <>
           <div data-tour="animal-list" className="mt-2.5 flex gap-2 overflow-x-auto pb-1 md:gap-3">
             {loadingAnimals ? (
               [0, 1, 2].map((item) => (
@@ -1343,6 +1350,15 @@ export default function Dashboard() {
               );
             })}
           </div>
+          <div className="mt-2 text-center">
+            <a
+              href="/contact?topic=Bug%20report"
+              className="text-xs text-gray-500 underline-offset-4 transition hover:text-gray-300 hover:underline"
+            >
+              Report a bug
+            </a>
+          </div>
+          </>
           )}
         </section>
         )}

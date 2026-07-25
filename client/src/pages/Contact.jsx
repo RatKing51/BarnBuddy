@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import Footer from '../components/Footer'
 import { API_URL } from '../config/env'
 
@@ -21,6 +22,14 @@ const contactMethods = [
 ]
 
 const supportTopics = ['Account help', 'Feature ideas', 'School or chapter plans', 'Bug reports']
+const contactTopicOptions = [
+  'General question',
+  'Support request',
+  'Bug report',
+  'Review or feedback',
+  'School or chapter pricing',
+  'Feature idea',
+]
 const CONTACT_COOLDOWN_KEY = 'barnbuddy_contact_last_sent_at'
 const CONTACT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -43,6 +52,7 @@ function getContactCooldown() {
 }
 
 export default function Contact() {
+  const [searchParams] = useSearchParams()
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -52,6 +62,13 @@ export default function Contact() {
   const [status, setStatus] = useState({ type: '', message: '' })
   const [submitting, setSubmitting] = useState(false)
   const [cooldown, setCooldown] = useState(() => getContactCooldown())
+
+  useEffect(() => {
+    const requestedTopic = searchParams.get('topic')
+    if (contactTopicOptions.includes(requestedTopic)) {
+      setForm((current) => ({ ...current, topic: requestedTopic }))
+    }
+  }, [searchParams])
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
@@ -186,10 +203,9 @@ export default function Contact() {
                       onChange={(e) => updateField('topic', e.target.value)}
                       className="mt-2 w-full rounded-lg border border-white/10 bg-[#101D42] px-4 py-3 text-white outline-none transition-colors focus:border-blue-300"
                     >
-                      <option>General question</option>
-                      <option>Support request</option>
-                      <option>School or chapter pricing</option>
-                      <option>Feature idea</option>
+                      {contactTopicOptions.map((topic) => (
+                        <option key={topic}>{topic}</option>
+                      ))}
                     </select>
                   </label>
 

@@ -97,6 +97,7 @@ export default function Footer() {
               <ul className="space-y-2 text-sm text-white/80">
                 <li><a href="/help" className="hover:text-white">Help Center</a></li>
                 <li><a href="/contact" className="hover:text-white">Contact</a></li>
+                <li><a href="/contact?topic=Review%20or%20feedback" className="hover:text-white">Leave a review</a></li>
                 <li><a href="/status" className="hover:text-white">Status</a></li>
               </ul>
             </div>
