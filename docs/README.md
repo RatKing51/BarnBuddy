@@ -16,4 +16,6 @@ npm run build
 npm run railway:start
 ```
 
+Production serves only the generated `build` directory with the dependency-free Node server in `serve.js`; Docusaurus remains a build-time dependency.
+
 On Railway, create a new service from this repository and set the root directory to `docs`. Point the custom domain `doc.barnbuddy.pro` at that service.

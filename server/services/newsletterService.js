@@ -28,7 +28,12 @@ function normalizeEmail(email) {
 }
 
 function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function normalizeSource(source) {
+  const normalized = String(source || "footer").trim().toLowerCase();
+  return normalized.slice(0, 80) || "footer";
 }
 
 function getNewsletterAudienceId() {
@@ -161,6 +166,7 @@ async function subscribeToNewsletter({ email, source = "footer" }) {
   await ensureNewsletterSchema();
 
   const normalizedEmail = normalizeEmail(email);
+  const normalizedSource = normalizeSource(source);
 
   if (!isValidEmail(normalizedEmail)) {
     const error = new Error("Please enter a valid email address.");
@@ -170,7 +176,7 @@ async function subscribeToNewsletter({ email, source = "footer" }) {
 
   const resendSync = await syncResendNewsletterContact({
     email: normalizedEmail,
-    source,
+    source: normalizedSource,
     unsubscribed: false,
   });
 
@@ -184,7 +190,7 @@ async function subscribeToNewsletter({ email, source = "footer" }) {
        unsubscribed_at = NULL,
        updated_at = CURRENT_TIMESTAMP
      RETURNING id, email, status, source, subscribed_at, updated_at`,
-    [normalizedEmail, source]
+    [normalizedEmail, normalizedSource]
   );
 
   const subscriber = result.rows[0];

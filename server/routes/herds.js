@@ -4,6 +4,22 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
+function normalizeHerdInput(body = {}) {
+    return {
+        name: typeof body.name === "string" ? body.name.trim() : "",
+        description: typeof body.description === "string" ? body.description.trim() : "",
+        location: typeof body.location === "string" ? body.location.trim() : "",
+    };
+}
+
+function validateHerdInput({ name, description, location }) {
+    if (!name) return "Herd name is required.";
+    if (name.length > 160 || description.length > 2_000 || location.length > 300) {
+        return "One or more herd fields are too long.";
+    }
+    return "";
+}
+
 // Get all herds for a user
 router.get("/", authMiddleware, async (req, res) => {
     try {
@@ -38,7 +54,9 @@ router.get("/:id", authMiddleware, async (req, res) => {
 
 // create a new herd
 router.post("/", authMiddleware, async (req, res) => {
-    const { name, description, location } = req.body;
+    const { name, description, location } = normalizeHerdInput(req.body);
+    const validationError = validateHerdInput({ name, description, location });
+    if (validationError) return res.status(400).json({ error: validationError });
     try {
         const result = await pool.query(
             "INSERT INTO herds (user_id, name, description, location) VALUES ($1, $2, $3, $4) RETURNING *",
@@ -55,7 +73,9 @@ router.post("/", authMiddleware, async (req, res) => {
 // Update herd
 router.put("/:id", authMiddleware, async (req, res) => {
     const herdId = req.params.id;
-    const { name, description, location } = req.body;
+    const { name, description, location } = normalizeHerdInput(req.body);
+    const validationError = validateHerdInput({ name, description, location });
+    if (validationError) return res.status(400).json({ error: validationError });
 
     try {
         const result = await pool.query(

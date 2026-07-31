@@ -1,25 +1,10 @@
-import { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { BrowserRouter as Router, Link, Routes, Route, useLocation } from "react-router";
 import Landing from "./pages/Landing";
 import Navbar from "./components/Navbar";
-import Login from "./pages/Login";
-import SignUp from "./pages/SignUp";
-import Dashboard from "./pages/Dashboard";
-import Onboarding from "./pages/Onboarding";
-import Pricing from "./pages/Pricing";
-import About from "./pages/AboutUs";
 import PrivateRoute from "./routes/PrivateRoute";
-import HerdSettings from "./pages/HerdSettings";
-import AccountSettings from "./pages/AccountSettings";
-import SettingsImportAssistant from "./pages/SettingsImportAssistant";
-import TOSandPP from "./pages/TOSandPP";
-import News from "./pages/News";
-import Contact from "./pages/Contact";
-import HelpCenter from "./pages/HelpCenter";
-import Status from "./pages/Status";
-import AdminContent from "./pages/AdminContent";
 import { ToastContainer } from "react-toastify";
-import { PageLoadingBar } from "./components/LoadingSpinner";
+import { LoadingSpinner, PageLoadingBar } from "./components/LoadingSpinner";
 import { getSiteContent } from "./api/siteContent";
 import { defaultSiteContent } from "./data/siteContent";
 import { useAuth } from "./context/AuthContext";
@@ -28,6 +13,21 @@ import { ADMIN_CLERK_USER_IDS, ADMIN_EMAILS } from "./config/env";
 const DOCS_URL = "https://doc.barnbuddy.pro";
 const ANNOUNCEMENT_EVENT = "barnbuddy:announcement-updated";
 const MAINTENANCE_EVENT = "barnbuddy:maintenance-updated";
+const Login = lazy(() => import("./pages/Login"));
+const SignUp = lazy(() => import("./pages/SignUp"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const About = lazy(() => import("./pages/AboutUs"));
+const HerdSettings = lazy(() => import("./pages/HerdSettings"));
+const AccountSettings = lazy(() => import("./pages/AccountSettings"));
+const SettingsImportAssistant = lazy(() => import("./pages/SettingsImportAssistant"));
+const TOSandPP = lazy(() => import("./pages/TOSandPP"));
+const News = lazy(() => import("./pages/News"));
+const Contact = lazy(() => import("./pages/Contact"));
+const HelpCenter = lazy(() => import("./pages/HelpCenter"));
+const Status = lazy(() => import("./pages/Status"));
+const AdminContent = lazy(() => import("./pages/AdminContent"));
 const announcementStyles = {
   blue: {
     shell: "border-sky-300/20 bg-[#0f2650]",
@@ -64,6 +64,21 @@ function DocsRedirect() {
         <p className="mt-3 text-white/70">
           If you are not redirected, <a className="text-blue-300 underline" href={DOCS_URL}>open the docs</a>.
         </p>
+      </div>
+    </main>
+  );
+}
+
+function NotFound() {
+  return (
+    <main className="grid min-h-[70vh] place-items-center bg-[#0b1730] px-4 text-center text-white">
+      <div className="max-w-lg">
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-300">404</p>
+        <h1 className="mt-3 text-4xl font-semibold">That page wandered off.</h1>
+        <p className="mt-4 text-white/70">The page may have moved, or the address may be incorrect.</p>
+        <Link className="mt-6 inline-flex rounded-lg bg-blue-500 px-5 py-3 font-semibold hover:bg-blue-400" to="/">
+          Return home
+        </Link>
       </div>
     </main>
   );
@@ -163,6 +178,31 @@ function AppContent() {
     return () => window.clearTimeout(timer);
   }, [location.pathname]);
 
+  useEffect(() => {
+    const titleByPath = {
+      "/": "BarnBuddy | Livestock records for small farms",
+      "/aboutus": "About BarnBuddy",
+      "/pricing": "BarnBuddy Pricing",
+      "/news": "BarnBuddy News",
+      "/contact": "Contact BarnBuddy",
+      "/help": "BarnBuddy Help Center",
+      "/status": "BarnBuddy Status",
+      "/termsofserviceandprivacypolicy": "BarnBuddy Terms and Privacy",
+      "/admin": "BarnBuddy Admin",
+      "/settings/account": "BarnBuddy Account Settings",
+      "/settings/herd": "BarnBuddy Herd Settings",
+      "/settings/import-assistant": "BarnBuddy Import Assistant",
+    };
+    const routedTitle = location.pathname.startsWith("/dashboard")
+      ? "BarnBuddy Dashboard"
+      : location.pathname.startsWith("/login")
+        ? "Log in to BarnBuddy"
+        : location.pathname.startsWith("/signup")
+          ? "Create a BarnBuddy account"
+          : "Page not found | BarnBuddy";
+    document.title = titleByPath[location.pathname] || routedTitle;
+  }, [location.pathname]);
+
   return (
     <>
       <PageLoadingBar active={pageLoading} />
@@ -208,6 +248,11 @@ function AppContent() {
           </div>
         </section>
       )}
+      <Suspense fallback={(
+        <main className="grid min-h-[70vh] place-items-center bg-[#0b1730] text-white">
+          <LoadingSpinner label="Loading page..." />
+        </main>
+      )}>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login/*" element={<Login />} />
@@ -230,7 +275,9 @@ function AppContent() {
           <Route path="/settings/import-assistant" element={<SettingsImportAssistant />} />
           <Route path="/settings/herd" element={<HerdSettings />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Routes>
+      </Suspense>
       </>
       )}
     </>

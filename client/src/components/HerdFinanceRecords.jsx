@@ -72,7 +72,8 @@ function getHerdFinancePayload(record, selectedHerd) {
 
 function getFinanceRecord(data) {
   if (!data || typeof data !== "object") return data;
-  const { archived_animal, ...record } = data;
+  const record = { ...data };
+  delete record.archived_animal;
   return record;
 }
 

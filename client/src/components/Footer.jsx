@@ -110,6 +110,7 @@ export default function Footer() {
             <form className="flex flex-col gap-3 sm:flex-row sm:items-center" onSubmit={handleNewsletterSubmit}>
               <input
                 type="email"
+                aria-label="Email address for BarnBuddy updates"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@farm.com"

@@ -190,6 +190,7 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
   const [fileName, setFileName] = useState("");
   const [aiFile, setAiFile] = useState(null);
   const [aiNotes, setAiNotes] = useState("");
+  const [aiProcessingAcknowledged, setAiProcessingAcknowledged] = useState(false);
   const [aiMessage, setAiMessage] = useState("Upload a PDF, Word doc, spreadsheet, text file, or clear record photo for AI review.");
   const [rows, setRows] = useState([]);
   const [message, setMessage] = useState("No file selected");
@@ -316,7 +317,11 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
       setShowConfirmation(false);
       setAiMessage("AI is reading your records...");
       setMessage("AI is extracting animal rows for review...");
-      const res = await extractRecordsWithAi({ file: aiFile, notes: aiNotes });
+      const res = await extractRecordsWithAi({
+        file: aiFile,
+        notes: aiNotes,
+        acknowledgedThirdPartyProcessing: aiProcessingAcknowledged,
+      });
       const extractedRows = Array.isArray(res.data?.rows) ? res.data.rows : [];
       const now = Date.now();
 
@@ -539,6 +544,17 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
                 className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-gray-100"
               />
             </label>
+            <label className="flex items-start gap-3 text-xs leading-5 text-gray-400">
+              <input
+                type="checkbox"
+                checked={aiProcessingAcknowledged}
+                onChange={(event) => setAiProcessingAcknowledged(event.target.checked)}
+                className="mt-1 h-4 w-4 accent-blue-500"
+              />
+              <span>
+                I understand this file and my notes will be sent to OpenAI to extract records. I have removed unrelated personal or sensitive information.
+              </span>
+            </label>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => aiFileRef.current?.click()} className="rounded-lg border border-gray-600 px-4 py-2.5 text-sm font-semibold text-gray-200 hover:bg-gray-800">
                 Choose Record File
@@ -546,7 +562,7 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
               <button
                 type="button"
                 onClick={handleAiExtract}
-                disabled={!aiFile || isExtracting}
+                disabled={!aiFile || !aiProcessingAcknowledged || isExtracting}
                 className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60"
               >
                 {isExtracting ? "Extracting..." : "Extract With AI"}

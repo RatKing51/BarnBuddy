@@ -12,6 +12,7 @@ export default function LargeLandingCard({ slides = landingCarouselSlides, brand
   const previewSlides = slides.length ? slides : landingCarouselSlides
 
   useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined
     const timer = window.setInterval(() => {
       setActiveSlide((current) => (current + 1) % previewSlides.length)
     }, 4500)
@@ -31,7 +32,10 @@ export default function LargeLandingCard({ slides = landingCarouselSlides, brand
     <div className="bg-[#101D42] text-white py-12 px-6 lg:py-20 lg:px-12 overflow-hidden">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 lg:gap-20 items-center">
         <div className="space-y-6 lg:space-y-8">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold">Why Us?</h2>
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-300">Why BarnBuddy</p>
+            <h1 className="mt-2 text-3xl font-semibold sm:text-4xl lg:text-5xl">Livestock records made simple</h1>
+          </div>
 
           <p className="text-lg sm:text-xl lg:text-2xl leading-relaxed">
             BarnBuddy is a livestock management platform built for small farmers, FFA and 4-H members, and hobby ranchers. It replaces paper records with a single, easy-to-use system for tracking health, vaccinations, breeding cycles, and overall herd performance.
@@ -87,13 +91,14 @@ export default function LargeLandingCard({ slides = landingCarouselSlides, brand
                   className="flex transition-transform duration-500 ease-out"
                   style={{ transform: `translateX(-${activeSlide * 100}%)` }}
                 >
-                  {previewSlides.map((slide) => (
-                    <figure key={slide.image} className="w-full shrink-0">
+                  {previewSlides.map((slide, index) => (
+                    <figure key={slide.image} className="w-full shrink-0" aria-hidden={activeSlide !== index}>
                       <div className="px-4 pt-4">
                         <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0b1425]">
                           <img
                             src={resolveSiteImageUrl(slide.image)}
                             alt={slide.alt}
+                            loading={index === 0 ? "eager" : "lazy"}
                             className="aspect-[16/10] h-auto w-full object-cover object-left-top"
                           />
                         </div>
@@ -114,6 +119,7 @@ export default function LargeLandingCard({ slides = landingCarouselSlides, brand
                     type="button"
                     onClick={() => goToSlide(index)}
                     aria-label={`Show ${slide.eyebrow} screenshot`}
+                    aria-current={activeSlide === index ? "true" : undefined}
                     className={`h-2.5 rounded-full transition-all ${
                       activeSlide === index ? 'w-8 bg-blue-400' : 'w-2.5 bg-white/28 hover:bg-white/50'
                     }`}

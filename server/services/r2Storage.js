@@ -91,10 +91,7 @@ function sanitizeFilename(filename) {
 }
 
 function createSiteMediaKey(filename, mimeType) {
-  const originalExtension = sanitizeFilename(filename).split(".").pop();
-  const extension = originalExtension && originalExtension !== sanitizeFilename(filename)
-    ? originalExtension
-    : extensionForMimeType(mimeType);
+  const extension = extensionForMimeType(mimeType);
   return `site/media/${crypto.randomUUID()}.${extension}`;
 }
 

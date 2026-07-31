@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { toast, ToastContainer } from "react-toastify";
 import axios from "../api/axios"; // your axios instance
 

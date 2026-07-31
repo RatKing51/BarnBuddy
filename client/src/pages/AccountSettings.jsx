@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { UserButton, useUser } from "@clerk/clerk-react";
 import { toast, ToastContainer } from "react-toastify";
 import BillingAction from "../components/BillingAction";

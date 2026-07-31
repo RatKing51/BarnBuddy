@@ -1,4 +1,5 @@
 const express = require("express");
+const crypto = require("crypto");
 const env = require("../config/env");
 const authMiddleware = require("../middleware/authMiddleware");
 const {
@@ -9,6 +10,13 @@ const {
 const { sendPremiumExpirationReminders } = require("../services/premiumExpirationService");
 
 const router = express.Router();
+
+function safeSecretEquals(value, expected) {
+  if (!value || !expected) return false;
+  const actualBuffer = Buffer.from(String(value));
+  const expectedBuffer = Buffer.from(String(expected));
+  return actualBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(actualBuffer, expectedBuffer);
+}
 
 function requirePremium(req, res) {
   if (!req.user.subscription?.isPremium) {
@@ -70,7 +78,7 @@ router.post("/reminders/run", async (req, res) => {
   const authHeader = req.get("authorization") || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : req.body?.secret;
 
-  if (!env.notifications.cronSecret || token !== env.notifications.cronSecret) {
+  if (!safeSecretEquals(token, env.notifications.cronSecret)) {
     return res.status(401).json({ error: "Unauthorized reminder run." });
   }
 

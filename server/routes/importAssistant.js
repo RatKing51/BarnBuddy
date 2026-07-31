@@ -3,12 +3,28 @@ const multer = require("multer");
 const pool = require("../data-source");
 const env = require("../config/env");
 const authMiddleware = require("../middleware/authMiddleware");
+const { createRateLimit } = require("../middleware/rateLimit");
 const {
   isR2Configured,
   uploadObject,
 } = require("../services/r2Storage");
 
 const router = express.Router();
+const importRateLimit = createRateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  message: "Too many imports. Please wait before trying again.",
+});
+const aiExtractionRateLimit = createRateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: "AI extraction limit reached. Please wait before trying again.",
+});
+const helpRequestRateLimit = createRateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: "Too many transfer-help requests. Please wait before trying again.",
+});
 
 const MAX_IMPORT_ROWS = 500;
 const MAX_HELP_FILE_SIZE = 15 * 1024 * 1024;
@@ -323,7 +339,7 @@ async function getHerdIdForName(client, userId, herdName) {
   return created.rows[0].id;
 }
 
-router.post("/import", authMiddleware, async (req, res) => {
+router.post("/import", authMiddleware, importRateLimit, async (req, res) => {
   const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
   const skipDuplicates = req.body?.skipDuplicates !== false;
 
@@ -428,12 +444,20 @@ const aiUpload = multer({
   },
 });
 
-router.post("/extract", authMiddleware, aiUpload.single("file"), async (req, res) => {
+router.post("/extract", authMiddleware, aiExtractionRateLimit, aiUpload.single("file"), async (req, res) => {
   if (!env.openai.apiKey) {
     return res.status(503).json({ error: "AI extraction is not configured yet. Add OPENAI_API_KEY on the server." });
   }
   if (!req.file) {
     return res.status(400).json({ error: "Upload a record file for AI review." });
+  }
+  if (req.body.acknowledgedThirdPartyProcessing !== "true") {
+    return res.status(400).json({
+      error: "Confirm that the selected file will be sent to OpenAI for processing.",
+    });
+  }
+  if (cleanText(req.body.notes).length > 2_000) {
+    return res.status(400).json({ error: "AI notes must be 2,000 characters or fewer." });
   }
 
   const extension = String(req.file.originalname || "").split(".").pop().toLowerCase();
@@ -472,6 +496,7 @@ router.post("/extract", authMiddleware, aiUpload.single("file"), async (req, res
           },
         },
       }),
+      signal: AbortSignal.timeout(90_000),
     });
 
     const body = await response.json().catch(() => ({}));
@@ -522,7 +547,7 @@ router.post("/extract", authMiddleware, aiUpload.single("file"), async (req, res
   }
 });
 
-router.post("/request", authMiddleware, helpUpload.single("file"), async (req, res) => {
+router.post("/request", authMiddleware, helpRequestRateLimit, helpUpload.single("file"), async (req, res) => {
   const recordFormat = cleanText(req.body.recordFormat);
   const transferPriority = cleanText(req.body.transferPriority);
   const notes = cleanText(req.body.notes);
@@ -532,6 +557,9 @@ router.post("/request", authMiddleware, helpUpload.single("file"), async (req, r
 
   if (!recordFormat || !transferPriority) {
     return res.status(400).json({ error: "Record format and transfer priority are required." });
+  }
+  if (recordFormat.length > 120 || transferPriority.length > 120 || notes.length > 5_000) {
+    return res.status(400).json({ error: "One or more request fields are too long." });
   }
 
   try {

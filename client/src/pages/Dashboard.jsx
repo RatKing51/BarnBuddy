@@ -11,7 +11,7 @@ import VetVisits from "../components/VetVisits";
 import WeightRecords from "../components/WeightRecords";
 import { SkeletonBlock } from "../components/LoadingSpinner";
 import PremiumExpiryBadge from "../components/PremiumExpiryBadge";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router";
 import {
   createAnimal,
   getAnimalByID,

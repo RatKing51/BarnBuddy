@@ -1,5 +1,6 @@
 const express = require("express");
 const authMiddleware = require("../middleware/authMiddleware");
+const { createRateLimit } = require("../middleware/rateLimit");
 const {
   getNewsletterSubscriptionByEmail,
   subscribeToNewsletter,
@@ -7,8 +8,13 @@ const {
 } = require("../services/newsletterService");
 
 const router = express.Router();
+const subscriptionRateLimit = createRateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: "Too many subscription requests. Please wait and try again.",
+});
 
-router.post("/subscribe", async (req, res) => {
+router.post("/subscribe", subscriptionRateLimit, async (req, res) => {
   try {
     const subscriber = await subscribeToNewsletter({
       email: req.body.email,

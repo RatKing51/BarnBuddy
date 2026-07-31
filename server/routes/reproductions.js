@@ -10,7 +10,31 @@ function nullableDate(value) {
 }
 
 function nullableId(value) {
-    return value ? Number(value) : null;
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isInteger(number) && number > 0 ? number : null;
+}
+
+function invalidProvidedId(value, normalized) {
+    return value !== null && value !== undefined && value !== "" && !normalized;
+}
+
+function normalizeOffspringCount(value) {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isInteger(number) && number >= 0 ? number : null;
+}
+
+async function validateOwnedParents(userId, damId, sireId) {
+    if (damId && sireId && damId === sireId) return "Dam and sire must be different animals.";
+    const parentIds = [...new Set([damId, sireId].filter(Boolean))];
+    if (!parentIds.length) return "";
+
+    const result = await pool.query(
+        "SELECT id FROM animals WHERE user_id = $1 AND id = ANY($2::int[])",
+        [userId, parentIds]
+    );
+    return result.rowCount === parentIds.length ? "" : "One or more selected parents were not found.";
 }
 
 function requirePremium(req, res) {
@@ -78,9 +102,21 @@ router.post("/", authMiddleware, async (req, res) => {
         birth_outcome,
         notes,
     } = req.body;
+    const damId = nullableId(dam_id);
+    const sireId = nullableId(sire_id);
+    const offspringCount = normalizeOffspringCount(offspring_count);
+
+    if (invalidProvidedId(dam_id, damId) || invalidProvidedId(sire_id, sireId)) {
+        return res.status(400).json({ error: "Dam and sire IDs must be positive whole numbers." });
+    }
+    if (offspring_count !== null && offspring_count !== undefined && offspring_count !== "" && offspringCount === null) {
+        return res.status(400).json({ error: "Offspring count must be a non-negative whole number." });
+    }
 
     try {
         await ensureReproductionSchema();
+        const ownershipError = await validateOwnedParents(req.user.id, damId, sireId);
+        if (ownershipError) return res.status(400).json({ error: ownershipError });
         const result = await pool.query(
             `INSERT INTO reproductions
             (user_id, dam_id, sire_id, breeding_date, due_date, outcome, breeding_method, pregnancy_check_date, pregnancy_status, birth_date, offspring_count, birth_outcome, notes)
@@ -88,8 +124,8 @@ router.post("/", authMiddleware, async (req, res) => {
             RETURNING *`,
             [
                 req.user.id,
-                nullableId(dam_id),
-                nullableId(sire_id),
+                damId,
+                sireId,
                 nullableDate(breeding_date),
                 nullableDate(due_date),
                 outcome || "Planned",
@@ -97,7 +133,7 @@ router.post("/", authMiddleware, async (req, res) => {
                 nullableDate(pregnancy_check_date),
                 pregnancy_status || "",
                 nullableDate(birth_date),
-                offspring_count === "" || offspring_count === undefined ? null : Number(offspring_count),
+                offspringCount,
                 birth_outcome || "",
                 notes || "",
             ]
@@ -128,9 +164,21 @@ router.put("/:id", authMiddleware, async (req, res) => {
         birth_outcome,
         notes,
     } = req.body;
+    const damId = nullableId(dam_id);
+    const sireId = nullableId(sire_id);
+    const offspringCount = normalizeOffspringCount(offspring_count);
+
+    if (invalidProvidedId(dam_id, damId) || invalidProvidedId(sire_id, sireId)) {
+        return res.status(400).json({ error: "Dam and sire IDs must be positive whole numbers." });
+    }
+    if (offspring_count !== null && offspring_count !== undefined && offspring_count !== "" && offspringCount === null) {
+        return res.status(400).json({ error: "Offspring count must be a non-negative whole number." });
+    }
 
     try {
         await ensureReproductionSchema();
+        const ownershipError = await validateOwnedParents(req.user.id, damId, sireId);
+        if (ownershipError) return res.status(400).json({ error: ownershipError });
         const result = await pool.query(
             `UPDATE reproductions SET
             dam_id = $1, sire_id = $2, breeding_date = $3, due_date = $4,
@@ -140,8 +188,8 @@ router.put("/:id", authMiddleware, async (req, res) => {
             WHERE id = $13 AND user_id = $14
             RETURNING *`,
             [
-                nullableId(dam_id),
-                nullableId(sire_id),
+                damId,
+                sireId,
                 nullableDate(breeding_date),
                 nullableDate(due_date),
                 outcome || "Planned",
@@ -149,7 +197,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
                 nullableDate(pregnancy_check_date),
                 pregnancy_status || "",
                 nullableDate(birth_date),
-                offspring_count === "" || offspring_count === undefined ? null : Number(offspring_count),
+                offspringCount,
                 birth_outcome || "",
                 notes || "",
                 id,

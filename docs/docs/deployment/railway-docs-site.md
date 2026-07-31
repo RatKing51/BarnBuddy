@@ -32,6 +32,8 @@ server
 npm run railway:start
 ```
 
+This command serves the generated static build with `serve.js`. Docusaurus is used only while building the site, which keeps its development toolchain out of the production runtime.
+
 5. Add the custom domain:
 
 ```text

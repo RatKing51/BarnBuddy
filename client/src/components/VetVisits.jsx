@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getVetVisitsForAnimal, createVetVisit, updateVetVisit, deleteVetVisit } from "../api/vetVisits";
 import { toast, ToastContainer } from "react-toastify";
 import { SkeletonBlock } from "./LoadingSpinner";
@@ -17,6 +17,100 @@ const emptyVisit = (animalId) => ({
   visit_completed: false,
   follow_up_completed: false,
 });
+
+function parseLocalDate(value) {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function normalizeDate(value) {
+  const date = parseLocalDate(value);
+  if (!date) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function normalizeVisit(visit) {
+  return {
+    ...visit,
+    visit_date: normalizeDate(visit.visit_date),
+    follow_up_date: normalizeDate(visit.follow_up_date),
+    completed: Boolean(visit.completed),
+    visit_completed: Boolean(visit.visit_completed || visit.completed),
+    follow_up_completed: Boolean(visit.follow_up_completed || visit.completed),
+  };
+}
+
+function getVisitPayload(visit) {
+  return {
+    ...visit,
+    visit_date: visit.visit_date || null,
+    follow_up_date: visit.follow_up_date || null,
+  };
+}
+
+function hasVisitData(visit) {
+  if (!visit) return false;
+  return Boolean(
+    visit.vet_name?.trim() ||
+    visit.reason?.trim() ||
+    visit.treatment?.trim() ||
+    visit.medications?.trim() ||
+    visit.follow_up_date ||
+    visit.cost ||
+    visit.notes?.trim() ||
+    visit.visit_date
+  );
+}
+
+function formatDate(dateValue) {
+  const date = parseLocalDate(dateValue);
+  if (!date) return "No date";
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function getDateOnly(value) {
+  const date = parseLocalDate(value);
+  if (!date) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function getVisitStatus(visit) {
+  const today = getDateOnly(new Date());
+  const visitDate = getDateOnly(visit.visit_date);
+  const followUpDate = getDateOnly(visit.follow_up_date);
+
+  const visitDone = Boolean(visit.visit_completed || visit.completed);
+  const followUpDone = Boolean(visit.follow_up_completed || visit.completed);
+
+  if (visitDone && (!visit.follow_up_date || followUpDone)) {
+    return { label: "Complete", tone: "green", dateLabel: "Visit date", displayDate: visit.visit_date };
+  }
+  if (visitDate && visitDate < today && !visitDone) {
+    return { label: "Overdue", tone: "red", dateLabel: "Visit date", displayDate: visit.visit_date };
+  }
+  if (visitDate && visitDate > today && !visitDone) {
+    return { label: "Upcoming", tone: "blue", dateLabel: "Visit date", displayDate: visit.visit_date };
+  }
+  if (followUpDate && followUpDate < today && !followUpDone) {
+    return { label: "Follow-up due", tone: "red", dateLabel: "Follow-up date", displayDate: visit.follow_up_date };
+  }
+  if (followUpDate && followUpDate >= today && !followUpDone) {
+    return { label: "Follow-up", tone: "amber", dateLabel: "Follow-up date", displayDate: visit.follow_up_date };
+  }
+  return { label: "Complete", tone: "green", dateLabel: "Visit date", displayDate: visit.visit_date };
+}
 
 function VetVisitsSkeleton() {
   return (
@@ -76,6 +170,7 @@ function VetVisitsSkeleton() {
 }
 
 export default function VetVisits({ animal, onVetVisitUpdate }) {
+  const animalId = animal?.id;
   const [visits, setVisits] = useState([]);
   const [selectedVisit, setSelectedVisit] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -85,12 +180,6 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
   const [saveStatus, setSaveStatus] = useState("idle");
   const lastVisitSignatures = useRef(new Map());
   const saveStatusTimer = useRef(null);
-
-  useEffect(() => {
-    if (animal?.id) {
-      fetchVisits();
-    }
-  }, [animal]);
 
   useEffect(() => () => {
     if (saveStatusTimer.current) clearTimeout(saveStatusTimer.current);
@@ -102,115 +191,11 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
     saveStatusTimer.current = setTimeout(() => setSaveStatus("idle"), 1600);
   };
 
-  const parseLocalDate = (value) => {
-    if (!value) return null;
-    if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      const [year, month, day] = value.split("-").map(Number);
-      return new Date(year, month - 1, day);
-    }
-
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
-  };
-
-  const normalizeDate = (value) => {
-    const date = parseLocalDate(value);
-    if (!date) return "";
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-  };
-
-  const normalizeVisit = (visit) => ({
-    ...visit,
-    visit_date: normalizeDate(visit.visit_date),
-    follow_up_date: normalizeDate(visit.follow_up_date),
-    completed: Boolean(visit.completed),
-    visit_completed: Boolean(visit.visit_completed || visit.completed),
-    follow_up_completed: Boolean(visit.follow_up_completed || visit.completed),
-  });
-
-  const formatDate = (dateValue) => {
-    const date = parseLocalDate(dateValue);
-    if (!date) return "No date";
-    return date.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const getDateOnly = (value) => {
-    const date = parseLocalDate(value);
-    if (!date) return null;
-    date.setHours(0, 0, 0, 0);
-    return date;
-  };
-
-  const getVisitStatus = (visit) => {
-    const today = getDateOnly(new Date());
-    const visitDate = getDateOnly(visit.visit_date);
-    const followUpDate = getDateOnly(visit.follow_up_date);
-
-    const visitDone = Boolean(visit.visit_completed || visit.completed);
-    const followUpDone = Boolean(visit.follow_up_completed || visit.completed);
-
-    if (visitDone && (!visit.follow_up_date || followUpDone)) {
-      return {
-        label: "Complete",
-        tone: "green",
-        dateLabel: "Visit date",
-        displayDate: visit.visit_date,
-      };
-    }
-
-    if (visitDate && visitDate < today && !visitDone) {
-      return {
-        label: "Overdue",
-        tone: "red",
-        dateLabel: "Visit date",
-        displayDate: visit.visit_date,
-      };
-    }
-
-    if (visitDate && visitDate > today && !visitDone) {
-      return {
-        label: "Upcoming",
-        tone: "blue",
-        dateLabel: "Visit date",
-        displayDate: visit.visit_date,
-      };
-    }
-
-    if (followUpDate && followUpDate < today && !followUpDone) {
-      return {
-        label: "Follow-up due",
-        tone: "red",
-        dateLabel: "Follow-up date",
-        displayDate: visit.follow_up_date,
-      };
-    }
-
-    if (followUpDate && followUpDate >= today && !followUpDone) {
-      return {
-        label: "Follow-up",
-        tone: "amber",
-        dateLabel: "Follow-up date",
-        displayDate: visit.follow_up_date,
-      };
-    }
-
-    return {
-      label: "Complete",
-      tone: "green",
-      dateLabel: "Visit date",
-      displayDate: visit.visit_date,
-    };
-  };
-
-  const fetchVisits = async () => {
+  const fetchVisits = useCallback(async () => {
+    if (!animalId) return;
     setLoading(true);
     try {
-      const response = await getVetVisitsForAnimal(animal.id);
+      const response = await getVetVisitsForAnimal(animalId);
       const normalizedVisits = Array.isArray(response.data) ? response.data.map(normalizeVisit) : [];
       const sorted = normalizedVisits.sort((a, b) => {
         const aDate = getDateOnly(a.visit_date)?.getTime() || 0;
@@ -227,30 +212,14 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [animalId]);
 
-  const hasVisitData = (visit) => {
-    if (!visit) return false;
-    return Boolean(
-      visit.vet_name?.trim() ||
-      visit.reason?.trim() ||
-      visit.treatment?.trim() ||
-      visit.medications?.trim() ||
-      visit.follow_up_date ||
-      visit.cost ||
-      visit.notes?.trim() ||
-      visit.visit_date
-    );
-  };
-
-  const getVisitPayload = (visit) => ({
-    ...visit,
-    visit_date: visit.visit_date || null,
-    follow_up_date: visit.follow_up_date || null,
-  });
+  useEffect(() => {
+    if (animalId) fetchVisits();
+  }, [animalId, fetchVisits]);
 
   const handleAddVisit = () => {
-    setSelectedVisit(emptyVisit(animal.id));
+    setSelectedVisit(emptyVisit(animalId));
   };
 
   const handleSelectVisit = (visit) => {

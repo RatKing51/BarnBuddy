@@ -351,7 +351,7 @@ export default function AnimalGeneralData({
             const diffMs = dueDate - now;
             const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
             let urgency = "green";
-            let dueLabel = "";
+            let dueLabel;
 
             if (diffDays < 0) {
               urgency = "red";
@@ -412,7 +412,7 @@ export default function AnimalGeneralData({
               const diffMs = date - now;
               const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
               let urgency = "green";
-              let dueLabel = "";
+              let dueLabel;
 
               if (diffDays < 0) {
                 urgency = "red";

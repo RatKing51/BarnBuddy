@@ -8,6 +8,7 @@ const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const { clerkMiddleware } = require("@clerk/express");
+const securityHeaders = require("./middleware/securityHeaders");
 
 const animalRoutes = require("./routes/animals");
 const herdRoutes = require("./routes/herds")
@@ -28,6 +29,9 @@ const importAssistantRoutes = require("./routes/importAssistant");
 const { ensureAppSchema } = require("./services/ensureAppSchema");
 
 const app = express();
+app.disable("x-powered-by");
+if (env.nodeEnv === "production") app.set("trust proxy", 1);
+app.use(securityHeaders);
 app.use(cors({
   origin(origin, callback) {
     if (!origin || env.clientUrls.includes(origin)) {
@@ -39,8 +43,14 @@ app.use(cors({
   },
   credentials: true,
 }));
+app.get("/health", (req, res) => {
+  res.json({
+    ok: true,
+    ...(env.nodeEnv === "production" ? {} : { environment: env.nodeEnv }),
+  });
+});
 app.use("/webhooks/clerk", express.raw({ type: "application/json" }), clerkWebhookRoutes);
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
 app.use(clerkMiddleware({
   publishableKey: env.clerk.publishableKey,
   secretKey: env.clerk.secretKey,
@@ -61,6 +71,10 @@ app.use("/contact", contactRoutes);
 app.use("/api/reproductions", reproductionRoutes);
 app.use("/api/premium-records", premiumRecordRoutes);
 app.use("/api/births", birthRoutes);
+
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
+});
 
 app.use((err, req, res, next) => {
   if (err) {
@@ -93,14 +107,18 @@ app.use((err, req, res, next) => {
       return res.status(403).json({ error: "Not allowed by CORS" });
     }
 
+    if (err.type === "entity.too.large") {
+      return res.status(413).json({ error: "Request body is too large." });
+    }
+
+    if (err.type === "entity.parse.failed") {
+      return res.status(400).json({ error: "Request body contains invalid JSON." });
+    }
+
     console.error("Server error:", err);
     return res.status(500).json({ error: "Server error" });
   }
   next();
-});
-
-app.get("/health", (req, res) => {
-  res.json({ ok: true, environment: env.nodeEnv });
 });
 
 async function startServer() {
@@ -113,4 +131,8 @@ async function startServer() {
   }
 }
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = { app, startServer };

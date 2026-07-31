@@ -1,4 +1,4 @@
-import { Navigate, Outlet, useLocation }  from "react-router-dom";
+import { Navigate, Outlet, useLocation }  from "react-router";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";

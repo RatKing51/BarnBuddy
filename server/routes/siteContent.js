@@ -23,22 +23,16 @@ const {
 } = require("../services/siteContent");
 const { getUserActivity, getUserActivityUsers } = require("../services/userActivity");
 const { deletePremiumDataForUser } = require("../services/premiumDowngradeCleanup");
+const { detectImageMimeType, supportedImageTypes } = require("../utils/imageFiles");
 
 const router = express.Router();
 const validTones = new Set(["green", "blue", "yellow", "red"]);
 const validAnnouncementAudiences = new Set(["all", "free", "premium", "admins"]);
-const supportedSiteImageTypes = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/gif",
-  "image/webp",
-  "image/avif",
-]);
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter(req, file, cb) {
-    if (supportedSiteImageTypes.has(file.mimetype)) {
+    if (supportedImageTypes.has(file.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error("Unsupported image type"), false);
@@ -73,6 +67,19 @@ function requireAdmin(req, res, next) {
 
 function asTrimmedString(value, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
+}
+
+function sanitizeLinkUrl(value) {
+  const url = asTrimmedString(value);
+  if (!url) return "";
+  if ((url.startsWith("/") && !url.startsWith("//")) || url.startsWith("#")) return url;
+
+  try {
+    const parsed = new URL(url);
+    return ["http:", "https:", "mailto:"].includes(parsed.protocol) ? url : "";
+  } catch {
+    return "";
+  }
 }
 
 function getEmailAddressValue(emailAddress) {
@@ -502,7 +509,7 @@ function sanitizeAnnouncement(announcement = {}) {
     title: asTrimmedString(announcement.title),
     message: asTrimmedString(announcement.message),
     linkText: asTrimmedString(announcement.linkText),
-    linkUrl: asTrimmedString(announcement.linkUrl),
+    linkUrl: sanitizeLinkUrl(announcement.linkUrl),
     targetAudience: validAnnouncementAudiences.has(announcement.targetAudience) ? announcement.targetAudience : "all",
   };
 }
@@ -1000,16 +1007,21 @@ router.post("/admin/media", authMiddleware, requireAdmin, upload.single("image")
       return res.status(400).json({ error: "No image uploaded" });
     }
 
+    const imageMimeType = detectImageMimeType(req.file.buffer);
+    if (!imageMimeType || !supportedImageTypes.has(imageMimeType)) {
+      return res.status(400).json({ error: "The uploaded file is not a supported image." });
+    }
+
     if (!isSiteR2Configured()) {
       return res.status(503).json({ error: "R2 must be configured before uploading website images." });
     }
 
-    const r2Key = createSiteMediaKey(req.file.originalname, req.file.mimetype);
+    const r2Key = createSiteMediaKey(req.file.originalname, imageMimeType);
     uploadedR2Key = r2Key;
     await uploadObject({
       key: r2Key,
       body: req.file.buffer,
-      contentType: req.file.mimetype,
+      contentType: imageMimeType,
       cacheControl: "public, max-age=31536000, immutable",
       bucket: env.r2.siteBucket,
     });
@@ -1018,7 +1030,7 @@ router.post("/admin/media", authMiddleware, requireAdmin, upload.single("image")
       `INSERT INTO site_media (filename, mime_type, r2_key, size_bytes, uploaded_by)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
-      [req.file.originalname || "", req.file.mimetype, r2Key, req.file.size, req.user.id]
+      [req.file.originalname || "", imageMimeType, r2Key, req.file.size, req.user.id]
     );
     const id = result.rows[0].id;
     await logAdminActivity({
@@ -1027,7 +1039,7 @@ router.post("/admin/media", authMiddleware, requireAdmin, upload.single("image")
       details: {
         mediaId: id,
         filename: req.file.originalname || "",
-        mimeType: req.file.mimetype,
+        mimeType: imageMimeType,
         size: req.file.size,
         storage: "r2",
         r2Key,

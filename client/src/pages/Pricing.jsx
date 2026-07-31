@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { PricingTable } from "@clerk/clerk-react";
 import Footer from "../components/Footer";
 import { PRICING_FEATURES } from "../config/subscription";

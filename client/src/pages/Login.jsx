@@ -1,6 +1,6 @@
 import React from "react";
 import { SignIn } from "@clerk/clerk-react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 
 const authAppearance = {
   variables: {

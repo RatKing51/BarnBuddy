@@ -1,64 +1,10 @@
-const { clerkClient, getAuth } = require("@clerk/express");
+const { getAuth } = require("@clerk/express");
 const pool = require("../data-source");
 const { findOrCreateLocalUserFromAuth } = require("../services/clerkUserSync");
 const { attachActivityLogger } = require("../services/userActivity");
 
-const premiumPlanValues = new Set(["premium", "pro", "paid", "active"]);
-const activeStatusValues = new Set(["active", "trialing", "paid"]);
-
 function normalizeValue(value) {
     return typeof value === "string" ? value.trim().toLowerCase() : "";
-}
-
-function readClaim(claims, keys) {
-    for (const key of keys) {
-        if (typeof claims[key] === "string" && claims[key].trim()) return claims[key];
-    }
-
-    return "";
-}
-
-function metadataSources(metadata = {}) {
-    return [
-        metadata,
-        metadata.publicMetadata,
-        metadata.privateMetadata,
-        metadata.unsafeMetadata,
-        metadata.publicMetadata?.subscription,
-        metadata.privateMetadata?.subscription,
-        metadata.unsafeMetadata?.subscription,
-        metadata.subscription,
-    ].filter((source) => source && typeof source === "object");
-}
-
-function readStringFromSources(sources, keys) {
-    for (const source of sources) {
-        for (const key of keys) {
-            if (typeof source[key] === "string" && source[key].trim()) {
-                return source[key];
-            }
-        }
-    }
-
-    return "";
-}
-
-function readBooleanFromSources(sources, keys) {
-    return sources.some((source) => keys.some((key) => source[key] === true));
-}
-
-function readDateFromSources(sources, keys) {
-    for (const source of sources) {
-        for (const key of keys) {
-            const value = source[key];
-            if (typeof value === "string" && value.trim()) {
-                const parsed = Date.parse(value);
-                if (!Number.isNaN(parsed)) return parsed;
-            }
-        }
-    }
-
-    return 0;
 }
 
 function readEnvList(name, fallback = []) {
@@ -92,45 +38,41 @@ function hasAnyClerkAccess(auth, planCandidates, featureCandidates) {
     return false;
 }
 
-function getSubscriptionFromClaims(claims = {}, hasPremiumAccess = false, clerkMetadata = {}) {
-    const sources = [claims, claims.subscription, ...metadataSources(clerkMetadata)].filter(
-        (source) => source && typeof source === "object"
+function getSubscriptionFromTrustedState(hasPremiumAccess = false, localState = {}) {
+    const premiumSource = normalizeValue(localState.subscription_source);
+    const trustedLocalSources = new Set(["manual_admin", "clerk_trial", "clerk_billing_canceled"]);
+    const trustedPremiumSource = trustedLocalSources.has(premiumSource) ? premiumSource : "";
+    const expiresTime = localState.subscription_expires_at
+        ? new Date(localState.subscription_expires_at).getTime()
+        : 0;
+    const hasFutureExpiration = Boolean(expiresTime && expiresTime > Date.now());
+    const hasManualGrant = Boolean(
+        localState.subscription_is_premium === true &&
+        premiumSource === "manual_admin" &&
+        (!expiresTime || hasFutureExpiration)
     );
-    const plan = normalizeValue(readStringFromSources(sources, [
-        "plan",
-        "subscriptionPlan",
-        "subscription_plan",
-        "billingPlan",
-        "tier",
-    ]));
-    const status = normalizeValue(readStringFromSources(sources, [
-        "subscriptionStatus",
-        "subscription_status",
-        "billingStatus",
-        "status",
-    ]));
-    const hasPremiumFlag = readBooleanFromSources(sources, ["premium", "isPremium", "hasPremium"]);
-    const premiumExpiresAt = readDateFromSources(sources, ["premiumExpiresAt", "premium_expires_at", "subscriptionExpiresAt"]);
-    const premiumSource = normalizeValue(readStringFromSources(sources, ["premiumSource", "premium_source", "subscriptionSource"]));
-    const premiumExpired = Boolean(premiumExpiresAt && premiumExpiresAt <= Date.now());
-    const isPremium = Boolean(
-        !premiumExpired &&
-        (Boolean(hasPremiumAccess) ||
-            hasPremiumFlag ||
-            premiumPlanValues.has(plan) ||
-            Boolean(plan && plan !== "free" && activeStatusValues.has(status)))
+    const hasServerManagedGracePeriod = Boolean(
+        localState.subscription_is_premium === true &&
+        ["clerk_trial", "clerk_billing_canceled"].includes(premiumSource) &&
+        hasFutureExpiration
     );
+    const isPremium = Boolean(hasPremiumAccess || hasManualGrant || hasServerManagedGracePeriod);
+    const keepExpiration = isPremium && hasFutureExpiration;
 
     return {
         plan: isPremium ? "premium" : "free",
-        status: status || (isPremium ? "active" : "free"),
+        status: isPremium && ["active", "trialing", "canceled"].includes(normalizeValue(localState.subscription_status))
+            ? normalizeValue(localState.subscription_status)
+            : (isPremium ? "active" : "free"),
         isPremium,
-        premiumExpiresAt: premiumExpiresAt ? new Date(premiumExpiresAt).toISOString() : "",
-        premiumSource,
+        premiumExpiresAt: keepExpiration ? new Date(expiresTime).toISOString() : "",
+        premiumSource: isPremium
+            ? (trustedPremiumSource || (hasPremiumAccess ? "clerk_entitlement" : ""))
+            : "",
     };
 }
 
-module.exports = async function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
     try {
         const auth =
             typeof req.auth === "function"
@@ -173,47 +115,26 @@ module.exports = async function authMiddleware(req, res, next) {
             ...auth,
             userId: authenticatedUserId,
         };
-        let clerkMetadata = {};
-        if (!hasPremiumAccess) {
-            try {
-                const clerkUser = await clerkClient.users.getUser(authenticatedUserId);
-                clerkMetadata = {
-                    publicMetadata: clerkUser.publicMetadata || clerkUser.public_metadata || {},
-                    privateMetadata: clerkUser.privateMetadata || clerkUser.private_metadata || {},
-                    unsafeMetadata: clerkUser.unsafeMetadata || clerkUser.unsafe_metadata || {},
-                };
-            } catch (err) {
-                console.warn("Could not fetch Clerk metadata for subscription fallback:", err.message);
-            }
-        }
-
         const user = await findOrCreateLocalUserFromAuth(authForSync);
-        const subscription = getSubscriptionFromClaims(auth.sessionClaims, hasPremiumAccess, clerkMetadata);
-        if (!subscription.premiumExpiresAt) {
-            const localExpirationResult = await pool.query(
-                `SELECT subscription_status, subscription_source, subscription_expires_at
-                 FROM users
-                 WHERE id = $1`,
-                [user.id]
-            );
-            const localExpiration = localExpirationResult.rows[0] || {};
-            const localExpiresTime = localExpiration.subscription_expires_at
-                ? new Date(localExpiration.subscription_expires_at).getTime()
-                : 0;
-            const preservedSources = new Set(["clerk_trial", "clerk_billing_canceled"]);
-
-            if (subscription.isPremium && !subscription.premiumSource && localExpiration.subscription_source) {
-                subscription.premiumSource = localExpiration.subscription_source;
-            }
-
-            if (localExpiresTime > Date.now() && preservedSources.has(localExpiration.subscription_source)) {
-                subscription.plan = "premium";
-                subscription.status = localExpiration.subscription_status || "active";
-                subscription.isPremium = true;
-                subscription.premiumExpiresAt = new Date(localExpiresTime).toISOString();
-                subscription.premiumSource = localExpiration.subscription_source;
-            }
-        }
+        const userStateResult = await pool.query(
+            `SELECT subscription_status,
+                    subscription_is_premium,
+                    subscription_source,
+                    subscription_expires_at,
+                    onboarding_required,
+                    onboarding_completed,
+                    user_type,
+                    primary_species,
+                    herd_size_range,
+                    main_goal,
+                    setup_mode,
+                    created_first_animal
+             FROM users
+             WHERE id = $1`,
+            [user.id]
+        );
+        const userState = userStateResult.rows[0] || {};
+        const subscription = getSubscriptionFromTrustedState(hasPremiumAccess, userState);
         await pool.query(
             `UPDATE users
              SET subscription_plan = $1,
@@ -231,21 +152,6 @@ module.exports = async function authMiddleware(req, res, next) {
                 user.id,
             ]
         );
-        const userStateResult = await pool.query(
-            `SELECT onboarding_required,
-                    onboarding_completed,
-                    user_type,
-                    primary_species,
-                    herd_size_range,
-                    main_goal,
-                    setup_mode,
-                    created_first_animal
-             FROM users
-             WHERE id = $1`,
-            [user.id]
-        );
-        const userState = userStateResult.rows[0] || {};
-
         req.user = {
             id: user.id,
             email: user.email,
@@ -273,7 +179,10 @@ module.exports = async function authMiddleware(req, res, next) {
         });
         return res.status(500).json({
             message: "Authentication failed",
-            error: err.message,
+            ...(process.env.NODE_ENV === "production" ? {} : { error: err.message }),
         });
     }
 }
+
+module.exports = authMiddleware;
+module.exports.getSubscriptionFromTrustedState = getSubscriptionFromTrustedState;

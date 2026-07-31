@@ -26,9 +26,13 @@ export default function TOSandPP() {
             <main className="flex-grow flex flex-col items-center px-4 py-10">
 
                 {/* Buttons */}
-                <div className="flex gap-4 mb-8">
+                <div className="flex gap-4 mb-8" role="tablist" aria-label="Legal documents">
                     <button
                         onClick={() => changeTab('tos')}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeTab === 'tos'}
+                        aria-controls="terms-panel"
                         className={`px-5 py-3 rounded-md font-semibold transition-colors ${
                             activeTab === 'tos'
                                 ? 'bg-blue-500'
@@ -40,6 +44,10 @@ export default function TOSandPP() {
 
                     <button
                         onClick={() => changeTab('pp')}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeTab === 'pp'}
+                        aria-controls="privacy-panel"
                         className={`px-5 py-3 rounded-md font-semibold transition-colors ${
                             activeTab === 'pp'
                                 ? 'bg-blue-500'
@@ -54,7 +62,7 @@ export default function TOSandPP() {
                 <div className="bg-[#0f2650] border border-white/10 rounded-xl shadow-lg w-full max-w-6xl p-8">
 
                     {activeTab === 'pp' && (
-                        <div className="space-y-6">
+                        <div className="space-y-6" id="privacy-panel" role="tabpanel">
 
                             <div>
                                 <h1 className="text-3xl font-bold mb-2">
@@ -64,6 +72,7 @@ export default function TOSandPP() {
                                 <p className="text-white/80">
                                     BarnBuddy respects your privacy. This Privacy Policy explains how we collect, use, and protect information when you use our website and services.
                                 </p>
+                                <p className="mt-2 text-sm text-white/60">Last updated: July 31, 2026</p>
                             </div>
 
                             <div>
@@ -74,6 +83,7 @@ export default function TOSandPP() {
                                 <ul className="list-disc pl-6 space-y-2 text-white/80">
                                     <li>Account Information: Name, email, and login credentials.</li>
                                     <li>Animal Data: Information you choose to store about your animals.</li>
+                                    <li>Uploaded Files: Photos, imports, and transfer-help files you choose to submit.</li>
                                     <li>Usage Data: Basic information about how you use the website.</li>
                                 </ul>
                             </div>
@@ -110,35 +120,59 @@ export default function TOSandPP() {
 
                                 <ul className="list-disc pl-6 space-y-2 text-white/80">
                                     <li>We do not sell your information.</li>
-                                    <li>Information may be shared with necessary third-party services.</li>
+                                    <li>We use providers for authentication (Clerk), hosting and databases, object storage (Cloudflare R2), email delivery (Resend), and optional AI-assisted imports (OpenAI).</li>
                                     <li>We may share information if required by law.</li>
                                 </ul>
                             </div>
 
                             <div>
                                 <h2 className="text-xl font-semibold mb-2">
-                                    5. User Choices
+                                    5. AI-Assisted Imports
                                 </h2>
 
                                 <ul className="list-disc pl-6 space-y-2 text-white/80">
-                                    <li>You can update or delete your account information.</li>
-                                    <li>You may request a copy of your stored data.</li>
+                                    <li>When you choose AI extraction, the selected file and your notes are sent to OpenAI to draft animal records.</li>
+                                    <li>BarnBuddy stores the extracted result and request metadata. The original AI extraction file is not saved by BarnBuddy.</li>
+                                    <li>Files attached to a transfer-help request may be stored so the request can be handled.</li>
+                                    <li>Remove unrelated personal or sensitive information before uploading a file.</li>
                                 </ul>
                             </div>
 
                             <div>
                                 <h2 className="text-xl font-semibold mb-2">
-                                    6. Children’s Privacy
+                                    6. Retention and Deletion
                                 </h2>
 
                                 <p className="text-white/80">
-                                    Users under 13 should use the platform with parent or guardian supervision.
+                                    We keep account and livestock records while your account is active or as needed to provide the service. Deleting your account removes linked BarnBuddy database records and private uploaded animal images. Limited records may be retained when required for security, fraud prevention, legal obligations, or backups.
                                 </p>
                             </div>
 
                             <div>
                                 <h2 className="text-xl font-semibold mb-2">
-                                    7. Updates to This Policy
+                                    7. User Choices
+                                </h2>
+
+                                <ul className="list-disc pl-6 space-y-2 text-white/80">
+                                    <li>You can update or delete your account information.</li>
+                                    <li>You can manage product emails from account settings.</li>
+                                    <li>You may contact us to request a copy or correction of your stored data.</li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h2 className="text-xl font-semibold mb-2">
+                                    8. Children’s Privacy
+                                </h2>
+
+                                <p className="text-white/80">
+                                    BarnBuddy is not intended for children under 13, and children under 13 should not create an account or submit personal information. A parent or guardian who believes a child provided personal information can contact us to request its deletion.
+                                </p>
+                            </div>
+
+                            <div>
+                                <h2 className="text-xl font-semibold mb-2">
+                                    9. Updates to This Policy
                                 </h2>
 
                                 <p className="text-white/80">
@@ -148,7 +182,7 @@ export default function TOSandPP() {
 
                             <div>
                                 <h2 className="text-xl font-semibold mb-2">
-                                    8. Contact Us
+                                    10. Contact Us
                                 </h2>
 
                                 <p className="text-white/80">
@@ -160,7 +194,7 @@ export default function TOSandPP() {
                     )}
 
                     {activeTab === 'tos' && (
-                        <div className="space-y-6">
+                        <div className="space-y-6" id="terms-panel" role="tabpanel">
 
                             <div>
                                 <h1 className="text-3xl font-bold mb-2">
@@ -170,6 +204,7 @@ export default function TOSandPP() {
                                 <p className="text-white/80">
                                     Welcome to BarnBuddy! These Terms govern your use of the platform.
                                 </p>
+                                <p className="mt-2 text-sm text-white/60">Last updated: July 31, 2026</p>
                             </div>
 
                             <div>
@@ -234,17 +269,27 @@ export default function TOSandPP() {
 
                             <div>
                                 <h2 className="text-xl font-semibold mb-2">
-                                    6. Service Availability
+                                    6. Livestock and Veterinary Disclaimer
                                 </h2>
 
                                 <p className="text-white/80">
-                                    BarnBuddy may update or pause features at any time.
+                                    BarnBuddy is a record-keeping tool, not veterinary advice or an emergency service. Verify dates, reminders, dosages, and imported information, and consult a qualified veterinarian for animal-health decisions.
                                 </p>
                             </div>
 
                             <div>
                                 <h2 className="text-xl font-semibold mb-2">
-                                    7. Limitation of Liability
+                                    7. Service Availability
+                                </h2>
+
+                                <p className="text-white/80">
+                                    BarnBuddy may update or pause features at any time. Keep copies of records you cannot afford to lose and do not rely on reminders as your only care schedule.
+                                </p>
+                            </div>
+
+                            <div>
+                                <h2 className="text-xl font-semibold mb-2">
+                                    8. Limitation of Liability
                                 </h2>
 
                                 <p className="text-white/80">
@@ -254,7 +299,7 @@ export default function TOSandPP() {
 
                             <div>
                                 <h2 className="text-xl font-semibold mb-2">
-                                    8. Termination
+                                    9. Termination
                                 </h2>
 
                                 <p className="text-white/80">
@@ -264,7 +309,7 @@ export default function TOSandPP() {
 
                             <div>
                                 <h2 className="text-xl font-semibold mb-2">
-                                    9. Changes to These Terms
+                                    10. Changes to These Terms
                                 </h2>
 
                                 <p className="text-white/80">
@@ -274,7 +319,7 @@ export default function TOSandPP() {
 
                             <div>
                                 <h2 className="text-xl font-semibold mb-2">
-                                    10. Contact Us
+                                    11. Contact Us
                                 </h2>
 
                                 <p className="text-white/80">

@@ -1,6 +1,9 @@
 import { API_BASE_URL, API_URL } from "./env";
 
 const publicR2BaseUrl = (import.meta.env.VITE_R2_PUBLIC_BASE_URL || "").replace(/\/+$/, "");
+const bundledFilenameOverrides = {
+  "img_5761.jpeg": "IMG_5761.JPEG",
+};
 
 function sanitizeFilename(filename) {
   return String(filename || "image")
@@ -11,16 +14,23 @@ function sanitizeFilename(filename) {
 }
 
 export function getSiteAssetUrl(filename) {
-  const key = `site/assets/${sanitizeFilename(filename)}`;
+  const sanitizedFilename = sanitizeFilename(filename);
+  const key = `site/assets/${sanitizedFilename}`;
+  if (import.meta.env.DEV && !publicR2BaseUrl) {
+    return `/${bundledFilenameOverrides[sanitizedFilename] || sanitizedFilename}`;
+  }
   return publicR2BaseUrl
     ? `${publicR2BaseUrl}/${key}`
-    : `${API_BASE_URL}/site-content/assets/${sanitizeFilename(filename)}`;
+    : `${API_BASE_URL}/site-content/assets/${sanitizedFilename}`;
 }
 
 export function resolveSiteImageUrl(value, fallbackFilename = "bblogo.png") {
   const source = String(value || "").trim();
   if (!source) return getSiteAssetUrl(fallbackFilename);
   if (/^(?:https?:|data:|blob:)/i.test(source)) return source;
+  if (source.startsWith("/api/site-content/assets/") && import.meta.env.DEV && !publicR2BaseUrl) {
+    return getSiteAssetUrl(source.split("/").pop());
+  }
   if (source.startsWith("/api/")) return `${API_URL}${source}`;
   return getSiteAssetUrl(source.split("/").pop());
 }

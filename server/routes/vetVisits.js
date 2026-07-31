@@ -4,6 +4,12 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
+function getReminderWindow(value) {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isInteger(parsed)) return 30;
+    return Math.min(365, Math.max(1, parsed));
+}
+
 async function ensureVetVisitColumns() {
     await pool.query(
         "ALTER TABLE vet_visits ADD COLUMN IF NOT EXISTS completed BOOLEAN NOT NULL DEFAULT false"
@@ -103,7 +109,7 @@ router.get("/animal/:animalId", authMiddleware, async (req, res) => {
 // Get upcoming vet visits for all animals in a herd
 router.get("/herd/:herdId/upcoming", authMiddleware, async (req, res) => {
     const { herdId } = req.params;
-    const days = parseInt(req.query.days) || 30; // Default to 30 days
+    const days = getReminderWindow(req.query.days);
 
     try {
         const result = await pool.query(
@@ -116,16 +122,16 @@ router.get("/herd/:herdId/upcoming", authMiddleware, async (req, res) => {
                 (COALESCE(vv.completed, false) = false
                  AND COALESCE(vv.visit_completed, false) = false
                  AND vv.visit_date >= CURRENT_DATE
-                 AND vv.visit_date <= CURRENT_DATE + INTERVAL '${days} days')
+                 AND vv.visit_date <= CURRENT_DATE + ($3::integer * INTERVAL '1 day'))
                 OR
                 (COALESCE(vv.completed, false) = false
                  AND COALESCE(vv.follow_up_completed, false) = false
                  AND vv.follow_up_date >= CURRENT_DATE
-                 AND vv.follow_up_date <= CURRENT_DATE + INTERVAL '${days} days')
+                 AND vv.follow_up_date <= CURRENT_DATE + ($3::integer * INTERVAL '1 day'))
               )
             ORDER BY vv.visit_date ASC, vv.follow_up_date ASC
             `,
-            [herdId, req.user.id]
+            [herdId, req.user.id, days]
         );
 
         res.json(result.rows);
@@ -137,7 +143,7 @@ router.get("/herd/:herdId/upcoming", authMiddleware, async (req, res) => {
 
 // Get upcoming vet visits for unassigned animals
 router.get("/unassigned/upcoming", authMiddleware, async (req, res) => {
-    const days = parseInt(req.query.days) || 30; // Default to 30 days
+    const days = getReminderWindow(req.query.days);
 
     try {
         const result = await pool.query(
@@ -150,16 +156,16 @@ router.get("/unassigned/upcoming", authMiddleware, async (req, res) => {
                 (COALESCE(vv.completed, false) = false
                  AND COALESCE(vv.visit_completed, false) = false
                  AND vv.visit_date >= CURRENT_DATE
-                 AND vv.visit_date <= CURRENT_DATE + INTERVAL '${days} days')
+                 AND vv.visit_date <= CURRENT_DATE + ($2::integer * INTERVAL '1 day'))
                 OR
                 (COALESCE(vv.completed, false) = false
                  AND COALESCE(vv.follow_up_completed, false) = false
                  AND vv.follow_up_date >= CURRENT_DATE
-                 AND vv.follow_up_date <= CURRENT_DATE + INTERVAL '${days} days')
+                 AND vv.follow_up_date <= CURRENT_DATE + ($2::integer * INTERVAL '1 day'))
               )
             ORDER BY vv.visit_date ASC, vv.follow_up_date ASC
             `,
-            [req.user.id]
+            [req.user.id, days]
         );
 
         res.json(result.rows);

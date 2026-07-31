@@ -9,6 +9,7 @@ export const importAnimals = (rows, options = {}) =>
 export const extractRecordsWithAi = (data) => {
   const formData = new FormData();
   formData.append("notes", data.notes || "");
+  formData.append("acknowledgedThirdPartyProcessing", data.acknowledgedThirdPartyProcessing ? "true" : "false");
   if (data.file) formData.append("file", data.file);
 
   return api.post("/import-assistant/extract", formData, {

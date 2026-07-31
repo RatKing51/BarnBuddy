@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { UserButton } from "@clerk/clerk-react";
 import { ToastContainer, toast } from "react-toastify";
 import ImportAssistant from "../components/ImportAssistant";

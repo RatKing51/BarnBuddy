@@ -3,6 +3,7 @@ const { clerkClient } = require("@clerk/express");
 const authMiddleware = require("../middleware/authMiddleware");
 const { deleteUserDataByUserId } = require("../services/deleteUserData");
 const { getUserPreferences, updateUserPreferences } = require("../services/userPreferences");
+const { unsubscribeFromNewsletter } = require("../services/newsletterService");
 const pool = require("../data-source");
 require("dotenv").config();
 
@@ -153,6 +154,11 @@ router.patch("/preferences", authMiddleware, async (req, res) => {
 
 router.delete("/me", authMiddleware, async (req, res) => {
     try {
+        if (req.user.email) {
+            await unsubscribeFromNewsletter({ email: req.user.email }).catch((err) => {
+                console.error("Failed to unsubscribe deleted user from newsletter provider:", err.message);
+            });
+        }
         const user = await deleteUserDataByUserId(req.user.id);
 
         if (!user) {

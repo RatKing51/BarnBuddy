@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { SignedIn, SignedOut } from "@clerk/clerk-react";
 import { CheckoutButton, SubscriptionDetailsButton } from "@clerk/clerk-react/experimental";
 import { CLERK_PREMIUM_PLAN_ID, HAS_VALID_CLERK_PREMIUM_PLAN_ID } from "../config/env";

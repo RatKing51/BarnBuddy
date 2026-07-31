@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { UserButton, useAuth as useClerkAuth, useUser } from '@clerk/clerk-react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { ADMIN_CLERK_USER_IDS, ADMIN_EMAILS } from '../config/env'
 import { useAuth as useBarnBuddyAuth } from '../context/AuthContext'
 import PremiumExpiryBadge from './PremiumExpiryBadge'
@@ -35,9 +35,9 @@ const Navbar = () => {
 
           {/* Center: Tagline only on desktop */}
           <div className="hidden md:flex md:flex-1 md:justify-center">
-            <h1 className="mx-auto text-center text-white text-lg font-bold md:text-lg lg:text-xl">
+            <p className="mx-auto text-center text-white text-lg font-bold md:text-lg lg:text-xl">
               Doing for the Small
-            </h1>
+            </p>
           </div>
 
           {/* Right: Desktop links */}

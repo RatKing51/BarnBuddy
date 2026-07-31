@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const pool = require("../data-source");
 const authMiddleware = require("../middleware/authMiddleware");
+const { detectImageMimeType, supportedImageTypes } = require("../utils/imageFiles");
 const {
   createAnimalImageKey,
   deleteObject,
@@ -176,8 +177,13 @@ function normalizeWeightValue(value) {
 
 function normalizeNullableInteger(value) {
     if (value === null || value === undefined || value === "") return null;
-    const number = Number.parseInt(value, 10);
-    return Number.isFinite(number) ? number : null;
+    const number = Number(value);
+    return Number.isInteger(number) ? number : null;
+}
+
+function normalizeNullableId(value) {
+    const number = normalizeNullableInteger(value);
+    return number && number > 0 ? number : null;
 }
 
 function normalizeNullableDecimal(value) {
@@ -197,6 +203,35 @@ async function ensureAnimalOwner(animalId, userId) {
     );
 
     return result.rows[0] || null;
+}
+
+async function validateAnimalRelationships(userId, { herdId, damId, sireId, currentAnimalId = null }) {
+    if (damId && sireId && damId === sireId) {
+        return "Dam and sire must be different animals.";
+    }
+
+    if (currentAnimalId && [damId, sireId].includes(Number(currentAnimalId))) {
+        return "An animal cannot be its own parent.";
+    }
+
+    if (herdId) {
+        const herd = await pool.query(
+            "SELECT id FROM herds WHERE id = $1 AND user_id = $2",
+            [herdId, userId]
+        );
+        if (!herd.rowCount) return "Selected herd was not found.";
+    }
+
+    const parentIds = [...new Set([damId, sireId].filter(Boolean))];
+    if (parentIds.length) {
+        const parents = await pool.query(
+            "SELECT id FROM animals WHERE user_id = $1 AND id = ANY($2::int[])",
+            [userId, parentIds]
+        );
+        if (parents.rowCount !== parentIds.length) return "One or more selected parents were not found.";
+    }
+
+    return "";
 }
 
 async function syncAnimalCurrentWeight(animalId, userId) {
@@ -446,46 +481,6 @@ router.get("/", authMiddleware, async (req, res) => {
 
 // Multer storage configuration - store in memory as buffer
 const storage = multer.memoryStorage();
-const supportedImageTypes = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/gif",
-  "image/webp",
-  "image/avif",
-]);
-
-function detectImageMimeType(buffer) {
-  if (!Buffer.isBuffer(buffer) || buffer.length < 12) return null;
-
-  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
-    return "image/jpeg";
-  }
-
-  if (
-    buffer.subarray(0, 8).equals(
-      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
-    )
-  ) {
-    return "image/png";
-  }
-
-  const header = buffer.subarray(0, 12).toString("ascii");
-  if (header.startsWith("GIF87a") || header.startsWith("GIF89a")) {
-    return "image/gif";
-  }
-  if (header.startsWith("RIFF") && header.endsWith("WEBP")) {
-    return "image/webp";
-  }
-
-  const boxType = buffer.subarray(4, 8).toString("ascii");
-  const brand = buffer.subarray(8, 12).toString("ascii");
-  if (boxType === "ftyp" && ["avif", "avis"].includes(brand)) {
-    return "image/avif";
-  }
-
-  return null;
-}
-
 const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
@@ -729,13 +724,15 @@ router.post("/", authMiddleware, async (req, res) => {
     } = req.body;
 
     // Handle "unassigned" herd
-    herd_id = herd_id === "unassigned" || herd_id === "" ? null : herd_id;
+    herd_id = herd_id === "unassigned" || herd_id === "" ? null : normalizeNullableId(herd_id);
+    name = String(name || "").trim();
+    species = String(species || "").trim();
     age = normalizeNullableInteger(age);
     weight = normalizeNullableDecimal(weight);
     birth_weight = normalizeNullableDecimal(birth_weight);
     birthdate = normalizeNullableDate(birthdate);
-    dam_id = normalizeNullableInteger(dam_id);
-    sire_id = normalizeNullableInteger(sire_id);
+    dam_id = normalizeNullableId(dam_id);
+    sire_id = normalizeNullableId(sire_id);
     status = normalizeAnimalStatus(status);
     if (status !== "deceased") {
         deceased_date = null;
@@ -743,6 +740,22 @@ router.post("/", authMiddleware, async (req, res) => {
     }
 
     try {
+        if (!name || !species) {
+            return res.status(400).json({ error: "Name and species are required." });
+        }
+        if (name.length > 160 || species.length > 120) {
+            return res.status(400).json({ error: "Name or species is too long." });
+        }
+        if ((age !== null && age < 0) || (weight !== null && weight <= 0) || (birth_weight !== null && birth_weight <= 0)) {
+            return res.status(400).json({ error: "Age cannot be negative and weights must be greater than zero." });
+        }
+        const relationshipError = await validateAnimalRelationships(req.user.id, {
+            herdId: herd_id,
+            damId: dam_id,
+            sireId: sire_id,
+        });
+        if (relationshipError) return res.status(400).json({ error: relationshipError });
+
         const result = await pool.query(
             `INSERT INTO animals
             (user_id, herd_id, name, species, sex, birthdate, age, comments, weight, behavior, tag_id, image_url, birth_weight, birth_notes, status, deceased_date, deceased_notes, dam_id, sire_id)
@@ -780,12 +793,14 @@ router.put("/:id", authMiddleware, async (req, res) => {
     } = req.body;
 
     // Handle "unassigned" herd
-    herd_id = herd_id === "unassigned" || herd_id === "" ? null : herd_id;
+    herd_id = herd_id === "unassigned" || herd_id === "" ? null : normalizeNullableId(herd_id);
+    name = String(name || "").trim();
+    species = String(species || "").trim();
     age = normalizeNullableInteger(age);
     weight = normalizeNullableDecimal(weight);
     birthdate = normalizeNullableDate(birthdate);
-    dam_id = normalizeNullableInteger(dam_id);
-    sire_id = normalizeNullableInteger(sire_id);
+    dam_id = normalizeNullableId(dam_id);
+    sire_id = normalizeNullableId(sire_id);
     status = normalizeAnimalStatus(status);
     if (status !== "deceased") {
         deceased_date = null;
@@ -793,6 +808,23 @@ router.put("/:id", authMiddleware, async (req, res) => {
     }
 
     try {
+        if (!name || !species) {
+            return res.status(400).json({ error: "Name and species are required." });
+        }
+        if (name.length > 160 || species.length > 120) {
+            return res.status(400).json({ error: "Name or species is too long." });
+        }
+        if ((age !== null && age < 0) || (weight !== null && weight <= 0)) {
+            return res.status(400).json({ error: "Age cannot be negative and weight must be greater than zero." });
+        }
+        const relationshipError = await validateAnimalRelationships(req.user.id, {
+            herdId: herd_id,
+            damId: dam_id,
+            sireId: sire_id,
+            currentAnimalId: id,
+        });
+        if (relationshipError) return res.status(400).json({ error: relationshipError });
+
         const result = await pool.query(
             `UPDATE animals
              SET herd_id=$1,
@@ -831,6 +863,9 @@ router.put("/:id/birth-data", authMiddleware, async (req, res) => {
     const birth_weight = normalizeNullableDecimal(req.body.birth_weight);
 
     try {
+        if (birth_weight !== null && birth_weight <= 0) {
+            return res.status(400).json({ error: "Birth weight must be greater than zero." });
+        }
         const result = await pool.query(
             `UPDATE animals SET birth_weight=$1, birth_notes=$2
              WHERE id=$3 AND user_id=$4
