@@ -30,6 +30,7 @@ import { usePreferences } from "../context/PreferencesContext";
 import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";
 import { API_URL } from "../config/env";
 import { formatAnimalAge } from "../utils/age";
+import { getOnboardingPersonalization } from "../config/onboardingPersonalization";
 
 const getAnimalCareSignature = (items) =>
   items
@@ -254,7 +255,7 @@ export default function Dashboard() {
 
   const { user } = useUser();
   const { preferences } = usePreferences();
-  const { subscription, authFetch, refreshBackendUser } = useBarnBuddyAuth();
+  const { subscription, authFetch, refreshBackendUser, backendUser } = useBarnBuddyAuth();
   const loadedHerdIdRef = React.useRef(null);
   const loadedCareSummaryKeyRef = React.useRef("");
   const loadedLinkedAnimalRef = React.useRef(null);
@@ -262,6 +263,10 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const isCompact = preferences.dashboardDensity === "compact";
   const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
+  const personalization = React.useMemo(
+    () => getOnboardingPersonalization(backendUser?.onboarding),
+    [backendUser?.onboarding]
+  );
   const getAnimalPrimaryLabel = (animal) => {
     if (primaryAnimalIdentifier === "tag") return animal.tag_id || animal.name || "Unnamed animal";
     return animal.name || animal.tag_id || "Unnamed animal";
@@ -698,7 +703,7 @@ export default function Dashboard() {
       const filler = {
         herd_id: selectedHerd.id === "unassigned" ? null : selectedHerd.id,
         name: "",
-        species: "Cow",
+        species: personalization.defaultSpecies,
         sex: "",
         birthdate: null,
         age: "",
@@ -736,7 +741,7 @@ export default function Dashboard() {
     } finally {
       setAddingAnimal(false);
     }
-  }, [authFetch, refreshBackendUser, selectedHerd]);
+  }, [authFetch, personalization.defaultSpecies, refreshBackendUser, selectedHerd]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -762,7 +767,11 @@ export default function Dashboard() {
 
   const handleSelectAnimal = (animal) => {
     setMobileMoreOpen(false);
-    if (["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab)) setActiveTab("general");
+    if (selectedAnimal?.id !== animal.id) {
+      setActiveTab(personalization.preferredAnimalTab);
+    } else if (["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab)) {
+      setActiveTab("general");
+    }
     if (selectedAnimal?.id === animal.id && linkedAnimalId) {
       navigate("/dashboard", { replace: true });
     }
@@ -776,6 +785,16 @@ export default function Dashboard() {
     setSelectedAnimal(null);
     if (linkedAnimalId) navigate("/dashboard", { replace: true });
   };
+
+  const handlePersonalizedAction = React.useCallback(async () => {
+    const firstAnimal = animals.find((animal) => !isInactiveAnimalStatus(animal.status)) || animals[0];
+    const animal = firstAnimal || await handleAddAnimal();
+
+    if (!animal) return;
+    setSelectedAnimal(animal);
+    setActiveTab(personalization.preferredAnimalTab);
+    setMobileMoreOpen(false);
+  }, [animals, handleAddAnimal, personalization.preferredAnimalTab]);
 
   useEffect(() => {
     const handleEsc = (e) => {
@@ -1487,6 +1506,8 @@ export default function Dashboard() {
               primaryAnimalIdentifier={primaryAnimalIdentifier}
               isPremium={subscription.isPremium}
               handleSelectAnimal={handleSelectAnimal}
+              personalization={personalization}
+              onPersonalizedAction={handlePersonalizedAction}
             />
           ) : (
             <>
