@@ -149,6 +149,16 @@ async function sendPremiumExpirationReminders({ limit = 100 } = {}) {
     }
   }
 
+  await pool.query(
+    `UPDATE users
+     SET subscription_plan = 'free',
+         subscription_status = 'expired',
+         subscription_is_premium = false
+     WHERE subscription_is_premium = true
+       AND subscription_expires_at IS NOT NULL
+       AND subscription_expires_at <= CURRENT_TIMESTAMP`
+  );
+
   const maxDays = Math.max(...env.notifications.premiumExpiryReminderDays);
   const users = await pool.query(
     `SELECT id, name, email, subscription_expires_at

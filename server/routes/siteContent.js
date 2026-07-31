@@ -22,6 +22,7 @@ const {
   updateSiteContent,
 } = require("../services/siteContent");
 const { getUserActivity, getUserActivityUsers } = require("../services/userActivity");
+const { deletePremiumDataForUser } = require("../services/premiumDowngradeCleanup");
 
 const router = express.Router();
 const validTones = new Set(["green", "blue", "yellow", "red"]);
@@ -836,6 +837,56 @@ router.patch("/admin/users/:clerkUserId/subscription", authMiddleware, requireAd
   } catch (err) {
     console.error("Failed to update user subscription:", err);
     res.status(500).json({ error: "Failed to update Clerk public metadata" });
+  }
+});
+
+router.delete("/admin/users/:clerkUserId/premium-data", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    if (req.body?.confirm !== true) {
+      return res.status(400).json({ error: "Explicit confirmation is required to delete Premium data." });
+    }
+
+    const localUser = await getLocalUserByClerkId(req.params.clerkUserId);
+    if (!localUser?.id) {
+      return res.status(404).json({ error: "This Clerk user is not linked to a BarnBuddy account." });
+    }
+
+    const expiresTime = localUser.subscription_expires_at
+      ? new Date(localUser.subscription_expires_at).getTime()
+      : 0;
+    const premiumIsActive = localUser.subscription_is_premium === true && (!expiresTime || expiresTime > Date.now());
+    if (premiumIsActive) {
+      return res.status(409).json({ error: "Remove or expire Premium access before deleting the user's Premium data." });
+    }
+
+    const clerkUser = await clerkClient.users.getUser(req.params.clerkUserId);
+    const privateMetadata = clerkUser.privateMetadata || clerkUser.private_metadata || {};
+    if (Array.isArray(privateMetadata.adminFlags) && privateMetadata.adminFlags.includes("do_not_delete_premium_data")) {
+      return res.status(409).json({ error: "Remove the Keep premium data admin flag before deleting these records." });
+    }
+
+    const result = await deletePremiumDataForUser(localUser.id);
+    await logAdminActivity({
+      userId: req.user.id,
+      action: "user_premium_data_deleted",
+      details: {
+        clerkUserId: req.params.clerkUserId,
+        email: localUser.email,
+        ...result,
+      },
+    });
+
+    res.json({
+      message: "Premium data deleted.",
+      ...result,
+      details: await getUserDetailsForAdmin(req.params.clerkUserId),
+    });
+  } catch (err) {
+    console.error("Failed to delete Premium data:", err);
+    res.status(500).json({
+      error: "Failed to delete Premium data",
+      message: env.nodeEnv === "production" ? undefined : err.message,
+    });
   }
 });
 

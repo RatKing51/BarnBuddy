@@ -130,6 +130,7 @@ function activityLabel(action) {
     support_message_updated: 'Updated support message',
     user_premium_granted: 'Granted premium',
     user_premium_revoked: 'Revoked premium',
+    user_premium_data_deleted: 'Deleted stored premium data',
     user_admin_flags_updated: 'Updated admin flags',
   }
 
@@ -248,6 +249,7 @@ export default function AdminContent() {
   const [userSearch, setUserSearch] = useState('')
   const [selectedAdminUserId, setSelectedAdminUserId] = useState('')
   const [updatingUserId, setUpdatingUserId] = useState('')
+  const [deletingPremiumData, setDeletingPremiumData] = useState(false)
   const [premiumDuration, setPremiumDuration] = useState('lifetime')
   const [premiumCustomDate, setPremiumCustomDate] = useState('')
   const [adminUserDetails, setAdminUserDetails] = useState(null)
@@ -753,6 +755,37 @@ export default function AdminContent() {
       toast.error(err.message || 'Failed to update user.')
     } finally {
       setUpdatingUserId('')
+    }
+  }
+
+  async function deleteSelectedUserPremiumData() {
+    if (!selectedAdminUser?.clerkUserId || deletingPremiumData) return
+
+    const premiumRecordCount = adminUserDetails?.counts?.premiumRecords || 0
+    const confirmed = window.confirm(
+      `Permanently delete ${premiumRecordCount} Premium record${premiumRecordCount === 1 ? '' : 's'} for ${selectedAdminUser.email || selectedAdminUser.clerkUserId}? This cannot be undone.`
+    )
+    if (!confirmed) return
+
+    try {
+      setDeletingPremiumData(true)
+      const res = await authFetch(`${API_BASE_URL}/site-content/admin/users/${encodeURIComponent(selectedAdminUser.clerkUserId)}/premium-data`, {
+        method: 'DELETE',
+        body: JSON.stringify({ confirm: true }),
+      })
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Failed to delete Premium data.')
+      }
+
+      setAdminUserDetails(data.details || null)
+      toast.success(`Deleted ${data.premiumRecordCount || 0} Premium record${data.premiumRecordCount === 1 ? '' : 's'}.`)
+      await loadAdminActivity()
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete Premium data.')
+    } finally {
+      setDeletingPremiumData(false)
     }
   }
 
@@ -2361,6 +2394,31 @@ export default function AdminContent() {
                             </div>
                           </>
                         )}
+                      </div>
+
+                      <div className="rounded-lg border border-red-300/20 bg-red-500/5 p-5">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <h4 className="font-semibold text-red-100">Stored Premium data</h4>
+                            <p className="mt-1 text-sm leading-relaxed text-slate-400">
+                              Premium records stay saved after a downgrade. Delete them only when you intentionally want to remove this user's finance, feed, inventory, reproduction, and birth records.
+                            </p>
+                            {selectedAdminUser.isPremium && (
+                              <p className="mt-2 text-xs font-semibold text-amber-200">Remove or expire Premium access before deleting these records.</p>
+                            )}
+                            {selectedAdminUserFlags.includes('do_not_delete_premium_data') && (
+                              <p className="mt-2 text-xs font-semibold text-amber-200">Remove the Keep premium data admin flag before deleting these records.</p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={deleteSelectedUserPremiumData}
+                            disabled={deletingPremiumData || selectedAdminUser.isPremium || selectedAdminUserFlags.includes('do_not_delete_premium_data') || !selectedAdminUser.localUser?.id || !adminUserDetails?.counts?.premiumRecords}
+                            className="shrink-0 rounded-md border border-red-300/25 bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {deletingPremiumData ? 'Deleting...' : `Delete Premium data (${adminUserDetails?.counts?.premiumRecords || 0})`}
+                          </button>
+                        </div>
                       </div>
 
                       <div className="rounded-lg border border-slate-800 bg-slate-950/45 p-5">

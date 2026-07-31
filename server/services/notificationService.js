@@ -575,6 +575,7 @@ async function sendDueReminderEmails({ limit = 100 } = {}) {
      FROM users
      WHERE automatic_reminders = true
        AND subscription_is_premium = true
+       AND (subscription_expires_at IS NULL OR subscription_expires_at > CURRENT_TIMESTAMP)
        AND email IS NOT NULL
      ORDER BY id ASC
      LIMIT $1`,

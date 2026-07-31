@@ -1,7 +1,6 @@
 const { clerkClient, getAuth } = require("@clerk/express");
 const pool = require("../data-source");
 const { findOrCreateLocalUserFromAuth } = require("../services/clerkUserSync");
-const { cleanupPremiumDataForUser } = require("../services/premiumDowngradeCleanup");
 const { attachActivityLogger } = require("../services/userActivity");
 
 const premiumPlanValues = new Set(["premium", "pro", "paid", "active"]);
@@ -246,10 +245,6 @@ module.exports = async function authMiddleware(req, res, next) {
             [user.id]
         );
         const userState = userStateResult.rows[0] || {};
-
-        if (!subscription.isPremium) {
-            await cleanupPremiumDataForUser(user.id);
-        }
 
         req.user = {
             id: user.id,

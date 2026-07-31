@@ -11,25 +11,48 @@ async function tableExists(tableName) {
   return Boolean(result.rows[0]?.name);
 }
 
-async function cleanupPremiumDataForUser(userId) {
+async function deletePremiumDataForUser(userId) {
   await ensurePreferenceSchema();
   await ensurePremiumRecordSchema();
   await ensureReproductionSchema();
   await ensureBirthSchema();
 
-  if (await tableExists("notification_deliveries")) {
-    await pool.query("DELETE FROM notification_deliveries WHERE user_id = $1", [userId]);
-  }
+  const hasNotificationDeliveries = await tableExists("notification_deliveries");
+  const client = await pool.connect();
 
-  await pool.query("DELETE FROM births WHERE user_id = $1", [userId]);
-  await pool.query("DELETE FROM reproductions WHERE user_id = $1", [userId]);
-  await pool.query("DELETE FROM finance_records WHERE user_id = $1", [userId]);
-  await pool.query("DELETE FROM feed_records WHERE user_id = $1", [userId]);
-  await pool.query("DELETE FROM inventory_records WHERE user_id = $1", [userId]);
-  await pool.query(
-    "UPDATE users SET automatic_reminders = false WHERE id = $1",
-    [userId]
-  );
+  try {
+    await client.query("BEGIN");
+    const deliveries = hasNotificationDeliveries
+      ? await client.query("DELETE FROM notification_deliveries WHERE user_id = $1", [userId])
+      : { rowCount: 0 };
+    const births = await client.query("DELETE FROM births WHERE user_id = $1", [userId]);
+    const reproductions = await client.query("DELETE FROM reproductions WHERE user_id = $1", [userId]);
+    const finance = await client.query("DELETE FROM finance_records WHERE user_id = $1", [userId]);
+    const feed = await client.query("DELETE FROM feed_records WHERE user_id = $1", [userId]);
+    const inventory = await client.query("DELETE FROM inventory_records WHERE user_id = $1", [userId]);
+    await client.query("UPDATE users SET automatic_reminders = false WHERE id = $1", [userId]);
+    await client.query("COMMIT");
+
+    const deleted = {
+      births: births.rowCount,
+      reproductions: reproductions.rowCount,
+      finance: finance.rowCount,
+      feed: feed.rowCount,
+      inventory: inventory.rowCount,
+      notificationDeliveries: deliveries.rowCount,
+    };
+
+    return {
+      deleted,
+      premiumRecordCount:
+        deleted.births + deleted.reproductions + deleted.finance + deleted.feed + deleted.inventory,
+    };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 async function downgradePremiumUser(userId, status = "free") {
@@ -43,8 +66,6 @@ async function downgradePremiumUser(userId, status = "free") {
      WHERE id = $1`,
     [userId, status || "free"]
   );
-
-  await cleanupPremiumDataForUser(userId);
 }
 
 async function downgradePremiumUserByClerkId(clerkUserId, status = "free") {
@@ -97,7 +118,7 @@ async function activatePremiumUserByClerkId(clerkUserId) {
 }
 
 module.exports = {
-  cleanupPremiumDataForUser,
+  deletePremiumDataForUser,
   downgradePremiumUser,
   downgradePremiumUserByClerkId,
   markPremiumExpiringByClerkId,
