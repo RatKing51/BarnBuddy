@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { usePreferences } from "../context/PreferencesContext";
 import { API_BASE_URL, API_URL } from "../config/env";
 import { PREMIUM_FEATURES, PLANS, PLAN_IDS } from "../config/subscription";
+import PremiumExpiryBadge from "../components/PremiumExpiryBadge";
 
 function reminderBadgeClass(urgency) {
   if (urgency === "critical" || urgency === "overdue") {
@@ -298,6 +299,7 @@ export default function AccountSettings() {
             >
               Dashboard
             </button>
+            <PremiumExpiryBadge subscription={subscription} />
             <UserButton afterSignOutUrl="/" />
           </div>
         </div>

@@ -6,6 +6,7 @@ const {
   sendDueReminderEmails,
   sendUserReminderEmail,
 } = require("../services/notificationService");
+const { sendPremiumExpirationReminders } = require("../services/premiumExpirationService");
 
 const router = express.Router();
 
@@ -74,7 +75,12 @@ router.post("/reminders/run", async (req, res) => {
   }
 
   try {
-    const results = await sendDueReminderEmails({ limit: req.body?.limit });
+    const careResults = await sendDueReminderEmails({ limit: req.body?.limit });
+    const premiumResults = await sendPremiumExpirationReminders({ limit: req.body?.limit });
+    const results = [
+      ...careResults.map((result) => ({ kind: "care", ...result })),
+      ...premiumResults.map((result) => ({ kind: "premium-expiration", ...result })),
+    ];
     const sent = results.filter((result) => result.sent).length;
     const skipped = results.filter((result) => result.skipped).length;
     const failed = results.filter((result) => result.error).length;

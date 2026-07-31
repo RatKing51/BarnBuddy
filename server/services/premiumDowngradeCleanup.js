@@ -37,7 +37,9 @@ async function downgradePremiumUser(userId, status = "free") {
     `UPDATE users
      SET subscription_plan = 'free',
          subscription_status = $2,
-         subscription_is_premium = false
+         subscription_is_premium = false,
+         subscription_source = '',
+         subscription_expires_at = NULL
      WHERE id = $1`,
     [userId, status || "free"]
   );
@@ -60,8 +62,44 @@ async function downgradePremiumUserByClerkId(clerkUserId, status = "free") {
   return true;
 }
 
+async function markPremiumExpiringByClerkId(clerkUserId, { expiresAt, source, status } = {}) {
+  if (!clerkUserId || !expiresAt) return false;
+
+  const result = await pool.query(
+    `UPDATE users
+     SET subscription_plan = 'premium',
+         subscription_status = $2,
+         subscription_is_premium = true,
+         subscription_source = $3,
+         subscription_expires_at = $4
+     WHERE clerk_user_id = $1`,
+    [clerkUserId, status || "active", source || "clerk_billing", expiresAt]
+  );
+
+  return result.rowCount > 0;
+}
+
+async function activatePremiumUserByClerkId(clerkUserId) {
+  if (!clerkUserId) return false;
+
+  const result = await pool.query(
+    `UPDATE users
+     SET subscription_plan = 'premium',
+         subscription_status = 'active',
+         subscription_is_premium = true,
+         subscription_source = 'clerk_billing',
+         subscription_expires_at = NULL
+     WHERE clerk_user_id = $1`,
+    [clerkUserId]
+  );
+
+  return result.rowCount > 0;
+}
+
 module.exports = {
   cleanupPremiumDataForUser,
   downgradePremiumUser,
   downgradePremiumUserByClerkId,
+  markPremiumExpiringByClerkId,
+  activatePremiumUserByClerkId,
 };

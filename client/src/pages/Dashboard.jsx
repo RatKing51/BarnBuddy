@@ -10,6 +10,7 @@ import PremiumRecords from "../components/PremiumRecords";
 import VetVisits from "../components/VetVisits";
 import WeightRecords from "../components/WeightRecords";
 import { SkeletonBlock } from "../components/LoadingSpinner";
+import PremiumExpiryBadge from "../components/PremiumExpiryBadge";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   createAnimal,
@@ -1230,6 +1231,7 @@ export default function Dashboard() {
               >
                 Settings
               </button>
+              <PremiumExpiryBadge subscription={subscription} />
               <div className="rounded-full border border-gray-700 bg-gray-900 p-1">
                 <UserButton afterSignOutUrl="/" />
               </div>
@@ -1391,6 +1393,7 @@ export default function Dashboard() {
             <div className="rounded-full border border-gray-700 bg-gray-800 p-1">
               <UserButton afterSignOutUrl="/" />
             </div>
+            <PremiumExpiryBadge subscription={subscription} />
             <button
               type="button"
               onClick={handleExportDashboardPdf}

@@ -112,6 +112,7 @@ function getSubscriptionFromClaims(claims = {}, hasPremiumAccess = false, clerkM
     ]));
     const hasPremiumFlag = readBooleanFromSources(sources, ["premium", "isPremium", "hasPremium"]);
     const premiumExpiresAt = readDateFromSources(sources, ["premiumExpiresAt", "premium_expires_at", "subscriptionExpiresAt"]);
+    const premiumSource = normalizeValue(readStringFromSources(sources, ["premiumSource", "premium_source", "subscriptionSource"]));
     const premiumExpired = Boolean(premiumExpiresAt && premiumExpiresAt <= Date.now());
     const isPremium = Boolean(
         !premiumExpired &&
@@ -125,6 +126,8 @@ function getSubscriptionFromClaims(claims = {}, hasPremiumAccess = false, clerkM
         plan: isPremium ? "premium" : "free",
         status: status || (isPremium ? "active" : "free"),
         isPremium,
+        premiumExpiresAt: premiumExpiresAt ? new Date(premiumExpiresAt).toISOString() : "",
+        premiumSource,
     };
 }
 
@@ -187,16 +190,45 @@ module.exports = async function authMiddleware(req, res, next) {
 
         const user = await findOrCreateLocalUserFromAuth(authForSync);
         const subscription = getSubscriptionFromClaims(auth.sessionClaims, hasPremiumAccess, clerkMetadata);
+        if (!subscription.premiumExpiresAt) {
+            const localExpirationResult = await pool.query(
+                `SELECT subscription_status, subscription_source, subscription_expires_at
+                 FROM users
+                 WHERE id = $1`,
+                [user.id]
+            );
+            const localExpiration = localExpirationResult.rows[0] || {};
+            const localExpiresTime = localExpiration.subscription_expires_at
+                ? new Date(localExpiration.subscription_expires_at).getTime()
+                : 0;
+            const preservedSources = new Set(["clerk_trial", "clerk_billing_canceled"]);
+
+            if (subscription.isPremium && !subscription.premiumSource && localExpiration.subscription_source) {
+                subscription.premiumSource = localExpiration.subscription_source;
+            }
+
+            if (localExpiresTime > Date.now() && preservedSources.has(localExpiration.subscription_source)) {
+                subscription.plan = "premium";
+                subscription.status = localExpiration.subscription_status || "active";
+                subscription.isPremium = true;
+                subscription.premiumExpiresAt = new Date(localExpiresTime).toISOString();
+                subscription.premiumSource = localExpiration.subscription_source;
+            }
+        }
         await pool.query(
             `UPDATE users
              SET subscription_plan = $1,
                  subscription_status = $2,
-                 subscription_is_premium = $3
-             WHERE id = $4`,
+                 subscription_is_premium = $3,
+                 subscription_source = $4,
+                 subscription_expires_at = $5
+             WHERE id = $6`,
             [
                 subscription.plan || "free",
                 subscription.status || (subscription.isPremium ? "active" : "free"),
                 subscription.isPremium === true,
+                subscription.premiumSource || "",
+                subscription.premiumExpiresAt || null,
                 user.id,
             ]
         );

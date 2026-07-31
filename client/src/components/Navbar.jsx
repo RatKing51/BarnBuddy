@@ -1,12 +1,15 @@
 import React, { useState } from 'react'
-import { UserButton, useAuth, useUser } from '@clerk/clerk-react'
+import { UserButton, useAuth as useClerkAuth, useUser } from '@clerk/clerk-react'
 import { Link } from 'react-router-dom'
 import { ADMIN_CLERK_USER_IDS, ADMIN_EMAILS } from '../config/env'
+import { useAuth as useBarnBuddyAuth } from '../context/AuthContext'
+import PremiumExpiryBadge from './PremiumExpiryBadge'
 import '../index.css'
 
 const Navbar = () => {
   const [open, setOpen] = useState(false)
-  const { isLoaded, isSignedIn } = useAuth()
+  const { isLoaded, isSignedIn } = useClerkAuth()
+  const { subscription } = useBarnBuddyAuth()
   const { user } = useUser()
   const showSignedIn = isLoaded && isSignedIn
   const primaryEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || ''
@@ -58,6 +61,7 @@ const Navbar = () => {
                 <Link to="/dashboard" className="bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-2 px-4 rounded-md transition-colors">
                   Dashboard
                 </Link>
+                <PremiumExpiryBadge subscription={subscription} />
                 <UserButton afterSignOutUrl="/" />
               </>
             ) : (
@@ -115,6 +119,7 @@ const Navbar = () => {
                 Dashboard
               </Link>
               <div className="py-2 px-2">
+                <PremiumExpiryBadge subscription={subscription} className="mr-3" />
                 <UserButton afterSignOutUrl="/" />
               </div>
             </>

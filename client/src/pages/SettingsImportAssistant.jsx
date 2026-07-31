@@ -3,10 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { UserButton } from "@clerk/clerk-react";
 import { ToastContainer, toast } from "react-toastify";
 import ImportAssistant from "../components/ImportAssistant";
+import PremiumExpiryBadge from "../components/PremiumExpiryBadge";
 import { getAnimalsForUser } from "../api/animal";
+import { useAuth } from "../context/AuthContext";
 
 export default function SettingsImportAssistant() {
   const navigate = useNavigate();
+  const { subscription } = useAuth();
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,6 +74,7 @@ export default function SettingsImportAssistant() {
             >
               Dashboard
             </button>
+            <PremiumExpiryBadge subscription={subscription} />
             <UserButton afterSignOutUrl="/" />
           </div>
         </div>

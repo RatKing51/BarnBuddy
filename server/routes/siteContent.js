@@ -167,7 +167,9 @@ async function getLocalUserByClerkId(clerkUserId) {
             clerk_user_id,
             subscription_plan,
             subscription_status,
-            subscription_is_premium
+            subscription_is_premium,
+            subscription_source,
+            subscription_expires_at
      FROM users
      WHERE clerk_user_id = $1
      LIMIT 1`,
@@ -211,8 +213,10 @@ async function upsertLocalSubscriptionFromClerkUser(clerkUser) {
            email = COALESCE(NULLIF($3, ''), email),
            subscription_plan = $4,
            subscription_status = $5,
-           subscription_is_premium = $6
-       WHERE id = $7`,
+           subscription_is_premium = $6,
+           subscription_source = $7,
+           subscription_expires_at = $8
+       WHERE id = $9`,
       [
         normalized.clerkUserId,
         normalized.name,
@@ -220,13 +224,15 @@ async function upsertLocalSubscriptionFromClerkUser(clerkUser) {
         isPremium ? "premium" : "free",
         isPremium ? "active" : "free",
         isPremium,
+        normalized.publicMetadata.premiumSource || "",
+        normalized.premiumExpiresAt || null,
         targetUserId,
       ]
     );
   } else {
     await pool.query(
-      `INSERT INTO users (clerk_user_id, name, email, password, subscription_plan, subscription_status, subscription_is_premium)
-       VALUES ($1, $2, $3, 'clerk_managed', $4, $5, $6)`,
+      `INSERT INTO users (clerk_user_id, name, email, password, subscription_plan, subscription_status, subscription_is_premium, subscription_source, subscription_expires_at)
+       VALUES ($1, $2, $3, 'clerk_managed', $4, $5, $6, $7, $8)`,
       [
         normalized.clerkUserId,
         normalized.name,
@@ -234,6 +240,8 @@ async function upsertLocalSubscriptionFromClerkUser(clerkUser) {
         isPremium ? "premium" : "free",
         isPremium ? "active" : "free",
         isPremium,
+        normalized.publicMetadata.premiumSource || "",
+        normalized.premiumExpiresAt || null,
       ]
     );
   }

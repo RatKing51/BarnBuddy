@@ -4,6 +4,15 @@ function uniqueUrls(urls) {
   return [...new Set(urls.map((url) => url.trim()).filter(Boolean))];
 }
 
+function positiveDayList(value, fallback = [7, 3, 1]) {
+  const days = String(value || "")
+    .split(",")
+    .map((item) => Number.parseInt(item.trim(), 10))
+    .filter((item) => Number.isInteger(item) && item > 0 && item <= 90);
+
+  return [...new Set(days.length ? days : fallback)].sort((a, b) => a - b);
+}
+
 const configuredClientUrls = (process.env.CLIENT_URL || "")
   .split(",")
   .map((url) => url.trim())
@@ -58,6 +67,7 @@ const env = {
   },
   notifications: {
     cronSecret: process.env.NOTIFICATION_CRON_SECRET || "",
+    premiumExpiryReminderDays: positiveDayList(process.env.PREMIUM_EXPIRY_REMINDER_DAYS),
   },
   openai: {
     apiKey: process.env.OPENAI_API_KEY || "",

@@ -12,7 +12,7 @@
     "site-images:migrate:assets": "node scripts/migrateSiteImagesToR2.js --assets-only",
     "site-images:migrate:database": "node scripts/migrateSiteImagesToR2.js --database-only",
     "site-images:cleanup:database": "node scripts/migrateSiteImagesToR2.js --cleanup-only",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test test/*.test.js",
     "dev": "nodemon server.js"
   },
   "keywords": [],
