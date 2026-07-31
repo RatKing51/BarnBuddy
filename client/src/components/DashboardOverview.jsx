@@ -155,8 +155,6 @@ export default function DashboardOverview({
   selectedHerd,
   isPremium = false,
   loading = false,
-  personalization,
-  onPersonalizedAction,
 }) {
   const [tableFilter, setTableFilter] = useState("all");
 
@@ -258,43 +256,6 @@ export default function DashboardOverview({
 
   return (
     <div className="space-y-3 bg-gray-950 p-3 sm:p-6 md:space-y-6">
-      {personalization?.isConfigured && (
-        <section className="rounded-2xl border border-blue-400/25 bg-gradient-to-br from-blue-500/15 via-gray-900 to-gray-900 p-4 sm:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-blue-200">
-                <span>Your BarnBuddy setup</span>
-                <span aria-hidden="true" className="text-gray-600">•</span>
-                <span>{personalization.profileLabel}</span>
-                {personalization.herdSizeLabel && (
-                  <>
-                    <span aria-hidden="true" className="text-gray-600">•</span>
-                    <span>{personalization.herdSizeLabel}</span>
-                  </>
-                )}
-                {personalization.primarySpecies.length > 0 && (
-                  <>
-                    <span aria-hidden="true" className="text-gray-600">•</span>
-                    <span>{personalization.speciesLabel}</span>
-                  </>
-                )}
-              </div>
-              <h2 className="mt-2 text-xl font-semibold text-white sm:text-2xl">{personalization.title}</h2>
-              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-gray-300">
-                {personalization.copy} New animals start as {personalization.defaultSpecies}, based on the animals you chose during setup.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onPersonalizedAction}
-              className="inline-flex shrink-0 items-center justify-center rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-400"
-            >
-              {totalAnimals ? personalization.actionLabel : `Add your first ${personalization.defaultSpecies}`}
-            </button>
-          </div>
-        </section>
-      )}
-
       <section className="hidden md:block">
         <div className="mb-3 flex items-end justify-between gap-3">
           <div>

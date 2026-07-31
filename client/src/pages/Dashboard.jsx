@@ -30,7 +30,7 @@ import { usePreferences } from "../context/PreferencesContext";
 import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";
 import { API_URL } from "../config/env";
 import { formatAnimalAge } from "../utils/age";
-import { getOnboardingPersonalization } from "../config/onboardingPersonalization";
+import { getOnboardingDefaultSpecies } from "../config/onboardingSpecies";
 
 const getAnimalCareSignature = (items) =>
   items
@@ -263,8 +263,8 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const isCompact = preferences.dashboardDensity === "compact";
   const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
-  const personalization = React.useMemo(
-    () => getOnboardingPersonalization(backendUser?.onboarding),
+  const onboardingDefaultSpecies = React.useMemo(
+    () => getOnboardingDefaultSpecies(backendUser?.onboarding),
     [backendUser?.onboarding]
   );
   const getAnimalPrimaryLabel = (animal) => {
@@ -703,7 +703,7 @@ export default function Dashboard() {
       const filler = {
         herd_id: selectedHerd.id === "unassigned" ? null : selectedHerd.id,
         name: "",
-        species: personalization.defaultSpecies,
+        species: onboardingDefaultSpecies,
         sex: "",
         birthdate: null,
         age: "",
@@ -741,7 +741,7 @@ export default function Dashboard() {
     } finally {
       setAddingAnimal(false);
     }
-  }, [authFetch, personalization.defaultSpecies, refreshBackendUser, selectedHerd]);
+  }, [authFetch, onboardingDefaultSpecies, refreshBackendUser, selectedHerd]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -767,11 +767,7 @@ export default function Dashboard() {
 
   const handleSelectAnimal = (animal) => {
     setMobileMoreOpen(false);
-    if (selectedAnimal?.id !== animal.id) {
-      setActiveTab(personalization.preferredAnimalTab);
-    } else if (["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab)) {
-      setActiveTab("general");
-    }
+    if (["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab)) setActiveTab("general");
     if (selectedAnimal?.id === animal.id && linkedAnimalId) {
       navigate("/dashboard", { replace: true });
     }
@@ -785,16 +781,6 @@ export default function Dashboard() {
     setSelectedAnimal(null);
     if (linkedAnimalId) navigate("/dashboard", { replace: true });
   };
-
-  const handlePersonalizedAction = React.useCallback(async () => {
-    const firstAnimal = animals.find((animal) => !isInactiveAnimalStatus(animal.status)) || animals[0];
-    const animal = firstAnimal || await handleAddAnimal();
-
-    if (!animal) return;
-    setSelectedAnimal(animal);
-    setActiveTab(personalization.preferredAnimalTab);
-    setMobileMoreOpen(false);
-  }, [animals, handleAddAnimal, personalization.preferredAnimalTab]);
 
   useEffect(() => {
     const handleEsc = (e) => {
@@ -1506,8 +1492,6 @@ export default function Dashboard() {
               primaryAnimalIdentifier={primaryAnimalIdentifier}
               isPremium={subscription.isPremium}
               handleSelectAnimal={handleSelectAnimal}
-              personalization={personalization}
-              onPersonalizedAction={handlePersonalizedAction}
             />
           ) : (
             <>
