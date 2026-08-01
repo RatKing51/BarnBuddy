@@ -26,6 +26,7 @@ const newsletterRoutes = require("./routes/newsletter");
 const notificationRoutes = require("./routes/notifications");
 const siteContentRoutes = require("./routes/siteContent");
 const importAssistantRoutes = require("./routes/importAssistant");
+const ffaProjectRoutes = require("./routes/ffaProjects");
 const { ensureAppSchema } = require("./services/ensureAppSchema");
 
 const app = express();
@@ -66,6 +67,7 @@ app.use("/api/newsletter", newsletterRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/site-content", siteContentRoutes);
 app.use("/api/import-assistant", importAssistantRoutes);
+app.use("/api/ffa-projects", ffaProjectRoutes);
 app.use("/auth", authRoutes);
 app.use("/contact", contactRoutes);
 app.use("/api/reproductions", reproductionRoutes);

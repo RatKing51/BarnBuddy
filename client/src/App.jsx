@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Link, Routes, Route, useLocation } from "react
 import Landing from "./pages/Landing";
 import Navbar from "./components/Navbar";
 import PrivateRoute from "./routes/PrivateRoute";
+import PremiumRoute from "./routes/PremiumRoute";
 import { ToastContainer } from "react-toastify";
 import { LoadingSpinner, PageLoadingBar } from "./components/LoadingSpinner";
 import { getSiteContent } from "./api/siteContent";
@@ -16,6 +17,7 @@ const MAINTENANCE_EVENT = "barnbuddy:maintenance-updated";
 const Login = lazy(() => import("./pages/Login"));
 const SignUp = lazy(() => import("./pages/SignUp"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const FfaProjects = lazy(() => import("./pages/FfaProjects"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const About = lazy(() => import("./pages/AboutUs"));
@@ -192,6 +194,7 @@ function AppContent() {
       "/settings/account": "BarnBuddy Account Settings",
       "/settings/herd": "BarnBuddy Herd Settings",
       "/settings/import-assistant": "BarnBuddy Import Assistant",
+      "/dashboard/ffa-projects": "FFA Projects | BarnBuddy",
     };
     const routedTitle = location.pathname.startsWith("/dashboard")
       ? "BarnBuddy Dashboard"
@@ -270,6 +273,9 @@ function AppContent() {
           <Route path="/dashboard/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/animal/:animalId" element={<Dashboard />} />
+          <Route element={<PremiumRoute />}>
+            <Route path="/dashboard/ffa-projects" element={<FfaProjects />} />
+          </Route>
           <Route path="/admin" element={<AdminContent />} />
           <Route path="/settings/account" element={<AccountSettings />} />
           <Route path="/settings/import-assistant" element={<SettingsImportAssistant />} />

@@ -4,6 +4,7 @@ const { ensureSchema: ensureUserSchema } = require("./clerkUserSync");
 const { ensurePreferenceSchema } = require("./userPreferences");
 const { ensureSiteContentSchema } = require("./siteContent");
 const { ensureUserActivitySchema } = require("./userActivity");
+const { ensureFfaProjectSchema } = require("./ensureFfaProjectSchema");
 
 let appSchemaReadyPromise;
 
@@ -212,6 +213,7 @@ async function ensureAppSchema() {
       await ensureReproductionSchema();
       await ensureBirthSchema();
       await ensureImportAssistantSchema();
+      await ensureFfaProjectSchema();
     })();
   }
 
@@ -224,4 +226,5 @@ module.exports = {
   ensureReproductionSchema,
   ensureBirthSchema,
   ensureImportAssistantSchema,
+  ensureFfaProjectSchema,
 };

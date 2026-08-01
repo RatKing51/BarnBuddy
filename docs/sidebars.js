@@ -36,6 +36,7 @@ const sidebars = {
         'premium/inventory',
         'premium/exports',
         'premium/reminders',
+        'premium/ffa-project-mode',
       ],
     },
     {

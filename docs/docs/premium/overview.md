@@ -15,6 +15,7 @@ Premium expands BarnBuddy beyond basic records.
 - Animal and herd finance records
 - Feed planning tools
 - Inventory tracking with low-stock and expiration visibility
+- FFA Project Mode for SAE projects, journals, finances, and printable summaries
 
 ## Free Plan Includes
 

@@ -16,7 +16,7 @@ const helpTopics = [
   },
   {
     title: 'Schools and chapters',
-    copy: 'BarnBuddy is built with FFA, 4H, and small programs in mind. Group setup details can live here later.',
+    copy: 'BarnBuddy Premium includes FFA Project Mode for SAE projects, linked animals, journals, project finances, and printable summaries.',
   },
 ]
 

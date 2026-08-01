@@ -66,6 +66,11 @@
               "sidebar": "tutorialSidebar"
             },
             {
+              "id": "premium/ffa-project-mode",
+              "path": "/premium/ffa-project-mode",
+              "sidebar": "tutorialSidebar"
+            },
+            {
               "id": "premium/finance",
               "path": "/premium/finance",
               "sidebar": "tutorialSidebar"

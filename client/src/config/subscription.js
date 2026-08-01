@@ -30,6 +30,7 @@ export const PLANS = {
       "PDF and scheduled exports",
       "Automatic reminders",
       "Breeding, finance, feed, and inventory tools",
+      "FFA Project Mode and SAE recordkeeping",
       "Shared farm account access",
     ],
   },
@@ -40,6 +41,7 @@ export const PREMIUM_FEATURES = [
   "PDF and scheduled exports",
   "Automatic reminders",
   "Breeding, finance, feed, and inventory tools",
+  "FFA Project Mode and SAE recordkeeping",
 ];
 
 export const PRICING_FEATURES = [
@@ -49,6 +51,7 @@ export const PRICING_FEATURES = [
   { label: "Exports", free: "Simple records", premium: "PDF and scheduled exports" },
   { label: "Automatic reminders", free: "Manual review", premium: "Included" },
   { label: "Breeding, finance, feed, and inventory tools", free: "Not included", premium: "Included" },
+  { label: "FFA Project Mode and SAE recordkeeping", free: "Not included", premium: "Included" },
 ];
 
 const premiumPlanValues = new Set(["premium", "pro", "paid", "active"]);

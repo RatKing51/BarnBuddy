@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { PricingTable } from "@clerk/clerk-react";
 import Footer from "../components/Footer";
 import { PRICING_FEATURES } from "../config/subscription";
@@ -143,6 +143,9 @@ const clerkPricingAppearance = {
 };
 
 export default function Pricing() {
+  const location = useLocation();
+  const requestedPremiumFeature = location.state?.premiumFeature || "";
+
   return (
     <div className="flex min-h-screen flex-col bg-[#0b1730] text-white">
       <main className="flex-grow">
@@ -151,9 +154,15 @@ export default function Pricing() {
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-300">Pricing</p>
             <h1 className="mt-3 text-4xl font-semibold sm:text-5xl">Choose your BarnBuddy plan</h1>
             <p className="mt-4 text-white/78">
-              Upgrade through Clerk Billing for Premium exports, reminders, planning tools, and deeper herd insight.
+              Upgrade through Clerk Billing for Premium exports, reminders, FFA Project Mode, planning tools, and deeper herd insight.
             </p>
           </div>
+
+          {requestedPremiumFeature && (
+            <div className="mx-auto mb-8 max-w-3xl rounded-xl border border-blue-300/25 bg-blue-500/10 px-5 py-4 text-center text-sm text-blue-100">
+              <strong>{requestedPremiumFeature}</strong> is included with BarnBuddy Premium. Choose Premium below to unlock it.
+            </div>
+          )}
 
           <section
             id="clerk-checkout"
