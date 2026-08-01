@@ -131,7 +131,6 @@ function ProjectModal({ animals, onClose, onCreated }) {
         goals: form.goals.split("\n").map((goal) => goal.trim()).filter(Boolean),
         animals: selectedAnimals.map((animalId) => ({
           animal_id: animalId,
-          records_from_date: form.start_date,
           ownership_percentage: 100,
         })),
       });
@@ -263,7 +262,7 @@ function Overview({ details }) {
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <h3 className="text-lg font-black text-white">Linked BarnBuddy records</h3>
-            <p className="mt-1 text-sm text-slate-400">Automatically counted from each animal’s project record start date.</p>
+            <p className="mt-1 text-sm text-slate-400">All existing and future records stay connected while the animal is linked.</p>
           </div>
           <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">Live connection</span>
         </div>
@@ -465,7 +464,6 @@ function AnimalSetupCard({ projectId, animal, onChanged }) {
     starting_weight: animal.starting_weight || "",
     starting_value: animal.starting_value || "0",
     ownership_percentage: animal.ownership_percentage || "100",
-    records_from_date: String(animal.records_from_date).slice(0, 10),
   });
   const change = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   async function save() {
@@ -492,7 +490,6 @@ function AnimalSetupCard({ projectId, animal, onChanged }) {
         <label className="text-xs font-bold text-slate-400">Starting weight<input className={fieldClass} type="number" name="starting_weight" min="0.01" step="0.01" value={form.starting_weight} onChange={change} /></label>
         <label className="text-xs font-bold text-slate-400">Starting value<input className={fieldClass} type="number" name="starting_value" min="0" step="0.01" value={form.starting_value} onChange={change} /></label>
         <label className="text-xs font-bold text-slate-400">Ownership %<input className={fieldClass} type="number" name="ownership_percentage" min="0.01" max="100" step="0.01" value={form.ownership_percentage} onChange={change} /></label>
-        <label className="text-xs font-bold text-slate-400">Use records from<input className={fieldClass} type="date" name="records_from_date" value={form.records_from_date} onChange={change} /></label>
       </div>
       <button type="button" disabled={saving} onClick={save} className="mt-4 rounded-xl border border-blue-400/40 px-4 py-2 text-sm font-black text-blue-300 hover:bg-blue-500/10 disabled:opacity-60">{saving ? "Saving…" : "Save snapshot"}</button>
     </article>
@@ -540,7 +537,7 @@ function Setup({ details, allAnimals, onChanged, onDeleted }) {
     if (!selectedAnimals.length) return;
     setAddingAnimals(true);
     try {
-      const response = await addFfaProjectAnimals(project.id, selectedAnimals.map((animalId) => ({ animal_id: animalId, ownership_percentage: 100, records_from_date: form.start_date })));
+      const response = await addFfaProjectAnimals(project.id, selectedAnimals.map((animalId) => ({ animal_id: animalId, ownership_percentage: 100 })));
       onChanged(response.data);
       setSelectedAnimals([]);
       toast.success("Animals linked to project");

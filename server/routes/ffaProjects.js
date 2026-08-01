@@ -23,6 +23,35 @@ const activityCategories = new Set([
 ]);
 const transactionTypes = new Set(["income", "expense"]);
 
+// A linked animal is a live connection to its BarnBuddy history. These counts
+// intentionally include records created before the FFA project was started as
+// well as records added later.
+const linkedRecordSummaryQuery = `SELECT
+  (SELECT COUNT(*)::int
+   FROM weight_records wr
+   JOIN ffa_project_animals pa ON pa.animal_id = wr.animal_id
+   WHERE pa.project_id = $1 AND pa.user_id = $2 AND wr.user_id = $2) AS weight_records,
+  (SELECT COUNT(*)::int
+   FROM vaccinations v
+   JOIN animals a ON a.id = v.animal_id AND a.user_id = $2
+   JOIN ffa_project_animals pa ON pa.animal_id = a.id AND pa.project_id = $1 AND pa.user_id = $2) AS vaccinations,
+  (SELECT COUNT(*)::int
+   FROM health_events he
+   JOIN animals a ON a.id = he.animal_id AND a.user_id = $2
+   JOIN ffa_project_animals pa ON pa.animal_id = a.id AND pa.project_id = $1 AND pa.user_id = $2) AS health_events,
+  (SELECT COUNT(*)::int
+   FROM vet_visits vv
+   JOIN animals a ON a.id = vv.animal_id AND a.user_id = $2
+   JOIN ffa_project_animals pa ON pa.animal_id = a.id AND pa.project_id = $1 AND pa.user_id = $2) AS vet_visits,
+  (SELECT COUNT(*)::int
+   FROM feed_records fr
+   JOIN ffa_project_animals pa ON pa.animal_id = fr.animal_id
+   WHERE pa.project_id = $1 AND pa.user_id = $2 AND fr.user_id = $2) AS feed_records,
+  (SELECT COUNT(*)::int
+   FROM finance_records fin
+   JOIN ffa_project_animals pa ON pa.animal_id = fin.animal_id
+   WHERE pa.project_id = $1 AND pa.user_id = $2 AND fin.user_id = $2) AS finance_records`;
+
 function normalizeText(value, maxLength = 500) {
   return String(value || "").trim().slice(0, maxLength);
 }
@@ -257,46 +286,7 @@ async function fetchProjectDetails(projectId, userId) {
        ORDER BY transaction_date DESC, id DESC`,
       [project.id, userId]
     ),
-    pool.query(
-      `SELECT
-         (SELECT COUNT(*)::int
-          FROM weight_records wr
-          JOIN ffa_project_animals pa ON pa.animal_id = wr.animal_id
-          WHERE pa.project_id = $1 AND pa.user_id = $2 AND wr.user_id = $2
-            AND wr.recorded_date >= pa.records_from_date
-            AND ($3::date IS NULL OR wr.recorded_date <= $3::date)) AS weight_records,
-         (SELECT COUNT(*)::int
-          FROM vaccinations v
-          JOIN animals a ON a.id = v.animal_id AND a.user_id = $2
-          JOIN ffa_project_animals pa ON pa.animal_id = a.id AND pa.project_id = $1 AND pa.user_id = $2
-          WHERE v.date_given >= pa.records_from_date
-            AND ($3::date IS NULL OR v.date_given <= $3::date)) AS vaccinations,
-         (SELECT COUNT(*)::int
-          FROM health_events he
-          JOIN animals a ON a.id = he.animal_id AND a.user_id = $2
-          JOIN ffa_project_animals pa ON pa.animal_id = a.id AND pa.project_id = $1 AND pa.user_id = $2
-          WHERE he.event_date >= pa.records_from_date
-            AND ($3::date IS NULL OR he.event_date <= $3::date)) AS health_events,
-         (SELECT COUNT(*)::int
-          FROM vet_visits vv
-          JOIN animals a ON a.id = vv.animal_id AND a.user_id = $2
-          JOIN ffa_project_animals pa ON pa.animal_id = a.id AND pa.project_id = $1 AND pa.user_id = $2
-          WHERE vv.visit_date >= pa.records_from_date
-            AND ($3::date IS NULL OR vv.visit_date <= $3::date)) AS vet_visits,
-         (SELECT COUNT(*)::int
-          FROM feed_records fr
-          JOIN ffa_project_animals pa ON pa.animal_id = fr.animal_id
-          WHERE pa.project_id = $1 AND pa.user_id = $2 AND fr.user_id = $2
-            AND fr.record_date >= pa.records_from_date
-            AND ($3::date IS NULL OR fr.record_date <= $3::date)) AS feed_records,
-         (SELECT COUNT(*)::int
-          FROM finance_records fin
-          JOIN ffa_project_animals pa ON pa.animal_id = fin.animal_id
-          WHERE pa.project_id = $1 AND pa.user_id = $2 AND fin.user_id = $2
-            AND fin.record_date >= pa.records_from_date
-            AND ($3::date IS NULL OR fin.record_date <= $3::date)) AS finance_records`,
-      [project.id, userId, project.end_date || null]
-    ),
+    pool.query(linkedRecordSummaryQuery, [project.id, userId]),
   ]);
 
   const animals = animalsResult.rows;
@@ -730,3 +720,4 @@ module.exports.normalizeProjectPayload = normalizeProjectPayload;
 module.exports.normalizeActivityPayload = normalizeActivityPayload;
 module.exports.normalizeFinancePayload = normalizeFinancePayload;
 module.exports.requirePremium = requirePremium;
+module.exports.linkedRecordSummaryQuery = linkedRecordSummaryQuery;

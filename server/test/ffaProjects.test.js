@@ -6,6 +6,7 @@ const {
   normalizeFinancePayload,
   normalizeProjectPayload,
   requirePremium,
+  linkedRecordSummaryQuery,
 } = require("../routes/ffaProjects");
 
 const project = {
@@ -35,6 +36,16 @@ test("FFA Project Mode requires Premium access", () => {
 
   requirePremium({ user: { subscription: { isPremium: true } } }, response, () => { nextCalled = true; });
   assert.equal(nextCalled, true);
+});
+
+test("linked animal summaries include existing and future BarnBuddy records", () => {
+  assert.doesNotMatch(linkedRecordSummaryQuery, /records_from_date/);
+  assert.doesNotMatch(linkedRecordSummaryQuery, /\$3/);
+  for (const table of ["weight_records", "vaccinations", "health_events", "vet_visits", "feed_records", "finance_records"]) {
+    assert.match(linkedRecordSummaryQuery, new RegExp(`FROM ${table}\\b`));
+  }
+  assert.match(linkedRecordSummaryQuery, /pa\.project_id = \$1/);
+  assert.match(linkedRecordSummaryQuery, /pa\.user_id = \$2/);
 });
 
 test("FFA project setup normalizes valid project fields", () => {
