@@ -4,15 +4,15 @@ import ComponentCreator from '@docusaurus/ComponentCreator';
 export default [
   {
     path: '/',
-    component: ComponentCreator('/', '977'),
+    component: ComponentCreator('/', 'd04'),
     routes: [
       {
         path: '/',
-        component: ComponentCreator('/', '9f6'),
+        component: ComponentCreator('/', 'faa'),
         routes: [
           {
             path: '/',
-            component: ComponentCreator('/', '05a'),
+            component: ComponentCreator('/', '0a6'),
             routes: [
               {
                 path: '/account/billing',
@@ -71,6 +71,12 @@ export default [
               {
                 path: '/premium/feed',
                 component: ComponentCreator('/premium/feed', '529'),
+                exact: true,
+                sidebar: "tutorialSidebar"
+              },
+              {
+                path: '/premium/ffa-project-mode',
+                component: ComponentCreator('/premium/ffa-project-mode', 'ca0'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },

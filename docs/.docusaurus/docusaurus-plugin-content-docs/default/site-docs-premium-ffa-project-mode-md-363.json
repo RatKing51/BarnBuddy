@@ -1,0 +1,25 @@
+{
+  "id": "premium/ffa-project-mode",
+  "title": "FFA Project Mode",
+  "description": "FFA Project Mode is included with BarnBuddy Premium. It uses the same blue BarnBuddy interface as the rest of the dashboard.",
+  "source": "@site/docs/premium/ffa-project-mode.md",
+  "sourceDirName": "premium",
+  "slug": "/premium/ffa-project-mode",
+  "permalink": "/premium/ffa-project-mode",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "FFA Project Mode"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Automatic Reminders",
+    "permalink": "/premium/reminders"
+  },
+  "next": {
+    "title": "Preferences",
+    "permalink": "/account/preferences"
+  }
+}

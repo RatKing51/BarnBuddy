@@ -39,9 +39,7 @@ export function PreferencesProvider({ children }) {
 
       try {
         setLoadingPreferences(true);
-        const data = backendPreferences || (() => {
-          throw new Error("Failed to load preferences");
-        })();
+        const data = backendPreferences || preferenceDefaults;
         if (!cancelled) {
           setPreferences({
             ...preferenceDefaults,

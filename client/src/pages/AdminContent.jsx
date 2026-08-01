@@ -2401,7 +2401,7 @@ export default function AdminContent() {
                           <div>
                             <h4 className="font-semibold text-red-100">Stored Premium data</h4>
                             <p className="mt-1 text-sm leading-relaxed text-slate-400">
-                              Premium records stay saved after a downgrade. Delete them only when you intentionally want to remove this user's finance, feed, inventory, reproduction, and birth records.
+                              Premium records stay saved after a downgrade. Delete them only when you intentionally want to remove this user's finance, feed, inventory, reproduction, birth, and FFA project records.
                             </p>
                             {selectedAdminUser.isPremium && (
                               <p className="mt-2 text-xs font-semibold text-amber-200">Remove or expire Premium access before deleting these records.</p>

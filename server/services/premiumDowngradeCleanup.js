@@ -1,6 +1,7 @@
 const pool = require("../data-source");
 const {
   ensureBirthSchema,
+  ensureFfaProjectSchema,
   ensurePremiumRecordSchema,
   ensureReproductionSchema,
 } = require("./ensureAppSchema");
@@ -16,6 +17,7 @@ async function deletePremiumDataForUser(userId) {
   await ensurePremiumRecordSchema();
   await ensureReproductionSchema();
   await ensureBirthSchema();
+  await ensureFfaProjectSchema();
 
   const hasNotificationDeliveries = await tableExists("notification_deliveries");
   const client = await pool.connect();
@@ -30,6 +32,16 @@ async function deletePremiumDataForUser(userId) {
     const finance = await client.query("DELETE FROM finance_records WHERE user_id = $1", [userId]);
     const feed = await client.query("DELETE FROM feed_records WHERE user_id = $1", [userId]);
     const inventory = await client.query("DELETE FROM inventory_records WHERE user_id = $1", [userId]);
+    const ffaRecordCountResult = await client.query(
+      `SELECT (
+         (SELECT COUNT(*) FROM ffa_projects WHERE user_id = $1) +
+         (SELECT COUNT(*) FROM ffa_project_animals WHERE user_id = $1) +
+         (SELECT COUNT(*) FROM ffa_project_activities WHERE user_id = $1) +
+         (SELECT COUNT(*) FROM ffa_project_finances WHERE user_id = $1)
+       )::int AS count`,
+      [userId]
+    );
+    const ffaProjects = await client.query("DELETE FROM ffa_projects WHERE user_id = $1", [userId]);
     await client.query("UPDATE users SET automatic_reminders = false WHERE id = $1", [userId]);
     await client.query("COMMIT");
 
@@ -39,13 +51,15 @@ async function deletePremiumDataForUser(userId) {
       finance: finance.rowCount,
       feed: feed.rowCount,
       inventory: inventory.rowCount,
+      ffaProjects: ffaProjects.rowCount,
+      ffaRecords: Number(ffaRecordCountResult.rows[0]?.count) || 0,
       notificationDeliveries: deliveries.rowCount,
     };
 
     return {
       deleted,
       premiumRecordCount:
-        deleted.births + deleted.reproductions + deleted.finance + deleted.feed + deleted.inventory,
+        deleted.births + deleted.reproductions + deleted.finance + deleted.feed + deleted.inventory + deleted.ffaRecords,
     };
   } catch (err) {
     await client.query("ROLLBACK");

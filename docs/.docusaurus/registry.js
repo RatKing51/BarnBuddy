@@ -9,6 +9,7 @@ export default {
   "22dd74f7": [() => import(/* webpackChunkName: "22dd74f7" */ "@generated/docusaurus-plugin-content-docs/default/p/index-466.json"), "@generated/docusaurus-plugin-content-docs/default/p/index-466.json", require.resolveWeak("@generated/docusaurus-plugin-content-docs/default/p/index-466.json")],
   "2517bbec": [() => import(/* webpackChunkName: "2517bbec" */ "@site/docs/records/bulk-entry.md"), "@site/docs/records/bulk-entry.md", require.resolveWeak("@site/docs/records/bulk-entry.md")],
   "35359770": [() => import(/* webpackChunkName: "35359770" */ "@site/docs/premium/inventory.md"), "@site/docs/premium/inventory.md", require.resolveWeak("@site/docs/premium/inventory.md")],
+  "36387381": [() => import(/* webpackChunkName: "36387381" */ "@site/docs/premium/ffa-project-mode.md"), "@site/docs/premium/ffa-project-mode.md", require.resolveWeak("@site/docs/premium/ffa-project-mode.md")],
   "464e4cb6": [() => import(/* webpackChunkName: "464e4cb6" */ "@site/docs/premium/reminders.md"), "@site/docs/premium/reminders.md", require.resolveWeak("@site/docs/premium/reminders.md")],
   "5d6865b0": [() => import(/* webpackChunkName: "5d6865b0" */ "@site/docs/support/contact.md"), "@site/docs/support/contact.md", require.resolveWeak("@site/docs/support/contact.md")],
   "5e95c892": [() => import(/* webpackChunkName: "5e95c892" */ "@theme/DocsRoot"), "@theme/DocsRoot", require.resolveWeak("@theme/DocsRoot")],

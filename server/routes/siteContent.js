@@ -325,6 +325,10 @@ async function getUserDetailsForAdmin(clerkUserId) {
     inventoryCount,
     reproductionCount,
     birthCount,
+    ffaProjectCount,
+    ffaAnimalCount,
+    ffaActivityCount,
+    ffaFinanceCount,
     herdsResult,
     activity,
   ] = await Promise.all([
@@ -341,6 +345,10 @@ async function getUserDetailsForAdmin(clerkUserId) {
     getCountIfTableExists("inventory_records", "SELECT COUNT(*)::int AS count FROM inventory_records WHERE user_id = $1", [localUser.id]),
     getCountIfTableExists("reproductions", "SELECT COUNT(*)::int AS count FROM reproductions WHERE user_id = $1", [localUser.id]),
     getCountIfTableExists("births", "SELECT COUNT(*)::int AS count FROM births WHERE user_id = $1", [localUser.id]),
+    getCountIfTableExists("ffa_projects", "SELECT COUNT(*)::int AS count FROM ffa_projects WHERE user_id = $1", [localUser.id]),
+    getCountIfTableExists("ffa_project_animals", "SELECT COUNT(*)::int AS count FROM ffa_project_animals WHERE user_id = $1", [localUser.id]),
+    getCountIfTableExists("ffa_project_activities", "SELECT COUNT(*)::int AS count FROM ffa_project_activities WHERE user_id = $1", [localUser.id]),
+    getCountIfTableExists("ffa_project_finances", "SELECT COUNT(*)::int AS count FROM ffa_project_finances WHERE user_id = $1", [localUser.id]),
     Promise.all([tableExists("herds"), tableExists("animals")]).then(([hasHerds, hasAnimals]) => {
       if (!hasHerds) return { rows: [] };
 
@@ -389,7 +397,7 @@ async function getUserDetailsForAdmin(clerkUserId) {
       healthEvents: healthEventCount,
       vetVisits: vetVisitCount,
       vaccinations: vaccinationCount,
-      premiumRecords: financeCount + feedCount + inventoryCount + reproductionCount + birthCount,
+      premiumRecords: financeCount + feedCount + inventoryCount + reproductionCount + birthCount + ffaProjectCount + ffaAnimalCount + ffaActivityCount + ffaFinanceCount,
     },
     herds: herdsResult.rows,
     recentActivity: activity,

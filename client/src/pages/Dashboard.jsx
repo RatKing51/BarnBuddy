@@ -262,6 +262,10 @@ export default function Dashboard() {
   const loadedLinkedAnimalRef = React.useRef(null);
   const handledOnboardingStartRef = React.useRef(false);
   const navigate = useNavigate();
+  const handleFfaProjectsClick = () => {
+    setMobileMoreOpen(false);
+    navigate("/dashboard/ffa-projects");
+  };
   const isCompact = preferences.dashboardDensity === "compact";
   const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
   const onboardingDefaultSpecies = React.useMemo(
@@ -1135,6 +1139,14 @@ export default function Dashboard() {
             Inventory
           </button>
 
+          <button
+            type="button"
+            onClick={handleFfaProjectsClick}
+            className="w-full cursor-pointer rounded-xl border border-gray-600 px-4 py-3 text-left font-semibold text-gray-200 transition hover:bg-gray-700"
+          >
+            FFA Projects
+          </button>
+
           <div className="mt-4 px-4 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
             Animals
           </div>
@@ -1611,6 +1623,14 @@ export default function Dashboard() {
                         {tab.label}
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      onClick={handleFfaProjectsClick}
+                      className="dashboard-mobile-more-item"
+                      role="menuitem"
+                    >
+                      FFA Projects
+                    </button>
                   </div>
                 )}
               </div>
@@ -1671,6 +1691,14 @@ export default function Dashboard() {
                       role="menuitem"
                     >
                       Inventory
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFfaProjectsClick}
+                      className="dashboard-mobile-more-item"
+                      role="menuitem"
+                    >
+                      FFA Projects
                     </button>
                   </div>
                 )}
