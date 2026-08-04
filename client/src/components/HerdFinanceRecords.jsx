@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import * as premiumRecordsAPI from "../api/premiumRecords";
+import { getAnimalDisplayName } from "../utils/animalLabel";
 import { SkeletonBlock } from "./LoadingSpinner";
 
 const EXPENSE_CATEGORIES = [
@@ -89,7 +90,7 @@ function asLedgerItem(record) {
     signedAmount: isIncome ? amount : -amount,
     vendor: record.vendor || "",
     notes: record.notes || "",
-    animal: record.animal_name || record.animal_tag || "",
+    animal: record.animal_id ? getAnimalDisplayName(record) : "",
   };
 }
 
@@ -329,7 +330,7 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
         signedAmount: -numeric(visit.cost),
         vendor: visit.vet_name || "",
         notes: visit.reason || visit.notes || "",
-        animal: visit.animal_name || visit.animal_tag || "",
+        animal: visit.animal_id ? getAnimalDisplayName(visit) : "",
       }));
 
     return [...financeItems, ...feedItems, ...vetItems].sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
@@ -614,7 +615,7 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
                     <select value={selectedFinance.animal_id || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, animal_id: e.target.value || null })} onBlur={saveFinance} className="mt-1 w-full min-w-0 rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white">
                       <option value="">Whole herd</option>
                       {animalOptions.map((animal) => (
-                        <option key={animal.id} value={animal.id}>{animal.name || animal.tag_id || "Unnamed animal"}</option>
+                        <option key={animal.id} value={animal.id}>{getAnimalDisplayName(animal)}</option>
                       ))}
                     </select>
                   </label>

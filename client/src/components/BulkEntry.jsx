@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 import * as healthEventsAPI from "../api/healthEvents";
 import * as premiumRecordsAPI from "../api/premiumRecords";
 import * as vaccinationsAPI from "../api/vaccinations";
+import { getAnimalDisplayName } from "../utils/animalLabel";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -80,9 +81,7 @@ export default function BulkEntry({
   }, [availableAnimals, search]);
 
   const getPrimaryLabel = (animal) =>
-    primaryAnimalIdentifier === "tag"
-      ? animal.tag_id || animal.name || "Unnamed animal"
-      : animal.name || animal.tag_id || "Unnamed animal";
+    getAnimalDisplayName(animal, { preferTag: primaryAnimalIdentifier === "tag" });
 
   const getSecondaryLabel = (animal) =>
     primaryAnimalIdentifier === "tag"

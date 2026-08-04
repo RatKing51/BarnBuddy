@@ -12,6 +12,7 @@ import { SkeletonBlock } from "./LoadingSpinner";
 import ImageCropModal from "./ImageCropModal";
 import { QRCodeSVG } from "qrcode.react";
 import { formatAgeFromBirthdate, getAgeYears } from "../utils/age";
+import { getAnimalDisplayName } from "../utils/animalLabel";
 
 function AnimalGeneralDataSkeleton() {
   const cardClass = "rounded-2xl border border-gray-700 bg-gray-800 p-6 shadow-md";
@@ -524,6 +525,10 @@ export default function AnimalGeneralData({
       );
 
   const hasAnimalImage = Boolean(imageBlobUrl);
+  const animalDisplayName = getAnimalDisplayName(
+    { ...animal, name, tag_id: tag },
+    { prefixTag: true }
+  );
   const animalInitial = (name || tag || species || "B").trim().charAt(0).toUpperCase();
   const imageSrc = hasAnimalImage
     ? imageBlobUrl
@@ -546,7 +551,7 @@ export default function AnimalGeneralData({
   const nameField = (
     <div>
       <label className="block text-gray-400 text-sm mb-1">
-        Name <span className="text-gray-500">(required)</span>
+        Name <span className="text-gray-500">(optional)</span>
       </label>
       <input
         value={name}
@@ -636,7 +641,7 @@ export default function AnimalGeneralData({
   async function handleRemoveImage() {
     if (!animal?.id || !imageUrl) return;
 
-    const confirmDeleteImage = window.confirm(`Remove image for ${animal.name}?`);
+    const confirmDeleteImage = window.confirm(`Remove image for ${animalDisplayName}?`);
     if (!confirmDeleteImage) return;
 
     try {
@@ -661,7 +666,7 @@ export default function AnimalGeneralData({
 
   async function handleDelete() {
     if (!animal || isDeletingAnimal) return;
-    const deletedAnimalName = animal.name || animal.tag_id || "Animal";
+    const deletedAnimalName = animalDisplayName;
 
     const confirmDelete = window.confirm(
       `Are you sure you want to delete ${deletedAnimalName}? This action cannot be undone!`
@@ -1154,7 +1159,7 @@ export default function AnimalGeneralData({
             onClick={handleDelete}
             disabled={isDeletingAnimal}
           >
-            {isDeletingAnimal ? "Deleting..." : `Delete ${animal.name}`}
+            {isDeletingAnimal ? "Deleting..." : `Delete ${animalDisplayName}`}
           </button>
         </div>
       </div>

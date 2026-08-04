@@ -31,6 +31,7 @@ import { usePreferences } from "../context/PreferencesContext";
 import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";
 import { API_URL } from "../config/env";
 import { formatAnimalAge } from "../utils/age";
+import { getAnimalDisplayName } from "../utils/animalLabel";
 import { getOnboardingDefaultSpecies } from "../config/onboardingSpecies";
 
 const getAnimalCareSignature = (items) =>
@@ -273,8 +274,7 @@ export default function Dashboard() {
     [backendUser?.onboarding]
   );
   const getAnimalPrimaryLabel = (animal) => {
-    if (primaryAnimalIdentifier === "tag") return animal.tag_id || animal.name || "Unnamed animal";
-    return animal.name || animal.tag_id || "Unnamed animal";
+    return getAnimalDisplayName(animal, { preferTag: primaryAnimalIdentifier === "tag" });
   };
   const getAnimalSecondaryLabel = (animal) => {
     if (primaryAnimalIdentifier === "tag") return animal.name ? `Name ${animal.name}` : "Name not set";

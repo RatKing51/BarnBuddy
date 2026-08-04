@@ -740,11 +740,14 @@ router.post("/", authMiddleware, async (req, res) => {
     }
 
     try {
-        if (!name || !species) {
-            return res.status(400).json({ error: "Name and species are required." });
+        if (!species) {
+            return res.status(400).json({ error: "Species is required." });
         }
-        if (name.length > 160 || species.length > 120) {
-            return res.status(400).json({ error: "Name or species is too long." });
+        if (name.length > 160) {
+            return res.status(400).json({ error: "Name is too long." });
+        }
+        if (species.length > 120) {
+            return res.status(400).json({ error: "Species is too long." });
         }
         if ((age !== null && age < 0) || (weight !== null && weight <= 0) || (birth_weight !== null && birth_weight <= 0)) {
             return res.status(400).json({ error: "Age cannot be negative and weights must be greater than zero." });
@@ -808,11 +811,14 @@ router.put("/:id", authMiddleware, async (req, res) => {
     }
 
     try {
-        if (!name || !species) {
-            return res.status(400).json({ error: "Name and species are required." });
+        if (!species) {
+            return res.status(400).json({ error: "Species is required." });
         }
-        if (name.length > 160 || species.length > 120) {
-            return res.status(400).json({ error: "Name or species is too long." });
+        if (name.length > 160) {
+            return res.status(400).json({ error: "Name is too long." });
+        }
+        if (species.length > 120) {
+            return res.status(400).json({ error: "Species is too long." });
         }
         if ((age !== null && age < 0) || (weight !== null && weight <= 0)) {
             return res.status(400).json({ error: "Age cannot be negative and weight must be greater than zero." });

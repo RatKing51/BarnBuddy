@@ -16,6 +16,7 @@ import {
   updateFfaProject,
   updateFfaProjectAnimal,
 } from "../api/ffaProjects";
+import { getAnimalDisplayName } from "../utils/animalLabel";
 
 const activityCategories = [
   "Feeding and nutrition",
@@ -199,7 +200,7 @@ function ProjectModal({ animals, onClose, onCreated }) {
                   <label key={animal.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${selectedAnimals.includes(animal.id) ? "border-blue-400 bg-blue-500/10" : "border-slate-700 bg-slate-950 hover:border-slate-600"}`}>
                     <input type="checkbox" className="h-4 w-4 accent-blue-500" checked={selectedAnimals.includes(animal.id)} onChange={() => toggleAnimal(animal.id)} />
                     <span>
-                      <span className="block text-sm font-bold text-white">{animal.name || "Unnamed animal"}</span>
+                      <span className="block text-sm font-bold text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</span>
                       <span className="block text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · Tag ${animal.tag_id}` : ""}</span>
                     </span>
                   </label>
@@ -287,7 +288,7 @@ function Overview({ details }) {
               <article key={animal.id} className={`${panelClass} p-5`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h4 className="font-black text-white">{animal.animal_name || "Former project animal"}</h4>
+                    <h4 className="font-black text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</h4>
                     <p className="mt-1 text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · Tag ${animal.tag_id}` : ""}</p>
                   </div>
                   <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${animal.animal_id ? "bg-emerald-500/10 text-emerald-300" : "bg-slate-800 text-slate-400"}`}>{animal.animal_id ? "Linked" : "Snapshot only"}</span>
@@ -344,7 +345,7 @@ function Journal({ details, onChanged }) {
           <label className={labelClass}>Date<input className={fieldClass} type="date" name="activity_date" min={String(details.project.start_date).slice(0, 10)} max={details.project.end_date ? String(details.project.end_date).slice(0, 10) : undefined} value={form.activity_date} onChange={change} required /></label>
           <label className={labelClass}>Time in minutes<input className={fieldClass} type="number" name="duration_minutes" min="1" max="1440" value={form.duration_minutes} onChange={change} required placeholder="45" /></label>
           <label className={labelClass}>Category<select className={fieldClass} name="category" value={form.category} onChange={change}>{activityCategories.map((category) => <option key={category}>{category}</option>)}</select></label>
-          <label className={labelClass}>Animal <span className="font-normal text-slate-500">(optional)</span><select className={fieldClass} name="animal_id" value={form.animal_id} onChange={change}><option value="">Whole project</option>{details.animals.filter((animal) => animal.animal_id).map((animal) => <option key={animal.animal_id} value={animal.animal_id}>{animal.animal_name}</option>)}</select></label>
+          <label className={labelClass}>Animal <span className="font-normal text-slate-500">(optional)</span><select className={fieldClass} name="animal_id" value={form.animal_id} onChange={change}><option value="">Whole project</option>{details.animals.filter((animal) => animal.animal_id).map((animal) => <option key={animal.animal_id} value={animal.animal_id}>{getAnimalDisplayName(animal, { prefixTag: true })}</option>)}</select></label>
           <label className={`${labelClass} sm:col-span-2`}>Activity title<input className={fieldClass} name="title" value={form.title} onChange={change} maxLength="180" required placeholder="Worked on leading and setting up" /></label>
           <label className={`${labelClass} sm:col-span-2`}>What did you do?<textarea className={fieldClass} name="description" value={form.description} onChange={change} rows="3" maxLength="4000" /></label>
           <label className={`${labelClass} sm:col-span-2`}>Skills learned or practiced<textarea className={fieldClass} name="skills_learned" value={form.skills_learned} onChange={change} rows="2" maxLength="1200" /></label>
@@ -365,7 +366,7 @@ function Journal({ details, onChanged }) {
                   <div>
                     <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-bold text-blue-300">{activity.category}</span><span className="text-xs text-slate-500">{formatDate(activity.activity_date)} · {activity.duration_minutes} min</span></div>
                     <h4 className="mt-3 font-black text-white">{activity.title}</h4>
-                    {activity.animal_name && <p className="mt-1 text-xs font-bold text-sky-300">Animal: {activity.animal_name}</p>}
+                    {activity.animal_id && <p className="mt-1 text-xs font-bold text-sky-300">Animal: {getAnimalDisplayName(activity, { prefixTag: true })}</p>}
                   </div>
                   <button type="button" onClick={() => remove(activity.id)} className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-500 hover:bg-rose-500/10 hover:text-rose-300">Delete</button>
                 </div>
@@ -424,7 +425,7 @@ function Finances({ details, onChanged }) {
             <label className={labelClass}>Amount<input className={fieldClass} type="number" name="amount" min="0.01" step="0.01" value={form.amount} onChange={change} required placeholder="0.00" /></label>
             <label className={labelClass}>Category<input className={fieldClass} name="category" value={form.category} onChange={change} maxLength="120" required placeholder="Feed, purchase, sale…" /></label>
             <label className={labelClass}>Vendor / buyer<input className={fieldClass} name="vendor" value={form.vendor} onChange={change} maxLength="180" /></label>
-            <label className={labelClass}>Animal <span className="font-normal text-slate-500">(optional)</span><select className={fieldClass} name="animal_id" value={form.animal_id} onChange={change}><option value="">Whole project</option>{details.animals.filter((animal) => animal.animal_id).map((animal) => <option key={animal.animal_id} value={animal.animal_id}>{animal.animal_name}</option>)}</select></label>
+            <label className={labelClass}>Animal <span className="font-normal text-slate-500">(optional)</span><select className={fieldClass} name="animal_id" value={form.animal_id} onChange={change}><option value="">Whole project</option>{details.animals.filter((animal) => animal.animal_id).map((animal) => <option key={animal.animal_id} value={animal.animal_id}>{getAnimalDisplayName(animal, { prefixTag: true })}</option>)}</select></label>
             <label className={`${labelClass} sm:col-span-2`}>Notes<textarea className={fieldClass} name="notes" value={form.notes} onChange={change} rows="2" maxLength="2400" /></label>
           </div>
           <button disabled={saving} className="mt-5 w-full rounded-xl bg-blue-600 px-4 py-3 font-black text-white hover:bg-blue-500 disabled:opacity-60">{saving ? "Saving…" : "Add finance entry"}</button>
@@ -442,7 +443,7 @@ function Finances({ details, onChanged }) {
                       <tr key={entry.id} className="hover:bg-slate-800/40">
                         <td className="px-4 py-4 text-slate-400">{formatDate(entry.transaction_date)}</td>
                         <td className="px-4 py-4"><p className="font-bold text-white">{entry.category}</p>{entry.notes && <p className="mt-1 max-w-xs truncate text-xs text-slate-500">{entry.notes}</p>}</td>
-                        <td className="px-4 py-4 text-slate-400">{entry.animal_name || entry.vendor || "Whole project"}</td>
+                        <td className="px-4 py-4 text-slate-400">{entry.animal_id ? getAnimalDisplayName(entry, { prefixTag: true }) : entry.vendor || "Whole project"}</td>
                         <td className={`px-4 py-4 text-right font-black ${entry.transaction_type === "income" ? "text-emerald-300" : "text-rose-300"}`}>{entry.transaction_type === "income" ? "+" : "−"}{money(entry.amount)}</td>
                         <td className="px-4 py-4 text-right"><button type="button" onClick={() => remove(entry.id)} className="rounded-lg px-2 py-1 text-xs font-bold text-slate-500 hover:bg-rose-500/10 hover:text-rose-300">Delete</button></td>
                       </tr>
@@ -476,7 +477,7 @@ function AnimalSetupCard({ projectId, animal, onChanged }) {
     finally { setSaving(false); }
   }
   async function remove() {
-    if (!window.confirm(`Remove ${animal.animal_name || "this animal"} from this project? The animal and its normal BarnBuddy records will not be deleted.`)) return;
+    if (!window.confirm(`Remove ${getAnimalDisplayName(animal, { prefixTag: true })} from this project? The animal and its normal BarnBuddy records will not be deleted.`)) return;
     try {
       const response = await removeFfaProjectAnimal(projectId, animal.id);
       onChanged(response.data);
@@ -485,7 +486,7 @@ function AnimalSetupCard({ projectId, animal, onChanged }) {
   }
   return (
     <article className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
-      <div className="flex items-start justify-between gap-3"><div><h4 className="font-black text-white">{animal.animal_name || "Former project animal"}</h4><p className="mt-1 text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · Tag ${animal.tag_id}` : ""}</p></div><button type="button" onClick={remove} className="rounded-lg px-2 py-1 text-xs font-bold text-slate-500 hover:bg-rose-500/10 hover:text-rose-300">Remove</button></div>
+      <div className="flex items-start justify-between gap-3"><div><h4 className="font-black text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</h4><p className="mt-1 text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · Tag ${animal.tag_id}` : ""}</p></div><button type="button" onClick={remove} className="rounded-lg px-2 py-1 text-xs font-bold text-slate-500 hover:bg-rose-500/10 hover:text-rose-300">Remove</button></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="text-xs font-bold text-slate-400">Starting weight<input className={fieldClass} type="number" name="starting_weight" min="0.01" step="0.01" value={form.starting_weight} onChange={change} /></label>
         <label className="text-xs font-bold text-slate-400">Starting value<input className={fieldClass} type="number" name="starting_value" min="0" step="0.01" value={form.starting_value} onChange={change} /></label>
@@ -579,7 +580,7 @@ function Setup({ details, allAnimals, onChanged, onDeleted }) {
         <div className="mt-5 grid gap-3 lg:grid-cols-2">{details.animals.map((animal) => <AnimalSetupCard key={animal.id} projectId={project.id} animal={animal} onChanged={onChanged} />)}</div>
         <div className="mt-6 border-t border-slate-800 pt-5">
           <h4 className="font-black text-white">Add existing animals</h4>
-          {availableAnimals.length ? <><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{availableAnimals.map((animal) => <label key={animal.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 ${selectedAnimals.includes(animal.id) ? "border-blue-400 bg-blue-500/10" : "border-slate-700 bg-slate-950"}`}><input type="checkbox" className="accent-blue-500" checked={selectedAnimals.includes(animal.id)} onChange={() => setSelectedAnimals((current) => current.includes(animal.id) ? current.filter((id) => id !== animal.id) : [...current, animal.id])} /><span><span className="block text-sm font-bold text-white">{animal.name}</span><span className="text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · ${animal.tag_id}` : ""}</span></span></label>)}</div><button type="button" onClick={addAnimals} disabled={!selectedAnimals.length || addingAnimals} className="mt-4 rounded-xl border border-blue-400/40 px-4 py-2.5 text-sm font-black text-blue-300 hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-40">{addingAnimals ? "Linking…" : `Link selected (${selectedAnimals.length})`}</button></> : <p className="mt-3 text-sm text-slate-500">All of your current animals are already linked to this project.</p>}
+          {availableAnimals.length ? <><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{availableAnimals.map((animal) => <label key={animal.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 ${selectedAnimals.includes(animal.id) ? "border-blue-400 bg-blue-500/10" : "border-slate-700 bg-slate-950"}`}><input type="checkbox" className="accent-blue-500" checked={selectedAnimals.includes(animal.id)} onChange={() => setSelectedAnimals((current) => current.includes(animal.id) ? current.filter((id) => id !== animal.id) : [...current, animal.id])} /><span><span className="block text-sm font-bold text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</span><span className="text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · ${animal.tag_id}` : ""}</span></span></label>)}</div><button type="button" onClick={addAnimals} disabled={!selectedAnimals.length || addingAnimals} className="mt-4 rounded-xl border border-blue-400/40 px-4 py-2.5 text-sm font-black text-blue-300 hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-40">{addingAnimals ? "Linking…" : `Link selected (${selectedAnimals.length})`}</button></> : <p className="mt-3 text-sm text-slate-500">All of your current animals are already linked to this project.</p>}
         </div>
       </section>
 
@@ -667,7 +668,7 @@ function PrintReport({ details }) {
             <thead><tr><th>Animal</th><th>Species / tag</th><th>Starting weight</th><th>Current weight</th><th>Starting value</th><th>Ownership</th></tr></thead>
             <tbody>{animals.map((animal) => (
               <tr key={animal.id}>
-                <td><strong>{animal.animal_name || "Former project animal"}</strong></td>
+                <td><strong>{getAnimalDisplayName(animal, { prefixTag: true })}</strong></td>
                 <td>{animal.species || "Animal"}{animal.tag_id ? ` · ${animal.tag_id}` : ""}</td>
                 <td>{animal.starting_weight ? `${Number(animal.starting_weight).toLocaleString()} lb` : "—"}</td>
                 <td>{animal.current_weight ? `${Number(animal.current_weight).toLocaleString()} lb` : "—"}</td>
@@ -697,7 +698,7 @@ function PrintReport({ details }) {
                 <h3>{activity.title}</h3>
                 <strong>{formatDate(activity.activity_date)} · {activity.duration_minutes} min</strong>
               </div>
-              <p className="ffa-document-activity-meta">{activity.category}{activity.animal_name ? ` · Animal: ${activity.animal_name}` : ""}</p>
+              <p className="ffa-document-activity-meta">{activity.category}{activity.animal_id ? ` · Animal: ${getAnimalDisplayName(activity, { prefixTag: true })}` : ""}</p>
               {activity.description && <p>{activity.description}</p>}
               {(activity.skills_learned || activity.reflection) && (
                 <dl className="ffa-document-activity-notes">
@@ -720,7 +721,7 @@ function PrintReport({ details }) {
                 <td>{formatDate(entry.transaction_date)}</td>
                 <td className="capitalize">{entry.transaction_type}</td>
                 <td>{entry.category}</td>
-                <td>{entry.animal_name || entry.vendor || "Whole project"}</td>
+                <td>{entry.animal_id ? getAnimalDisplayName(entry, { prefixTag: true }) : entry.vendor || "Whole project"}</td>
                 <td>{entry.notes || "—"}</td>
                 <td>{money(entry.amount)}</td>
               </tr>

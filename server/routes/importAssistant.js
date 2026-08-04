@@ -160,7 +160,6 @@ function validateImportRow(row, rowNumber) {
   const errors = [];
   const warnings = [];
 
-  if (!normalized.name) errors.push("Name is required");
   if (!normalized.species) errors.push("Species is required");
   if (normalized.birthdate) {
     const date = normalizeDate(normalized.birthdate);

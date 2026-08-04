@@ -6,6 +6,7 @@ import * as reproductionsAPI from "../api/reproductions";
 import * as premiumRecordsAPI from "../api/premiumRecords";
 import * as vetVisitsAPI from "../api/vetVisits";
 import { getReproductionDefaults } from "../config/animalTypes";
+import { getAnimalDisplayName } from "../utils/animalLabel";
 import { SkeletonBlock } from "./LoadingSpinner";
 
 function today() {
@@ -25,10 +26,6 @@ const FINANCE_INCOME_CATEGORIES = ["Income", "Animal sales"];
 
 function isFinanceIncome(category) {
   return FINANCE_INCOME_CATEGORIES.includes(category);
-}
-
-function getAnimalLabel(animal) {
-  return animal?.name || animal?.tag_id || "Unnamed animal";
 }
 
 function getSexRole(animal) {
@@ -778,7 +775,7 @@ export default function PremiumRecords({
             >
               <option value="">Mother not set</option>
               {currentAnimalDamOptions.map((item) => (
-                <option key={item.id} value={item.id}>{getAnimalLabel(item)} - {item.species || "Unknown"}</option>
+                <option key={item.id} value={item.id}>{getAnimalDisplayName(item)} - {item.species || "Unknown"}</option>
               ))}
             </select>
             <p className="mt-1 text-sm text-gray-400">
@@ -795,7 +792,7 @@ export default function PremiumRecords({
             >
               <option value="">Father not set</option>
               {currentAnimalSireOptions.map((item) => (
-                <option key={item.id} value={item.id}>{getAnimalLabel(item)} - {item.species || "Unknown"}</option>
+                <option key={item.id} value={item.id}>{getAnimalDisplayName(item)} - {item.species || "Unknown"}</option>
               ))}
             </select>
             <p className="mt-1 text-sm text-gray-400">
@@ -830,7 +827,7 @@ export default function PremiumRecords({
                     {formatDate(record.breeding_date) || "No breeding date"} - due {formatDate(record.due_date) || "not set"}
                   </p>
                   <p className="mt-1 text-xs text-gray-500">
-                    Dam {getAnimalLabel(animals.find((item) => String(item.id) === String(record.dam_id)))} / Sire {getAnimalLabel(animals.find((item) => String(item.id) === String(record.sire_id)))}
+                    Dam {getAnimalDisplayName(animals.find((item) => String(item.id) === String(record.dam_id)))} / Sire {getAnimalDisplayName(animals.find((item) => String(item.id) === String(record.sire_id)))}
                   </p>
                 </>
               )}
@@ -848,7 +845,7 @@ export default function PremiumRecords({
                   {parentCards.map((card) => (
                     <div key={card.key} className="rounded-xl border border-gray-700 bg-gray-900 p-4">
                       <p className="text-xs uppercase tracking-[0.14em] text-gray-500">{card.label}</p>
-                      <p className="mt-2 text-lg font-semibold text-white">{getAnimalLabel(card.animal)}</p>
+                      <p className="mt-2 text-lg font-semibold text-white">{getAnimalDisplayName(card.animal)}</p>
                       <p className="mt-1 text-sm text-gray-400">
                         {card.animal?.species || card.fallback}
                         {card.animal?.id === animal.id ? " - this animal" : ""}
@@ -869,14 +866,14 @@ export default function PremiumRecords({
                       Dam / mother
                       <select value={selectedReproduction.dam_id || ""} onChange={(e) => setReproductionField("dam_id", e.target.value || null)} onBlur={saveReproduction} className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white">
                         <option value="">Select mother</option>
-                        {damOptions.map((item) => <option key={item.id} value={item.id}>{getAnimalLabel(item)} - {item.species || "Unknown"}{item.id === animal.id ? " (this animal)" : ""}</option>)}
+                        {damOptions.map((item) => <option key={item.id} value={item.id}>{getAnimalDisplayName(item)} - {item.species || "Unknown"}{item.id === animal.id ? " (this animal)" : ""}</option>)}
                       </select>
                     </label>
                     <label className="block text-xs text-gray-400">
                       Sire / father
                       <select value={selectedReproduction.sire_id || ""} onChange={(e) => setReproductionField("sire_id", e.target.value || null)} onBlur={saveReproduction} className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white">
                         <option value="">Select father</option>
-                        {sireOptions.map((item) => <option key={item.id} value={item.id}>{getAnimalLabel(item)} - {item.species || "Unknown"}{item.id === animal.id ? " (this animal)" : ""}</option>)}
+                        {sireOptions.map((item) => <option key={item.id} value={item.id}>{getAnimalDisplayName(item)} - {item.species || "Unknown"}{item.id === animal.id ? " (this animal)" : ""}</option>)}
                       </select>
                     </label>
                   </div>

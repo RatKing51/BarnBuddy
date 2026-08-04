@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { DashboardOverviewSkeleton } from "./LoadingSpinner";
 import { formatAnimalAge, getAgeYears } from "../utils/age";
+import { getAnimalDisplayName } from "../utils/animalLabel";
 
 const statusMeta = {
   red: {
@@ -237,8 +238,7 @@ export default function DashboardOverview({
     ? attentionAnimals
     : analytics.tableRows.filter((animal) => animal.status !== "green" && !isInactiveAnimalStatus(animal.status)).slice(0, 4);
   const getAnimalPrimaryLabel = (animal) => {
-    if (primaryAnimalIdentifier === "tag") return animal.tag_id || animal.name || "Unnamed animal";
-    return animal.name || animal.tag_id || "Unnamed animal";
+    return getAnimalDisplayName(animal, { preferTag: primaryAnimalIdentifier === "tag" });
   };
   const getAnimalSecondaryLabel = (animal) => {
     if (primaryAnimalIdentifier === "tag") return animal.name ? `Name ${animal.name}` : "Name not set";

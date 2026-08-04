@@ -55,7 +55,7 @@ const ALLOWED_SEX = new Set([
 ]);
 
 const FIELD_LABELS = [
-  ["name", "Name"],
+  ["name", "Name (optional)"],
   ["species", "Species"],
   ["breed", "Breed"],
   ["sex", "Sex"],
@@ -153,7 +153,6 @@ function validateRow(row, existingAnimals) {
   const warnings = [...row.headerWarnings];
   const data = { ...row.data, sex: normalizeSex(row.data.sex) };
 
-  if (!data.name) errors.push("Missing name");
   if (!data.species) errors.push("Missing species");
   if (data.birthdate) {
     const date = normalizeDate(data.birthdate);
@@ -264,8 +263,8 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
 
       const headers = csvRows[0];
       const { map, unknown } = buildHeaderMap(headers);
-      if (map.name === undefined || map.species === undefined) {
-        throw new Error("Missing required columns: name and species");
+      if (map.species === undefined) {
+        throw new Error("Missing required column: species");
       }
 
       const parsedRows = csvRows.slice(1).map((cells, index) => ({
@@ -577,7 +576,7 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h2 className="text-xl font-semibold text-white">CSV Format</h2>
-            <p className="mt-2 text-sm text-gray-400">CSV imports are instant. AI-extracted files use the same preview table after BarnBuddy reads them.</p>
+            <p className="mt-2 text-sm text-gray-400">CSV imports are instant. Species is required; name and the other fields are optional. AI-extracted files use the same preview table after BarnBuddy reads them.</p>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
             <div className="rounded-lg bg-gray-800 p-3"><span className="text-gray-400">Total rows</span><strong className="block text-lg">{counts.total}</strong></div>
