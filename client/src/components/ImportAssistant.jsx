@@ -56,7 +56,7 @@ const ALLOWED_SEX = new Set([
 
 const FIELD_LABELS = [
   ["name", "Name (optional)"],
-  ["species", "Species"],
+  ["species", "Species (required)"],
   ["breed", "Breed"],
   ["sex", "Sex"],
   ["birthdate", "Birthdate"],
@@ -190,7 +190,8 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
   const [aiFile, setAiFile] = useState(null);
   const [aiNotes, setAiNotes] = useState("");
   const [aiProcessingAcknowledged, setAiProcessingAcknowledged] = useState(false);
-  const [aiMessage, setAiMessage] = useState("Upload a PDF, Word doc, spreadsheet, text file, or clear record photo for AI review.");
+  const [aiMessage, setAiMessage] = useState("Choose a record file to begin.");
+  const [reviewSource, setReviewSource] = useState(null);
   const [rows, setRows] = useState([]);
   const [message, setMessage] = useState("No file selected");
   const [skipDuplicates, setSkipDuplicates] = useState(true);
@@ -243,17 +244,31 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
     if (!file.name.toLowerCase().endsWith(".csv") && file.type !== "text/csv") {
       setRows([]);
       setFileName("");
+      setReviewSource("csv");
       setMessage("Wrong file type. Choose a CSV file.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
       setRows([]);
+      setFileName("");
+      setReviewSource("csv");
       setMessage("CSV file is too large. Keep imports under 2MB and 500 rows.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
     try {
       setIsParsing(true);
+      setReviewSource("csv");
+      setAiFile(null);
+      setAiProcessingAcknowledged(false);
+      setAiMessage("Choose a record file to begin.");
+      if (aiFileRef.current) aiFileRef.current.value = "";
+      setRows([]);
+      setFileName("");
+      setSuccessCount(null);
+      setShowConfirmation(false);
       setMessage("Parsing spreadsheet...");
       const text = await file.text();
       if (!text.trim()) throw new Error("Empty file");
@@ -279,9 +294,10 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
 
       setRows(parsedRows);
       setFileName(file.name);
-      setSuccessCount(null);
-      setShowConfirmation(false);
-      setMessage("Review your animals before importing");
+      setMessage("Your CSV is ready. Review each row, correct anything needed, then continue to import.");
+      window.setTimeout(() => {
+        document.getElementById("import-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
     } catch (err) {
       setRows([]);
       setFileName("");
@@ -292,12 +308,28 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
   };
 
   const handleAiFile = (file) => {
-    setAiFile(file || null);
     if (!file) {
-      setAiMessage("Upload a PDF, Word doc, spreadsheet, text file, or clear record photo for AI review.");
+      setAiFile(null);
+      setAiMessage("Choose a record file to begin.");
       return;
     }
-    setAiMessage(`${file.name} is ready for AI review.`);
+    if (file.size > 15 * 1024 * 1024) {
+      setAiFile(null);
+      setAiMessage("That file is larger than 15MB. Choose a smaller file.");
+      if (aiFileRef.current) aiFileRef.current.value = "";
+      return;
+    }
+
+    setAiFile(file);
+    setAiProcessingAcknowledged(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setRows([]);
+    setFileName("");
+    setReviewSource("ai");
+    setSuccessCount(null);
+    setShowConfirmation(false);
+    setMessage("No AI draft created yet.");
+    setAiMessage(`${file.name} selected. Complete the privacy confirmation, then create the draft.`);
   };
 
   const handleAiExtract = async () => {
@@ -314,8 +346,8 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
       setIsExtracting(true);
       setSuccessCount(null);
       setShowConfirmation(false);
-      setAiMessage("AI is reading your records...");
-      setMessage("AI is extracting animal rows for review...");
+      setAiMessage("AI is reading the file and creating editable animal rows. This may take a minute.");
+      setMessage("Creating your AI draft...");
       const res = await extractRecordsWithAi({
         file: aiFile,
         notes: aiNotes,
@@ -325,7 +357,8 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
       const now = Date.now();
 
       if (extractedRows.length === 0) {
-        setAiMessage("AI did not find animal rows in that file.");
+        setAiMessage("No animals were found. Try a clearer scan, add a note explaining the file, or request transfer help below.");
+        setMessage("No animal rows were found.");
         setRows([]);
         return;
       }
@@ -346,8 +379,12 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
         };
       }));
       setFileName(aiFile.name);
-      setAiMessage(res.data?.summary || `AI found ${extractedRows.length} possible animal row${extractedRows.length === 1 ? "" : "s"}.`);
-      setMessage("Review AI-extracted animals before importing");
+      setReviewSource("ai");
+      setAiMessage(`${res.data?.summary || `AI found ${extractedRows.length} possible animal row${extractedRows.length === 1 ? "" : "s"}.`} Review the draft below before importing.`);
+      setMessage(`AI created ${extractedRows.length} editable animal row${extractedRows.length === 1 ? "" : "s"}. Check every row before importing.`);
+      window.setTimeout(() => {
+        document.getElementById("import-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
       if (Array.isArray(res.data?.warnings) && res.data.warnings.length) {
         toast.info(res.data.warnings.slice(0, 2).join(" "));
       }
@@ -361,6 +398,7 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
   };
 
   const updateRow = (id, field, value) => {
+    setShowConfirmation(false);
     setRows((current) =>
       current.map((row) =>
         row.id === id ? { ...row, data: { ...row.data, [field]: value } } : row
@@ -369,10 +407,12 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
   };
 
   const removeRow = (id) => {
+    setShowConfirmation(false);
     setRows((current) => current.map((row) => (row.id === id ? { ...row, removed: true } : row)));
   };
 
   const restoreRow = (id) => {
+    setShowConfirmation(false);
     setRows((current) => current.map((row) => (row.id === id ? { ...row, removed: false } : row)));
   };
 
@@ -426,7 +466,9 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
     setMessage("No file selected");
     setAiFile(null);
     setAiNotes("");
-    setAiMessage("Upload a PDF, Word doc, spreadsheet, text file, or clear record photo for AI review.");
+    setAiProcessingAcknowledged(false);
+    setAiMessage("Choose a record file to begin.");
+    setReviewSource(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (aiFileRef.current) aiFileRef.current.value = "";
   };
@@ -446,12 +488,18 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
     }
   };
 
-  const chooseHelpFile = () => {
-    helpFileRef.current?.click();
-    window.setTimeout(() => {
-      document.getElementById("import-help-request")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 80);
+  const scrollToSection = (sectionId) => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+
+  const aiDraftReady = reviewSource === "ai" && validatedRows.length > 0;
+  const aiActionHint = !aiFile
+    ? "Choose a file to continue."
+    : !aiProcessingAcknowledged
+      ? "Check the required privacy confirmation to continue."
+      : aiDraftReady
+        ? "Draft ready. Review it below, or run extraction again after changing the notes."
+        : "Ready to create an editable draft. Nothing will be imported yet.";
 
   return (
     <div className="space-y-6 text-gray-100">
@@ -459,13 +507,13 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-300">Import Assistant</p>
-            <h1 className="mt-2 text-3xl font-bold text-white">BarnBuddy Import Assistant</h1>
+            <h1 className="mt-2 text-3xl font-bold text-white">Bring your animal records into BarnBuddy</h1>
             <p className="mt-3 text-sm leading-6 text-gray-300 sm:text-base">
-              Moving records should not stop you from getting started. Upload a spreadsheet, review your animals, and import records into BarnBuddy without starting from scratch.
+              Choose the option that matches what you have. AI extraction creates an editable draft from photos and documents; it never imports anything until you review and confirm it.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-2 rounded-xl border border-gray-700 bg-gray-950 p-2 text-center text-xs sm:min-w-80">
-            {["Upload records", "Review AI draft", "Import animals"].map((step, index) => (
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-gray-700 bg-gray-950 p-2 text-center text-xs sm:min-w-96 lg:grid-cols-4">
+            {["Choose a file", "Add context", "Create a draft", "Review & import"].map((step, index) => (
               <div key={step} className="rounded-lg bg-gray-800 px-2 py-3">
                 <span className="block text-blue-300">Step {index + 1}</span>
                 <strong className="mt-1 block text-gray-100">{step}</strong>
@@ -476,143 +524,158 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
-          <h2 className="text-xl font-semibold text-white">Start Fresh</h2>
+        <div className="rounded-2xl border border-blue-400/40 bg-blue-500/5 p-5 shadow-sm shadow-blue-950/40">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-xl font-semibold text-white">Let AI read my records</h2>
+            <span className="rounded-full bg-blue-500/15 px-2.5 py-1 text-xs font-semibold text-blue-200">Best for most files</span>
+          </div>
           <p className="mt-2 text-sm leading-6 text-gray-400">
-            Do not want to transfer years of records? Add your current animals now and start keeping new records from today forward.
+            Use a photo, PDF, Word document, spreadsheet, or text file. AI will turn it into animal rows that you can correct before importing.
           </p>
-          <button type="button" onClick={onAddCurrentAnimal} className="mt-5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500">
-            Add Current Animal
+          <button type="button" onClick={() => scrollToSection("ai-extraction")} className="mt-5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500">
+            Start AI extraction
           </button>
         </div>
 
-        <div className="rounded-2xl border border-blue-500/30 bg-gray-900 p-5">
-          <h2 className="text-xl font-semibold text-white">Upload Spreadsheet</h2>
+        <div className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
+          <h2 className="text-xl font-semibold text-white">I already have a CSV</h2>
           <p className="mt-2 text-sm leading-6 text-gray-400">
-            Upload a CSV file with animal information and review everything before importing instantly.
+            Upload a structured spreadsheet directly. The only required column is <strong className="text-gray-200">species</strong>.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500">
-              Choose CSV File
+              Choose CSV file
             </button>
             <button type="button" onClick={handleTemplateDownload} className="rounded-lg border border-gray-600 px-4 py-2.5 text-sm font-semibold text-gray-200 hover:bg-gray-800">
-              Download CSV Template
+              Download template
             </button>
           </div>
           <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
-          <p className="mt-3 text-xs text-gray-500">{fileName || message}</p>
+          <p className="mt-3 text-xs text-gray-500" aria-live="polite">
+            {reviewSource === "csv" ? fileName || message : "No CSV selected."}
+          </p>
+          <details className="mt-4 rounded-lg border border-gray-800 bg-gray-950/70 px-3 py-2 text-xs text-gray-400">
+            <summary className="cursor-pointer font-semibold text-gray-300">See CSV columns and an example</summary>
+            <p className="mt-2 leading-5">Columns: {TEMPLATE_HEADERS}. Name and all fields except species are optional.</p>
+            <p className="mt-1 break-all text-gray-500">Example: {TEMPLATE_EXAMPLE}</p>
+          </details>
         </div>
 
         <div className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
-          <h2 className="text-xl font-semibold text-white">Upload Records for AI Review</h2>
+          <h2 className="text-xl font-semibold text-white">I only need current animals</h2>
           <p className="mt-2 text-sm leading-6 text-gray-400">
-            Have notebook pages, photos, PDFs, spreadsheets, Word docs, notes, or another system export? Let AI draft animal rows for you to review.
+            Skip importing old files and add animals individually from the dashboard. You can leave an animal name blank.
           </p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <button type="button" onClick={() => aiFileRef.current?.click()} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500">
-              Upload Records
-            </button>
-            <button type="button" onClick={chooseHelpFile} className="rounded-lg border border-gray-600 px-4 py-2.5 text-sm font-semibold text-gray-200 hover:bg-gray-800">
-              Request Help
-            </button>
-          </div>
-          <input ref={aiFileRef} type="file" accept={AI_FILE_ACCEPT} className="hidden" onChange={(event) => handleAiFile(event.target.files?.[0])} />
-          <p className="mt-3 text-xs text-gray-500">{aiMessage}</p>
+          <button type="button" onClick={onAddCurrentAnimal} className="mt-5 rounded-lg border border-gray-600 px-4 py-2.5 text-sm font-semibold text-gray-200 hover:bg-gray-800">
+            Go to Add Animal
+          </button>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-blue-500/30 bg-gray-900 p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-2xl">
-            <h2 className="text-xl font-semibold text-white">AI Record Extraction</h2>
+      <section id="ai-extraction" className="scroll-mt-6 rounded-2xl border border-blue-400/40 bg-gray-900 p-5 shadow-lg shadow-blue-950/20 sm:p-6">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-300">Guided AI extraction</p>
+            <h2 className="mt-2 text-2xl font-semibold text-white">Create an editable draft from your records</h2>
             <p className="mt-2 text-sm leading-6 text-gray-400">
-              BarnBuddy can read many record files and draft animal rows. You stay in control: review, edit, remove, and confirm before anything is imported.
-            </p>
-            <p className="mt-2 text-xs text-gray-500">
-              Google Docs shortcut files cannot be read directly. In Google Docs, choose File, Download, then PDF or Word (.docx).
+              First choose one file. Then add any helpful context and confirm the privacy notice. AI will draft the rows; you decide what gets imported.
             </p>
           </div>
-          <div className="w-full space-y-3 lg:max-w-md">
-            <label className="block text-sm font-semibold text-gray-300">
-              Notes for AI
+          <span className="w-fit rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-200">Nothing imports automatically</span>
+        </div>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <div className={`rounded-xl border p-4 ${aiFile ? "border-blue-400/40 bg-blue-500/5" : "border-gray-700 bg-gray-950/60"}`}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-300">Step 1</p>
+            <h3 className="mt-1 text-lg font-semibold text-white">Choose your record file</h3>
+            <p className="mt-2 text-sm leading-6 text-gray-400">PDF, Word, Excel, CSV, TXT, JPG, PNG, or WebP up to 15MB. Clear, straight photos work best.</p>
+            <input ref={aiFileRef} type="file" accept={AI_FILE_ACCEPT} className="hidden" onChange={(event) => handleAiFile(event.target.files?.[0])} />
+            <button type="button" onClick={() => aiFileRef.current?.click()} className="mt-4 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500">
+              {aiFile ? "Choose a different file" : "Choose a file"}
+            </button>
+            <div className="mt-3 rounded-lg border border-gray-800 bg-gray-900 px-3 py-2.5" aria-live="polite">
+              <p className={`text-sm font-medium ${aiFile ? "text-blue-100" : "text-gray-400"}`}>{aiFile?.name || "No file selected"}</p>
+              {aiFile && <p className="mt-1 text-xs text-gray-500">{(aiFile.size / (1024 * 1024)).toFixed(1)}MB</p>}
+            </div>
+            <p className="mt-3 text-xs leading-5 text-gray-500">Google Docs shortcuts cannot be read directly. Download the document as a PDF or Word file first.</p>
+          </div>
+
+          <div className="rounded-xl border border-gray-700 bg-gray-950/60 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-300">Step 2</p>
+            <h3 className="mt-1 text-lg font-semibold text-white">Add context and confirm</h3>
+            <label className="mt-3 block text-sm font-semibold text-gray-300">
+              Helpful notes <span className="font-normal text-gray-500">(optional)</span>
               <textarea
                 rows="3"
                 value={aiNotes}
                 onChange={(event) => setAiNotes(event.target.value)}
-                placeholder="Example: These are goat show records from 2023-2025. Tags may be listed as ear numbers."
+                placeholder="Example: These are goat records from 2023-2025. Ear numbers are the tag IDs."
                 className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-gray-100"
               />
             </label>
-            <label className="flex items-start gap-3 text-xs leading-5 text-gray-400">
+            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-amber-400/25 bg-amber-500/5 p-3 text-xs leading-5 text-gray-300">
               <input
                 type="checkbox"
                 checked={aiProcessingAcknowledged}
                 onChange={(event) => setAiProcessingAcknowledged(event.target.checked)}
-                className="mt-1 h-4 w-4 accent-blue-500"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-blue-500"
               />
-              <span>
-                I understand this file and my notes will be sent to OpenAI to extract records. I have removed unrelated personal or sensitive information.
-              </span>
+              <span><strong className="block text-amber-100">Required privacy confirmation</strong>I understand this file and my notes will be sent to OpenAI for extraction, and I removed unrelated personal or sensitive information.</span>
             </label>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => aiFileRef.current?.click()} className="rounded-lg border border-gray-600 px-4 py-2.5 text-sm font-semibold text-gray-200 hover:bg-gray-800">
-                Choose Record File
-              </button>
-              <button
-                type="button"
-                onClick={handleAiExtract}
-                disabled={!aiFile || !aiProcessingAcknowledged || isExtracting}
-                className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60"
-              >
-                {isExtracting ? "Extracting..." : "Extract With AI"}
-              </button>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-gray-700 bg-gray-950 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+          <div aria-live="polite">
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-300">Step 3</p>
+            <p className="mt-1 text-sm font-medium text-gray-200">{isExtracting ? aiMessage : aiActionHint}</p>
+            {!isExtracting && aiMessage !== "Choose a record file to begin." && <p className="mt-1 text-xs leading-5 text-gray-500">{aiMessage}</p>}
+          </div>
+          <div className="mt-4 flex shrink-0 flex-wrap gap-2 sm:mt-0">
+            <button type="button" onClick={() => scrollToSection("import-help-request")} className="rounded-lg border border-gray-600 px-4 py-2.5 text-sm font-semibold text-gray-200 hover:bg-gray-800">
+              I need help
+            </button>
+            <button
+              type="button"
+              onClick={handleAiExtract}
+              disabled={!aiFile || !aiProcessingAcknowledged || isExtracting}
+              className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isExtracting ? "Creating draft..." : aiDraftReady ? "Recreate review draft" : "Create review draft"}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {(isParsing || validatedRows.length > 0 || successCount !== null) && (
+        <section id="import-review" className="scroll-mt-6 rounded-2xl border border-gray-800 bg-gray-900 p-5 sm:p-6">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-300">Step 4</p>
+          <h2 className="mt-1 text-2xl font-semibold text-white">
+            {successCount !== null ? "Import complete" : reviewSource === "ai" ? "Review the AI draft" : "Review the CSV rows"}
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-400">
+            {isParsing ? "Reading your spreadsheet..." : message}
+          </p>
+          {successCount === null && validatedRows.length > 0 && (
+            <p className="mt-2 text-xs leading-5 text-gray-500">Nothing below has been saved yet. Correct any fields, remove unwanted rows, and confirm the import when you are satisfied.</p>
+          )}
+        </div>
+
+        {successCount === null && validatedRows.length > 0 && (
+          <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-stretch lg:justify-between">
+            <div className="grid flex-1 grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+              <div className="rounded-lg bg-gray-800 p-3"><span className="text-gray-400">Draft rows</span><strong className="block text-lg">{counts.total}</strong></div>
+              <div className="rounded-lg bg-gray-800 p-3"><span className="text-gray-400">Ready</span><strong className="block text-lg text-emerald-200">{counts.ready}</strong></div>
+              <div className="rounded-lg bg-gray-800 p-3"><span className="text-gray-400">Need fixes</span><strong className="block text-lg text-red-200">{counts.errors}</strong></div>
+              <div className="rounded-lg bg-gray-800 p-3"><span className="text-gray-400">Removed</span><strong className="block text-lg">{counts.removed}</strong></div>
             </div>
-            <p className="text-xs text-gray-500">{aiFile?.name || "No AI review file selected"}</p>
+            <label className="inline-flex items-center gap-3 rounded-lg border border-gray-700 bg-gray-950 px-4 py-3 text-sm text-gray-200">
+              <input type="checkbox" checked={skipDuplicates} onChange={(event) => { setSkipDuplicates(event.target.checked); setShowConfirmation(false); }} />
+              Skip possible duplicates
+            </label>
           </div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-white">CSV Format</h2>
-            <p className="mt-2 text-sm text-gray-400">CSV imports are instant. Species is required; name and the other fields are optional. AI-extracted files use the same preview table after BarnBuddy reads them.</p>
-          </div>
-          <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-            <div className="rounded-lg bg-gray-800 p-3"><span className="text-gray-400">Total rows</span><strong className="block text-lg">{counts.total}</strong></div>
-            <div className="rounded-lg bg-gray-800 p-3"><span className="text-gray-400">Ready to import</span><strong className="block text-lg">{counts.ready}</strong></div>
-            <div className="rounded-lg bg-gray-800 p-3"><span className="text-gray-400">Rows with errors</span><strong className="block text-lg">{counts.errors}</strong></div>
-            <div className="rounded-lg bg-gray-800 p-3"><span className="text-gray-400">Rows removed</span><strong className="block text-lg">{counts.removed}</strong></div>
-          </div>
-        </div>
-
-        <div className="mt-4 overflow-x-auto rounded-xl border border-gray-800">
-          <table className="min-w-full divide-y divide-gray-800 text-left text-sm">
-            <thead className="bg-gray-950 text-xs uppercase tracking-wide text-gray-400">
-              <tr>
-                {TEMPLATE_HEADERS.split(",").map((header) => <th key={header} className="px-3 py-2">{header}</th>)}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-800">
-              <tr className="bg-gray-900 text-gray-300">
-                {TEMPLATE_EXAMPLE.split(",").map((cell) => <td key={cell} className="px-3 py-2">{cell}</td>)}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-white">{successCount === null ? "Review your animals before importing" : "Import complete"}</h2>
-            <p className="mt-1 text-sm text-gray-400">{isParsing ? "Parsing spreadsheet..." : message}</p>
-          </div>
-          <label className="inline-flex items-center gap-3 rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-200">
-            <input type="checkbox" checked={skipDuplicates} onChange={(event) => setSkipDuplicates(event.target.checked)} />
-            Skip duplicates
-          </label>
-        </div>
+        )}
 
         {successCount !== null ? (
           <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5">
@@ -670,9 +733,9 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
 
             {showConfirmation && (
               <div className="mt-5 rounded-xl border border-blue-500/30 bg-blue-500/10 p-4">
-                <p className="font-semibold text-blue-100">You are about to import {counts.ready} animals into BarnBuddy.</p>
+                <p className="font-semibold text-blue-100">Final check: import {counts.ready} animal{counts.ready === 1 ? "" : "s"}?</p>
                 <p className="mt-2 text-sm text-gray-300">
-                  Ready rows: {counts.ready}. Skipped duplicates: {counts.skippedDuplicates}. Rows with errors that will not import: {counts.errors}.
+                  {counts.ready} ready. {counts.skippedDuplicates} possible duplicate{counts.skippedDuplicates === 1 ? "" : "s"} will be skipped. You can still edit the draft above.
                 </p>
               </div>
             )}
@@ -684,17 +747,16 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
                 disabled={isImporting || counts.ready === 0 || counts.errors > 0}
                 className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {showConfirmation ? (isImporting ? "Importing..." : "Import Animals") : "Continue to Import"}
+                {showConfirmation
+                  ? (isImporting ? "Importing..." : `Confirm and import ${counts.ready}`)
+                  : `Review import summary (${counts.ready})`}
               </button>
               {counts.errors > 0 && <p className="self-center text-sm text-red-200">Fix rows with errors before importing.</p>}
             </div>
           </>
-        ) : (
-          <div className="mt-5 rounded-xl border border-dashed border-gray-700 bg-gray-950 p-8 text-center text-gray-400">
-            No file selected
-          </div>
-        )}
-      </section>
+        ) : null}
+        </section>
+      )}
 
       <section id="import-help-request" className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
         <h2 className="text-xl font-semibold text-white">Request Transfer Help</h2>
