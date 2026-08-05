@@ -2,6 +2,12 @@ const express = require("express");
 const pool = require("../data-source");
 const authMiddleware = require("../middleware/authMiddleware");
 const { ensurePremiumRecordSchema } = require("../services/ensureAppSchema");
+const {
+  normalizeFeedPayload,
+  normalizeFinancePayload,
+  normalizeInventoryPayload,
+} = require("../utils/recordPayloads");
+const { sendRouteError } = require("../utils/routeErrors");
 
 const router = express.Router();
 
@@ -103,7 +109,7 @@ router.get("/finance/animal/:animalId", authMiddleware, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to fetch finance records" });
+    sendRouteError(res, err, "Failed to fetch finance records");
   }
 });
 
@@ -167,7 +173,7 @@ router.get("/finance/herd/:herdId/summary", authMiddleware, async (req, res) => 
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to fetch herd finance summary" });
+    sendRouteError(res, err, "Failed to fetch herd finance summary");
   }
 });
 
@@ -176,19 +182,19 @@ router.post("/finance", authMiddleware, async (req, res) => {
 
   try {
     await ensurePremiumSchema();
-    const { animal_id, herd_id, record_date, category, amount, vendor, notes } = req.body;
-    const normalizedAnimalId = animal_id || null;
-    const normalizedHerdId = herd_id || null;
+    const normalized = normalizeFinancePayload(req.body);
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const record = normalized.value;
 
-    if (normalizedAnimalId && !(await userOwnsAnimal(req.user.id, normalizedAnimalId))) {
+    if (record.animalId && !(await userOwnsAnimal(req.user.id, record.animalId))) {
       return res.status(404).json({ error: "Animal not found" });
     }
 
-    if (normalizedHerdId && !(await userOwnsHerd(req.user.id, normalizedHerdId))) {
+    if (record.herdId && !(await userOwnsHerd(req.user.id, record.herdId))) {
       return res.status(404).json({ error: "Herd not found" });
     }
 
-    if (!normalizedAnimalId && !Object.prototype.hasOwnProperty.call(req.body, "herd_id")) {
+    if (!record.animalId && !Object.prototype.hasOwnProperty.call(req.body, "herd_id")) {
       return res.status(400).json({ error: "Animal or herd is required" });
     }
 
@@ -196,13 +202,22 @@ router.post("/finance", authMiddleware, async (req, res) => {
       `INSERT INTO finance_records (user_id, animal_id, herd_id, record_date, category, amount, vendor, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [req.user.id, normalizedAnimalId, normalizedHerdId, record_date || null, category || "Expense", amount || 0, vendor || "", notes || ""]
+      [
+        req.user.id,
+        record.animalId,
+        record.herdId,
+        record.recordDate,
+        record.category,
+        record.amount,
+        record.vendor,
+        record.notes,
+      ]
     );
     const archivedAnimal = await archiveSoldAnimal(req.user.id, result.rows[0].animal_id, result.rows[0].category);
     res.status(201).json({ ...result.rows[0], archived_animal: archivedAnimal });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to create finance record" });
+    sendRouteError(res, err, "Failed to create finance record");
   }
 });
 
@@ -212,17 +227,17 @@ router.put("/finance/:id", authMiddleware, async (req, res) => {
   try {
     await ensurePremiumSchema();
     const { id } = req.params;
-    const { animal_id, herd_id, record_date, category, amount, vendor, notes } = req.body;
     const shouldUpdateAnimal = Object.prototype.hasOwnProperty.call(req.body, "animal_id");
     const shouldUpdateHerd = Object.prototype.hasOwnProperty.call(req.body, "herd_id");
-    const normalizedAnimalId = animal_id || null;
-    const normalizedHerdId = herd_id || null;
+    const normalized = normalizeFinancePayload(req.body);
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const record = normalized.value;
 
-    if (normalizedAnimalId && !(await userOwnsAnimal(req.user.id, normalizedAnimalId))) {
+    if (record.animalId && !(await userOwnsAnimal(req.user.id, record.animalId))) {
       return res.status(404).json({ error: "Animal not found" });
     }
 
-    if (normalizedHerdId && !(await userOwnsHerd(req.user.id, normalizedHerdId))) {
+    if (record.herdId && !(await userOwnsHerd(req.user.id, record.herdId))) {
       return res.status(404).json({ error: "Herd not found" });
     }
 
@@ -238,7 +253,19 @@ router.put("/finance/:id", authMiddleware, async (req, res) => {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $10 AND user_id = $11
        RETURNING *`,
-      [shouldUpdateAnimal, normalizedAnimalId, shouldUpdateHerd, normalizedHerdId, record_date || null, category || "Expense", amount || 0, vendor || "", notes || "", id, req.user.id]
+      [
+        shouldUpdateAnimal,
+        record.animalId,
+        shouldUpdateHerd,
+        record.herdId,
+        record.recordDate,
+        record.category,
+        record.amount,
+        record.vendor,
+        record.notes,
+        id,
+        req.user.id,
+      ]
     );
 
     if (result.rowCount === 0) return res.status(404).json({ error: "Finance record not found" });
@@ -246,7 +273,7 @@ router.put("/finance/:id", authMiddleware, async (req, res) => {
     res.json({ ...result.rows[0], archived_animal: archivedAnimal });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to update finance record" });
+    sendRouteError(res, err, "Failed to update finance record");
   }
 });
 
@@ -264,7 +291,7 @@ router.delete("/finance/:id", authMiddleware, async (req, res) => {
     res.json({ message: "Finance record deleted" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to delete finance record" });
+    sendRouteError(res, err, "Failed to delete finance record");
   }
 });
 
@@ -285,7 +312,7 @@ router.get("/feed/animal/:animalId", authMiddleware, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to fetch feed records" });
+    sendRouteError(res, err, "Failed to fetch feed records");
   }
 });
 
@@ -306,7 +333,7 @@ router.get("/feed/herd/:herdId", authMiddleware, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to fetch herd feed records" });
+    sendRouteError(res, err, "Failed to fetch herd feed records");
   }
 });
 
@@ -322,7 +349,7 @@ router.get("/feed/unassigned", authMiddleware, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to fetch unassigned feed records" });
+    sendRouteError(res, err, "Failed to fetch unassigned feed records");
   }
 });
 
@@ -331,15 +358,15 @@ router.post("/feed", authMiddleware, async (req, res) => {
 
   try {
     await ensurePremiumSchema();
-    const { animal_id, herd_id, record_date, feed_type, amount, unit, cost, next_purchase_date, notes } = req.body;
-    const normalizedAnimalId = animal_id || null;
-    const normalizedHerdId = herd_id || null;
+    const normalized = normalizeFeedPayload(req.body);
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const record = normalized.value;
 
-    if (normalizedAnimalId && !(await userOwnsAnimal(req.user.id, normalizedAnimalId))) {
+    if (record.animalId && !(await userOwnsAnimal(req.user.id, record.animalId))) {
       return res.status(404).json({ error: "Animal not found" });
     }
 
-    if (normalizedHerdId && !(await userOwnsHerd(req.user.id, normalizedHerdId))) {
+    if (record.herdId && !(await userOwnsHerd(req.user.id, record.herdId))) {
       return res.status(404).json({ error: "Herd not found" });
     }
 
@@ -347,12 +374,23 @@ router.post("/feed", authMiddleware, async (req, res) => {
       `INSERT INTO feed_records (user_id, animal_id, herd_id, record_date, feed_type, amount, unit, cost, next_purchase_date, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [req.user.id, normalizedAnimalId, normalizedHerdId, record_date || null, feed_type || "", amount || 0, unit || "lb", cost || 0, next_purchase_date || null, notes || ""]
+      [
+        req.user.id,
+        record.animalId,
+        record.herdId,
+        record.recordDate,
+        record.feedType,
+        record.amount,
+        record.unit,
+        record.cost,
+        record.nextPurchaseDate,
+        record.notes,
+      ]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to create feed record" });
+    sendRouteError(res, err, "Failed to create feed record");
   }
 });
 
@@ -362,9 +400,11 @@ router.put("/feed/:id", authMiddleware, async (req, res) => {
   try {
     await ensurePremiumSchema();
     const { id } = req.params;
-    const { herd_id, record_date, feed_type, amount, unit, cost, next_purchase_date, notes } = req.body;
+    const normalized = normalizeFeedPayload(req.body);
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const record = normalized.value;
 
-    if (herd_id && !(await userOwnsHerd(req.user.id, herd_id))) {
+    if (record.herdId && !(await userOwnsHerd(req.user.id, record.herdId))) {
       return res.status(404).json({ error: "Herd not found" });
     }
 
@@ -373,14 +413,25 @@ router.put("/feed/:id", authMiddleware, async (req, res) => {
        SET herd_id = $1, record_date = $2, feed_type = $3, amount = $4, unit = $5, cost = $6, next_purchase_date = $7, notes = $8, updated_at = CURRENT_TIMESTAMP
        WHERE id = $9 AND user_id = $10
        RETURNING *`,
-      [herd_id || null, record_date || null, feed_type || "", amount || 0, unit || "lb", cost || 0, next_purchase_date || null, notes || "", id, req.user.id]
+      [
+        record.herdId,
+        record.recordDate,
+        record.feedType,
+        record.amount,
+        record.unit,
+        record.cost,
+        record.nextPurchaseDate,
+        record.notes,
+        id,
+        req.user.id,
+      ]
     );
 
     if (result.rowCount === 0) return res.status(404).json({ error: "Feed record not found" });
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to update feed record" });
+    sendRouteError(res, err, "Failed to update feed record");
   }
 });
 
@@ -398,7 +449,7 @@ router.delete("/feed/:id", authMiddleware, async (req, res) => {
     res.json({ message: "Feed record deleted" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to delete feed record" });
+    sendRouteError(res, err, "Failed to delete feed record");
   }
 });
 
@@ -423,7 +474,7 @@ router.get("/inventory/herd/:herdId", authMiddleware, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to fetch inventory" });
+    sendRouteError(res, err, "Failed to fetch inventory");
   }
 });
 
@@ -432,27 +483,12 @@ router.post("/inventory", authMiddleware, async (req, res) => {
 
   try {
     await ensurePremiumSchema();
-    const {
-      herd_id,
-      item_name,
-      category,
-      quantity,
-      unit,
-      reorder_level,
-      cost_per_unit,
-      supplier,
-      expiration_date,
-      use_for_vaccinations,
-      use_for_health_events,
-      notes,
-    } = req.body;
-    const normalizedHerdId = herd_id || null;
+    const normalized = normalizeInventoryPayload(req.body);
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const item = normalized.value;
 
-    if (normalizedHerdId && !(await userOwnsHerd(req.user.id, normalizedHerdId))) {
+    if (item.herdId && !(await userOwnsHerd(req.user.id, item.herdId))) {
       return res.status(404).json({ error: "Herd not found" });
-    }
-    if (!String(item_name || "").trim()) {
-      return res.status(400).json({ error: "Item name is required" });
     }
 
     const result = await pool.query(
@@ -462,24 +498,24 @@ router.post("/inventory", authMiddleware, async (req, res) => {
        RETURNING *`,
       [
         req.user.id,
-        normalizedHerdId,
-        String(item_name).trim(),
-        category || "Supplies",
-        quantity || 0,
-        unit || "each",
-        reorder_level || 0,
-        cost_per_unit || 0,
-        supplier || "",
-        expiration_date || null,
-        Boolean(use_for_vaccinations),
-        Boolean(use_for_health_events),
-        notes || "",
+        item.herdId,
+        item.itemName,
+        item.category,
+        item.quantity,
+        item.unit,
+        item.reorderLevel,
+        item.costPerUnit,
+        item.supplier,
+        item.expirationDate,
+        item.useForVaccinations,
+        item.useForHealthEvents,
+        item.notes,
       ]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to create inventory item" });
+    sendRouteError(res, err, "Failed to create inventory item");
   }
 });
 
@@ -488,27 +524,12 @@ router.put("/inventory/:id", authMiddleware, async (req, res) => {
 
   try {
     await ensurePremiumSchema();
-    const {
-      herd_id,
-      item_name,
-      category,
-      quantity,
-      unit,
-      reorder_level,
-      cost_per_unit,
-      supplier,
-      expiration_date,
-      use_for_vaccinations,
-      use_for_health_events,
-      notes,
-    } = req.body;
-    const normalizedHerdId = herd_id || null;
+    const normalized = normalizeInventoryPayload(req.body);
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const item = normalized.value;
 
-    if (normalizedHerdId && !(await userOwnsHerd(req.user.id, normalizedHerdId))) {
+    if (item.herdId && !(await userOwnsHerd(req.user.id, item.herdId))) {
       return res.status(404).json({ error: "Herd not found" });
-    }
-    if (!String(item_name || "").trim()) {
-      return res.status(400).json({ error: "Item name is required" });
     }
 
     const result = await pool.query(
@@ -529,18 +550,18 @@ router.put("/inventory/:id", authMiddleware, async (req, res) => {
        WHERE id = $13 AND user_id = $14
        RETURNING *`,
       [
-        normalizedHerdId,
-        String(item_name).trim(),
-        category || "Supplies",
-        quantity || 0,
-        unit || "each",
-        reorder_level || 0,
-        cost_per_unit || 0,
-        supplier || "",
-        expiration_date || null,
-        Boolean(use_for_vaccinations),
-        Boolean(use_for_health_events),
-        notes || "",
+        item.herdId,
+        item.itemName,
+        item.category,
+        item.quantity,
+        item.unit,
+        item.reorderLevel,
+        item.costPerUnit,
+        item.supplier,
+        item.expirationDate,
+        item.useForVaccinations,
+        item.useForHealthEvents,
+        item.notes,
         req.params.id,
         req.user.id,
       ]
@@ -550,7 +571,7 @@ router.put("/inventory/:id", authMiddleware, async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to update inventory item" });
+    sendRouteError(res, err, "Failed to update inventory item");
   }
 });
 
@@ -568,7 +589,7 @@ router.delete("/inventory/:id", authMiddleware, async (req, res) => {
     res.json({ message: "Inventory item deleted" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to delete inventory item" });
+    sendRouteError(res, err, "Failed to delete inventory item");
   }
 });
 

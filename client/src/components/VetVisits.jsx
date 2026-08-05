@@ -52,6 +52,7 @@ function getVisitPayload(visit) {
     ...visit,
     visit_date: visit.visit_date || null,
     follow_up_date: visit.follow_up_date || null,
+    cost: visit.cost === "" || visit.cost === null || visit.cost === undefined ? 0 : visit.cost,
   };
 }
 
@@ -258,7 +259,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
     } catch (error) {
       setSaveStatus("idle");
       console.error("Error saving vet visit:", error);
-      toast.error("Failed to save vet visit. Please try again.");
+      toast.error(error.response?.data?.error || "Failed to save vet visit. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -477,7 +478,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
               <label className="block">
                 <div className="mb-1 flex items-center justify-between gap-3">
-                  <span className="block text-sm text-gray-400">Visit date</span>
+                  <span className="block text-sm text-gray-400">Visit date <span className="text-gray-500">(required)</span></span>
                   <span className="flex items-center gap-2 text-xs text-gray-300">
                     Done
                     <input
@@ -492,7 +493,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
                     />
                   </span>
                 </div>
-                <input type="date" value={selectedVisit.visit_date || ""} onChange={(e) => handleInputChange("visit_date", e.target.value)} onBlur={handleBlurSave} className={fieldClass} />
+                <input required type="date" value={selectedVisit.visit_date || ""} onChange={(e) => handleInputChange("visit_date", e.target.value)} onBlur={handleBlurSave} className={fieldClass} />
               </label>
 
               <label className="block">

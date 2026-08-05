@@ -2,28 +2,10 @@ const express = require("express");
 const pool = require("../data-source");
 const authMiddleware = require("../middleware/authMiddleware");
 const { ensureReproductionSchema } = require("../services/ensureAppSchema");
+const { normalizeReproductionPayload } = require("../utils/recordPayloads");
+const { sendRouteError } = require("../utils/routeErrors");
 
 const router = express.Router();
-
-function nullableDate(value) {
-    return value ? value : null;
-}
-
-function nullableId(value) {
-    if (value === null || value === undefined || value === "") return null;
-    const number = Number(value);
-    return Number.isInteger(number) && number > 0 ? number : null;
-}
-
-function invalidProvidedId(value, normalized) {
-    return value !== null && value !== undefined && value !== "" && !normalized;
-}
-
-function normalizeOffspringCount(value) {
-    if (value === null || value === undefined || value === "") return null;
-    const number = Number(value);
-    return Number.isInteger(number) && number >= 0 ? number : null;
-}
 
 async function validateOwnedParents(userId, damId, sireId) {
     if (damId && sireId && damId === sireId) return "Dam and sire must be different animals.";
@@ -62,7 +44,7 @@ router.get("/", authMiddleware, async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to fetch reproductions" });
+        sendRouteError(res, err, "Failed to fetch reproductions");
     }
 });
 
@@ -80,7 +62,7 @@ router.get("/animal/:animalId", authMiddleware, async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to fetch animal reproductions" });
+        sendRouteError(res, err, "Failed to fetch animal reproductions");
     }
 });
 
@@ -88,34 +70,13 @@ router.get("/animal/:animalId", authMiddleware, async (req, res) => {
 router.post("/", authMiddleware, async (req, res) => {
     if (!requirePremium(req, res)) return;
 
-    const {
-        dam_id,
-        sire_id,
-        breeding_date,
-        due_date,
-        outcome,
-        breeding_method,
-        pregnancy_check_date,
-        pregnancy_status,
-        birth_date,
-        offspring_count,
-        birth_outcome,
-        notes,
-    } = req.body;
-    const damId = nullableId(dam_id);
-    const sireId = nullableId(sire_id);
-    const offspringCount = normalizeOffspringCount(offspring_count);
-
-    if (invalidProvidedId(dam_id, damId) || invalidProvidedId(sire_id, sireId)) {
-        return res.status(400).json({ error: "Dam and sire IDs must be positive whole numbers." });
-    }
-    if (offspring_count !== null && offspring_count !== undefined && offspring_count !== "" && offspringCount === null) {
-        return res.status(400).json({ error: "Offspring count must be a non-negative whole number." });
-    }
+    const normalized = normalizeReproductionPayload(req.body);
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const event = normalized.value;
 
     try {
         await ensureReproductionSchema();
-        const ownershipError = await validateOwnedParents(req.user.id, damId, sireId);
+        const ownershipError = await validateOwnedParents(req.user.id, event.damId, event.sireId);
         if (ownershipError) return res.status(400).json({ error: ownershipError });
         const result = await pool.query(
             `INSERT INTO reproductions
@@ -124,24 +85,24 @@ router.post("/", authMiddleware, async (req, res) => {
             RETURNING *`,
             [
                 req.user.id,
-                damId,
-                sireId,
-                nullableDate(breeding_date),
-                nullableDate(due_date),
-                outcome || "Planned",
-                breeding_method || "",
-                nullableDate(pregnancy_check_date),
-                pregnancy_status || "",
-                nullableDate(birth_date),
-                offspringCount,
-                birth_outcome || "",
-                notes || "",
+                event.damId,
+                event.sireId,
+                event.breedingDate,
+                event.dueDate,
+                event.outcome,
+                event.breedingMethod,
+                event.pregnancyCheckDate,
+                event.pregnancyStatus,
+                event.birthDate,
+                event.offspringCount,
+                event.birthOutcome,
+                event.notes,
             ]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to create reproduction" });
+        sendRouteError(res, err, "Failed to create reproduction");
     }
 });
 
@@ -150,34 +111,13 @@ router.put("/:id", authMiddleware, async (req, res) => {
     if (!requirePremium(req, res)) return;
 
     const { id } = req.params;
-    const {
-        dam_id,
-        sire_id,
-        breeding_date,
-        due_date,
-        outcome,
-        breeding_method,
-        pregnancy_check_date,
-        pregnancy_status,
-        birth_date,
-        offspring_count,
-        birth_outcome,
-        notes,
-    } = req.body;
-    const damId = nullableId(dam_id);
-    const sireId = nullableId(sire_id);
-    const offspringCount = normalizeOffspringCount(offspring_count);
-
-    if (invalidProvidedId(dam_id, damId) || invalidProvidedId(sire_id, sireId)) {
-        return res.status(400).json({ error: "Dam and sire IDs must be positive whole numbers." });
-    }
-    if (offspring_count !== null && offspring_count !== undefined && offspring_count !== "" && offspringCount === null) {
-        return res.status(400).json({ error: "Offspring count must be a non-negative whole number." });
-    }
+    const normalized = normalizeReproductionPayload(req.body);
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const event = normalized.value;
 
     try {
         await ensureReproductionSchema();
-        const ownershipError = await validateOwnedParents(req.user.id, damId, sireId);
+        const ownershipError = await validateOwnedParents(req.user.id, event.damId, event.sireId);
         if (ownershipError) return res.status(400).json({ error: ownershipError });
         const result = await pool.query(
             `UPDATE reproductions SET
@@ -188,18 +128,18 @@ router.put("/:id", authMiddleware, async (req, res) => {
             WHERE id = $13 AND user_id = $14
             RETURNING *`,
             [
-                damId,
-                sireId,
-                nullableDate(breeding_date),
-                nullableDate(due_date),
-                outcome || "Planned",
-                breeding_method || "",
-                nullableDate(pregnancy_check_date),
-                pregnancy_status || "",
-                nullableDate(birth_date),
-                offspringCount,
-                birth_outcome || "",
-                notes || "",
+                event.damId,
+                event.sireId,
+                event.breedingDate,
+                event.dueDate,
+                event.outcome,
+                event.breedingMethod,
+                event.pregnancyCheckDate,
+                event.pregnancyStatus,
+                event.birthDate,
+                event.offspringCount,
+                event.birthOutcome,
+                event.notes,
                 id,
                 req.user.id,
             ]
@@ -209,7 +149,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to update reproduction" });
+        sendRouteError(res, err, "Failed to update reproduction");
     }
 });
 
@@ -230,7 +170,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
         res.json({ message: "Reproduction deleted successfully" });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to delete reproduction" });
+        sendRouteError(res, err, "Failed to delete reproduction");
     }
 });
 

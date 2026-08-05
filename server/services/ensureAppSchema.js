@@ -8,6 +8,47 @@ const { ensureFfaProjectSchema } = require("./ensureFfaProjectSchema");
 
 let appSchemaReadyPromise;
 
+function ensureVetVisitSchema() {
+  return pool.query(`
+    CREATE TABLE IF NOT EXISTS vet_visits (
+      id SERIAL PRIMARY KEY,
+      animal_id INTEGER NOT NULL REFERENCES animals(id) ON DELETE CASCADE,
+      vet_name TEXT DEFAULT '',
+      visit_date DATE,
+      reason TEXT DEFAULT '',
+      treatment TEXT DEFAULT '',
+      medications TEXT DEFAULT '',
+      follow_up_date DATE,
+      cost DECIMAL(10,2) DEFAULT 0,
+      notes TEXT DEFAULT '',
+      completed BOOLEAN NOT NULL DEFAULT false,
+      visit_completed BOOLEAN NOT NULL DEFAULT false,
+      follow_up_completed BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    ALTER TABLE vet_visits
+      ADD COLUMN IF NOT EXISTS animal_id INTEGER REFERENCES animals(id) ON DELETE CASCADE,
+      ADD COLUMN IF NOT EXISTS vet_name TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS visit_date DATE,
+      ADD COLUMN IF NOT EXISTS reason TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS treatment TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS medications TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS follow_up_date DATE,
+      ADD COLUMN IF NOT EXISTS cost DECIMAL(10,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS completed BOOLEAN NOT NULL DEFAULT false,
+      ADD COLUMN IF NOT EXISTS visit_completed BOOLEAN NOT NULL DEFAULT false,
+      ADD COLUMN IF NOT EXISTS follow_up_completed BOOLEAN NOT NULL DEFAULT false,
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+    CREATE INDEX IF NOT EXISTS idx_vet_visits_animal_date
+      ON vet_visits (animal_id, visit_date DESC, id DESC);
+  `);
+}
+
 function ensurePremiumRecordSchema() {
   return pool.query(`
     CREATE TABLE IF NOT EXISTS finance_records (
@@ -207,6 +248,7 @@ async function ensureAppSchema() {
       await ensureUserSchema();
       await ensurePreferenceSchema();
       await ensureAnimalSchema();
+      await ensureVetVisitSchema();
       await ensureSiteContentSchema();
       await ensureUserActivitySchema();
       await ensurePremiumRecordSchema();
@@ -222,6 +264,7 @@ async function ensureAppSchema() {
 
 module.exports = {
   ensureAppSchema,
+  ensureVetVisitSchema,
   ensurePremiumRecordSchema,
   ensureReproductionSchema,
   ensureBirthSchema,

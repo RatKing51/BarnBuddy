@@ -1,6 +1,8 @@
 const express = require("express");
 const pool = require("../data-source");
 const authMiddleware = require("../middleware/authMiddleware");
+const { normalizeVetVisitPayload } = require("../utils/vetVisitPayload");
+const { sendRouteError } = require("../utils/routeErrors");
 
 const router = express.Router();
 
@@ -10,24 +12,13 @@ function getReminderWindow(value) {
     return Math.min(365, Math.max(1, parsed));
 }
 
-async function ensureVetVisitColumns() {
-    await pool.query(
-        "ALTER TABLE vet_visits ADD COLUMN IF NOT EXISTS completed BOOLEAN NOT NULL DEFAULT false"
-    );
-    await pool.query(
-        "ALTER TABLE vet_visits ADD COLUMN IF NOT EXISTS visit_completed BOOLEAN NOT NULL DEFAULT false"
-    );
-    await pool.query(
-        "ALTER TABLE vet_visits ADD COLUMN IF NOT EXISTS follow_up_completed BOOLEAN NOT NULL DEFAULT false"
-    );
-}
-
-ensureVetVisitColumns().catch((err) => {
-    console.error("Failed to ensure vet visit columns:", err);
-});
-
 // Create Visit
 router.post("/", authMiddleware, async (req, res) => {
+    const normalized = normalizeVetVisitPayload(req.body, { requireAnimalId: true });
+    if (normalized.error) {
+        return res.status(400).json({ error: normalized.error });
+    }
+
     const {
         animal_id,
         vet_name,
@@ -41,7 +32,7 @@ router.post("/", authMiddleware, async (req, res) => {
         completed = false,
         visit_completed = false,
         follow_up_completed = false
-    } = req.body;
+    } = normalized.value;
 
     try {
         // making sure the animal is owned by the user
@@ -51,7 +42,7 @@ router.post("/", authMiddleware, async (req, res) => {
         );
 
         if (animalCheck.rowCount === 0) {
-            return res.status(403).json({ error: "Unauthorized animnal access" });
+            return res.status(403).json({ error: "Unauthorized animal access" });
         }
 
         const result = await pool.query(
@@ -78,8 +69,8 @@ router.post("/", authMiddleware, async (req, res) => {
 
         res.status(201).json(result.rows[0]);
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to create vet visit" });
+        console.error("Failed to create vet visit:", err);
+        sendRouteError(res, err, "Failed to create vet visit");
     }
 });
 
@@ -102,7 +93,7 @@ router.get("/animal/:animalId", authMiddleware, async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to fetch vet visits" });
+        sendRouteError(res, err, "Failed to fetch vet visits");
     }
 });
 
@@ -137,7 +128,7 @@ router.get("/herd/:herdId/upcoming", authMiddleware, async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to fetch upcoming vet visits" });
+        sendRouteError(res, err, "Failed to fetch upcoming vet visits");
     }
 });
 
@@ -171,7 +162,7 @@ router.get("/unassigned/upcoming", authMiddleware, async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to fetch upcoming vet visits for unassigned animals" });
+        sendRouteError(res, err, "Failed to fetch upcoming vet visits for unassigned animals");
     }
 });
 
@@ -195,12 +186,17 @@ router.get("/:id", authMiddleware, async (req, res) => {
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to fetch vet visit" });
+        sendRouteError(res, err, "Failed to fetch vet visit");
     }
 });
 
 // update single vet visit
 router.put("/:id", authMiddleware, async (req, res) => {
+    const normalized = normalizeVetVisitPayload(req.body);
+    if (normalized.error) {
+        return res.status(400).json({ error: normalized.error });
+    }
+
     const {
         vet_name,
         visit_date,
@@ -213,7 +209,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
         completed = false,
         visit_completed = false,
         follow_up_completed = false
-    } = req.body;
+    } = normalized.value;
 
     try {
         const result = await pool.query(
@@ -257,8 +253,8 @@ router.put("/:id", authMiddleware, async (req, res) => {
 
         res.json(result.rows[0]);
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Error editing vet visit" });
+        console.error("Failed to update vet visit:", err);
+        sendRouteError(res, err, "Error editing vet visit");
     }
 });
 
@@ -282,7 +278,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
         res.json({ message: "Vet visit deleted" });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to delete vet visit" });
+        sendRouteError(res, err, "Failed to delete vet visit");
     }
 })
 

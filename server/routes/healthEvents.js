@@ -2,6 +2,9 @@ const express = require("express");
 const pool = require("../data-source");
 const authMiddleware = require("../middleware/authMiddleware");
 const { ensurePremiumRecordSchema } = require("../services/ensureAppSchema");
+const { normalizeHealthEventPayload } = require("../utils/recordPayloads");
+const { isBlank, normalizeNumber, normalizePositiveId } = require("../utils/requestValues");
+const { sendRouteError } = require("../utils/routeErrors");
 
 const router = express.Router();
 
@@ -9,31 +12,41 @@ function normalizeAnimalIds(value) {
     if (!Array.isArray(value)) return [];
     return [...new Set(
         value
-            .map((id) => Number.parseInt(id, 10))
+            .map((id) => Number(id))
             .filter((id) => Number.isInteger(id) && id > 0)
     )];
 }
 
 function normalizeInventoryUsage(body) {
-    const inventoryItemId = Number.parseInt(body.inventory_item_id, 10);
-    const quantityUsed = Number.parseFloat(body.inventory_quantity_used);
-    if (!Number.isInteger(inventoryItemId) || inventoryItemId <= 0) {
+    if (isBlank(body.inventory_item_id)) {
         return { inventoryItemId: null, quantityUsed: 0 };
     }
+
+    const inventoryItemId = normalizePositiveId(body.inventory_item_id, { label: "Inventory item" });
+    if (inventoryItemId.error) return { error: inventoryItemId.error };
+    const quantityUsed = normalizeNumber(body.inventory_quantity_used, {
+        label: "Inventory amount used",
+        required: true,
+        min: 0,
+        exclusiveMin: true,
+    });
+    if (quantityUsed.error) return { error: quantityUsed.error };
+
     return {
-        inventoryItemId,
-        quantityUsed: Number.isFinite(quantityUsed) && quantityUsed > 0 ? quantityUsed : 0,
+        inventoryItemId: inventoryItemId.value,
+        quantityUsed: quantityUsed.value,
     };
 }
 
 async function consumeHealthInventory(client, userId, body, animalIds) {
-    const { inventoryItemId, quantityUsed } = normalizeInventoryUsage(body);
-    if (!inventoryItemId) return { inventoryItemId: null, quantityUsed: 0 };
-    if (!quantityUsed) {
-        const error = new Error("Inventory amount used must be greater than zero");
+    const usage = normalizeInventoryUsage(body);
+    if (usage.error) {
+        const error = new Error(usage.error);
         error.status = 400;
         throw error;
     }
+    const { inventoryItemId, quantityUsed } = usage;
+    if (!inventoryItemId) return { inventoryItemId: null, quantityUsed: 0 };
 
     const ids = Array.isArray(animalIds) ? animalIds : [animalIds];
     const totalUsed = quantityUsed * ids.length;
@@ -81,14 +94,7 @@ async function consumeHealthInventory(client, userId, body, animalIds) {
 // Create the same health event for multiple owned animals.
 router.post("/bulk", authMiddleware, async (req, res) => {
     const animalIds = normalizeAnimalIds(req.body.animal_ids);
-    const {
-        event_date,
-        type,
-        description,
-        severity,
-        resolved,
-        notes
-    } = req.body;
+    const normalized = normalizeHealthEventPayload(req.body);
 
     if (!animalIds.length) {
         return res.status(400).json({ error: "Select at least one animal" });
@@ -96,12 +102,8 @@ router.post("/bulk", authMiddleware, async (req, res) => {
     if (animalIds.length > 500) {
         return res.status(400).json({ error: "Bulk entries are limited to 500 animals" });
     }
-    if (!event_date) {
-        return res.status(400).json({ error: "Event date is required" });
-    }
-    if (!String(type || "").trim()) {
-        return res.status(400).json({ error: "Event type is required" });
-    }
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const event = normalized.value;
 
     await ensurePremiumRecordSchema();
     const client = await pool.connect();
@@ -130,12 +132,12 @@ router.post("/bulk", authMiddleware, async (req, res) => {
              RETURNING *`,
             [
                 animalIds,
-                event_date,
-                String(type).trim(),
-                description || "",
-                severity || "Low",
-                resolved ?? false,
-                notes || "",
+                event.eventDate,
+                event.type,
+                event.description,
+                event.severity,
+                event.resolved,
+                event.notes,
                 usage.inventoryItemId,
                 usage.quantityUsed,
             ]
@@ -146,7 +148,7 @@ router.post("/bulk", authMiddleware, async (req, res) => {
     } catch (err) {
         await client.query("ROLLBACK");
         console.error(err);
-        res.status(err.status || 500).json({ error: err.status ? err.message : "Failed to create bulk health events" });
+        sendRouteError(res, err, "Failed to create bulk health events");
     } finally {
         client.release();
     }
@@ -154,15 +156,9 @@ router.post("/bulk", authMiddleware, async (req, res) => {
 
 // create health event
 router.post("/", authMiddleware, async (req, res) => {
-    const {
-        animal_id,
-        event_date,
-        type,
-        description,
-        severity,
-        resolved,
-        notes
-    } = req.body;
+    const normalized = normalizeHealthEventPayload(req.body, { requireAnimalId: true });
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const event = normalized.value;
 
     await ensurePremiumRecordSchema();
     const client = await pool.connect();
@@ -171,7 +167,7 @@ router.post("/", authMiddleware, async (req, res) => {
         // ownership check
         const animalCheck = await client.query(
             "SELECT id FROM animals WHERE id=$1 AND user_id=$2",
-            [animal_id, req.user.id]
+            [event.animalId, req.user.id]
         );
 
         if (!animalCheck.rowCount) {
@@ -179,20 +175,20 @@ router.post("/", authMiddleware, async (req, res) => {
             return res.status(403).json({ error: "Unauthorized animal access" });
         }
 
-        const usage = await consumeHealthInventory(client, req.user.id, req.body, Number.parseInt(animal_id, 10));
+        const usage = await consumeHealthInventory(client, req.user.id, req.body, event.animalId);
         const result = await client.query(
             `INSERT INTO health_events
             (animal_id, event_date, type, description, severity, resolved, notes, inventory_item_id, inventory_quantity_used)
             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
             RETURNING *`,
             [
-                animal_id,
-                event_date,
-                type,
-                description,
-                severity,
-                resolved ?? false,
-                notes,
+                event.animalId,
+                event.eventDate,
+                event.type,
+                event.description,
+                event.severity,
+                event.resolved,
+                event.notes,
                 usage.inventoryItemId,
                 usage.quantityUsed,
             ]
@@ -203,7 +199,7 @@ router.post("/", authMiddleware, async (req, res) => {
     } catch (err) {
         await client.query("ROLLBACK");
         console.error(err);
-        res.status(err.status || 500).json({ error: err.status ? err.message : "Failed to create health event" });
+        sendRouteError(res, err, "Failed to create health event");
     } finally {
         client.release();
     }
@@ -224,7 +220,7 @@ router.get("/animal/:animalId", authMiddleware, async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to fetch health events" });
+        sendRouteError(res, err, "Failed to fetch health events");
     }
 });
 
@@ -246,20 +242,15 @@ router.get("/:id", authMiddleware, async (req, res) => {
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to fetch health event" });
+        sendRouteError(res, err, "Failed to fetch health event");
     }
 });
 
 // Update health event
 router.put("/:id", authMiddleware, async (req, res) => {
-    const {
-        event_date,
-        type,
-        description,
-        severity,
-        resolved,
-        notes
-    } = req.body;
+    const normalized = normalizeHealthEventPayload(req.body);
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const event = normalized.value;
 
     try {
          const result = await pool.query(
@@ -276,12 +267,12 @@ router.put("/:id", authMiddleware, async (req, res) => {
               AND a.user_id=$8
             RETURNING he.*`,
             [
-                event_date,
-                type,
-                description,
-                severity,
-                resolved,
-                notes,
+                event.eventDate,
+                event.type,
+                event.description,
+                event.severity,
+                event.resolved,
+                event.notes,
                 req.params.id,
                 req.user.id
             ]
@@ -294,7 +285,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
          res.json(result.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to update health event" });
+        sendRouteError(res, err, "Failed to update health event");
     }
 });
 
@@ -318,7 +309,7 @@ router.delete("/:id" , authMiddleware, async (req, res) => {
         res.json({ message: "Health event deleted" });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to delete health event"});
+        sendRouteError(res, err, "Failed to delete health event");
     }
 });
 

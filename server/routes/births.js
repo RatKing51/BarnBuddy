@@ -2,18 +2,10 @@ const express = require("express");
 const pool = require("../data-source");
 const authMiddleware = require("../middleware/authMiddleware");
 const { ensureBirthSchema } = require("../services/ensureAppSchema");
+const { normalizeBirthPayload } = require("../utils/recordPayloads");
+const { sendRouteError } = require("../utils/routeErrors");
 
 const router = express.Router();
-
-function nullableId(value) {
-    if (value === null || value === undefined || value === "") return null;
-    const number = Number(value);
-    return Number.isInteger(number) && number > 0 ? number : null;
-}
-
-function invalidProvidedId(value, normalized) {
-    return value !== null && value !== undefined && value !== "" && !normalized;
-}
 
 async function validateOwnedBirthReferences(userId, reproductionId, offspringId) {
     if (reproductionId) {
@@ -69,7 +61,7 @@ router.get("/", authMiddleware, async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to fetch births" });
+        sendRouteError(res, err, "Failed to fetch births");
     }
 });
 
@@ -129,7 +121,7 @@ router.get("/animal/:animalId", authMiddleware, async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to fetch animal births" });
+        sendRouteError(res, err, "Failed to fetch animal births");
     }
 });
 
@@ -137,28 +129,32 @@ router.get("/animal/:animalId", authMiddleware, async (req, res) => {
 router.post("/", authMiddleware, async (req, res) => {
     if (!requirePremium(req, res)) return;
 
-    const { reproduction_id, offspring_id, birth_date, birth_weight, birth_notes } = req.body;
-    const reproductionId = nullableId(reproduction_id);
-    const offspringId = nullableId(offspring_id);
-    if (invalidProvidedId(reproduction_id, reproductionId) || invalidProvidedId(offspring_id, offspringId)) {
-        return res.status(400).json({ error: "Reproduction and offspring IDs must be positive whole numbers." });
-    }
+    const normalized = normalizeBirthPayload(req.body);
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const birth = normalized.value;
 
     try {
         await ensureBirthSchema();
-        const ownershipError = await validateOwnedBirthReferences(req.user.id, reproductionId, offspringId);
+        const ownershipError = await validateOwnedBirthReferences(req.user.id, birth.reproductionId, birth.offspringId);
         if (ownershipError) return res.status(400).json({ error: ownershipError });
         const result = await pool.query(
             `INSERT INTO births
             (user_id, reproduction_id, offspring_id, birth_date, birth_weight, birth_notes)
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *`,
-            [req.user.id, reproductionId, offspringId, birth_date || null, birth_weight || null, birth_notes || ""]
+            [
+                req.user.id,
+                birth.reproductionId,
+                birth.offspringId,
+                birth.birthDate,
+                birth.birthWeight,
+                birth.birthNotes,
+            ]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to create birth record" });
+        sendRouteError(res, err, "Failed to create birth record");
     }
 });
 
@@ -167,16 +163,13 @@ router.put("/:id", authMiddleware, async (req, res) => {
     if (!requirePremium(req, res)) return;
 
     const { id } = req.params;
-    const { reproduction_id, offspring_id, birth_date, birth_weight, birth_notes } = req.body;
-    const reproductionId = nullableId(reproduction_id);
-    const offspringId = nullableId(offspring_id);
-    if (invalidProvidedId(reproduction_id, reproductionId) || invalidProvidedId(offspring_id, offspringId)) {
-        return res.status(400).json({ error: "Reproduction and offspring IDs must be positive whole numbers." });
-    }
+    const normalized = normalizeBirthPayload(req.body);
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const birth = normalized.value;
 
     try {
         await ensureBirthSchema();
-        const ownershipError = await validateOwnedBirthReferences(req.user.id, reproductionId, offspringId);
+        const ownershipError = await validateOwnedBirthReferences(req.user.id, birth.reproductionId, birth.offspringId);
         if (ownershipError) return res.status(400).json({ error: ownershipError });
         const result = await pool.query(
             `UPDATE births SET
@@ -184,14 +177,22 @@ router.put("/:id", authMiddleware, async (req, res) => {
             birth_weight = $4, birth_notes = $5
             WHERE id = $6 AND user_id = $7
             RETURNING *`,
-            [reproductionId, offspringId, birth_date || null, birth_weight || null, birth_notes || "", id, req.user.id]
+            [
+                birth.reproductionId,
+                birth.offspringId,
+                birth.birthDate,
+                birth.birthWeight,
+                birth.birthNotes,
+                id,
+                req.user.id,
+            ]
         );
 
         if (result.rows.length === 0) return res.status(404).json({ error: "Birth record not found" });
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to update birth record" });
+        sendRouteError(res, err, "Failed to update birth record");
     }
 });
 
@@ -212,7 +213,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
         res.json({ message: "Birth record deleted successfully" });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to delete birth record" });
+        sendRouteError(res, err, "Failed to delete birth record");
     }
 });
 

@@ -349,7 +349,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate, selectedHer
     } catch (err) {
       setBirthSaveStatus("idle");
       console.error("Error saving birth data:", err);
-      toast.error("Failed to save birth data");
+      toast.error(err.response?.data?.error || "Failed to save birth data");
     }
   };
 

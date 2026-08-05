@@ -189,7 +189,7 @@ export default function HerdFeedRecords({ selectedHerd, isPremium = false, autom
       toast.success("Feed record created.");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to create feed record.");
+      toast.error(err.response?.data?.error || "Failed to create feed record.");
     } finally {
       setAddingFeed(false);
     }
@@ -211,7 +211,7 @@ export default function HerdFeedRecords({ selectedHerd, isPremium = false, autom
     } catch (err) {
       setSaveStatus("idle");
       console.error(err);
-      toast.error("Failed to save feed record.");
+      toast.error(err.response?.data?.error || "Failed to save feed record.");
     }
   };
 

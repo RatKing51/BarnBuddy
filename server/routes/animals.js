@@ -3,6 +3,8 @@ const multer = require("multer");
 const pool = require("../data-source");
 const authMiddleware = require("../middleware/authMiddleware");
 const { detectImageMimeType, supportedImageTypes } = require("../utils/imageFiles");
+const { isBlank, normalizeDateOnly } = require("../utils/requestValues");
+const { sendRouteError } = require("../utils/routeErrors");
 const {
   createAnimalImageKey,
   deleteObject,
@@ -170,13 +172,13 @@ function normalizeWeightUnit(unit) {
 }
 
 function normalizeWeightValue(value) {
-    const number = Number.parseFloat(value);
+    const number = Number(value);
     if (!Number.isFinite(number) || number <= 0) return null;
     return number.toFixed(2);
 }
 
 function normalizeNullableInteger(value) {
-    if (value === null || value === undefined || value === "") return null;
+    if (isBlank(value)) return null;
     const number = Number(value);
     return Number.isInteger(number) ? number : null;
 }
@@ -187,13 +189,9 @@ function normalizeNullableId(value) {
 }
 
 function normalizeNullableDecimal(value) {
-    if (value === null || value === undefined || value === "") return null;
-    const number = Number.parseFloat(value);
+    if (isBlank(value)) return null;
+    const number = Number(value);
     return Number.isFinite(number) ? number : null;
-}
-
-function normalizeNullableDate(value) {
-    return value === null || value === undefined || value === "" ? null : value;
 }
 
 async function ensureAnimalOwner(animalId, userId) {
@@ -267,7 +265,7 @@ router.get("/unassigned", authMiddleware, async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to get animals that are unassigned" });
+        sendRouteError(res, err, "Failed to get animals that are unassigned");
     }
 });
 
@@ -312,7 +310,7 @@ router.get("/dashboard/bootstrap", authMiddleware, async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to load dashboard data" });
+        sendRouteError(res, err, "Failed to load dashboard data");
     }
 });
 
@@ -337,7 +335,7 @@ router.get("/herd/:herdId", authMiddleware, async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to get animals for herd" });
+        sendRouteError(res, err, "Failed to get animals for herd");
     }
 });
 
@@ -349,7 +347,7 @@ router.get("/herd/:herdId/care-summary", authMiddleware, async (req, res) => {
         res.json(await getHerdCareSummaryData(req.user.id, herdId, careWindowDays));
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to get herd care summary" });
+        sendRouteError(res, err, "Failed to get herd care summary");
     }
 });
 
@@ -369,17 +367,21 @@ router.get("/:id/weight-records", authMiddleware, async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to fetch weight records" });
+        sendRouteError(res, err, "Failed to fetch weight records");
     }
 });
 
 router.post("/:id/weight-records", authMiddleware, async (req, res) => {
     const weight = normalizeWeightValue(req.body.weight);
     const unit = normalizeWeightUnit(req.body.unit);
-    const recordedDate = req.body.recorded_date || new Date().toISOString().slice(0, 10);
+    const recordedDate = normalizeDateOnly(
+        req.body.recorded_date || new Date().toISOString().slice(0, 10),
+        { label: "Recorded date", required: true }
+    );
     const notes = req.body.notes || "";
 
     if (!weight) return res.status(400).json({ error: "A positive weight is required" });
+    if (recordedDate.error) return res.status(400).json({ error: recordedDate.error });
 
     try {
         const animal = await ensureAnimalOwner(req.params.id, req.user.id);
@@ -390,24 +392,28 @@ router.post("/:id/weight-records", authMiddleware, async (req, res) => {
              (user_id, animal_id, recorded_date, weight, unit, notes)
              VALUES ($1, $2, $3, $4, $5, $6)
              RETURNING *`,
-            [req.user.id, req.params.id, recordedDate, weight, unit, notes]
+            [req.user.id, req.params.id, recordedDate.value, weight, unit, notes]
         );
         const updatedAnimal = await syncAnimalCurrentWeight(req.params.id, req.user.id);
 
         res.status(201).json({ record: result.rows[0], animal: updatedAnimal });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to create weight record" });
+        sendRouteError(res, err, "Failed to create weight record");
     }
 });
 
 router.put("/:id/weight-records/:recordId", authMiddleware, async (req, res) => {
     const weight = normalizeWeightValue(req.body.weight);
     const unit = normalizeWeightUnit(req.body.unit);
-    const recordedDate = req.body.recorded_date || new Date().toISOString().slice(0, 10);
+    const recordedDate = normalizeDateOnly(
+        req.body.recorded_date || new Date().toISOString().slice(0, 10),
+        { label: "Recorded date", required: true }
+    );
     const notes = req.body.notes || "";
 
     if (!weight) return res.status(400).json({ error: "A positive weight is required" });
+    if (recordedDate.error) return res.status(400).json({ error: recordedDate.error });
 
     try {
         const result = await pool.query(
@@ -424,7 +430,7 @@ router.put("/:id/weight-records/:recordId", authMiddleware, async (req, res) => 
                AND wr.user_id = $7
                AND a.user_id = $7
              RETURNING wr.*`,
-            [recordedDate, weight, unit, notes, req.params.recordId, req.params.id, req.user.id]
+            [recordedDate.value, weight, unit, notes, req.params.recordId, req.params.id, req.user.id]
         );
 
         if (!result.rows.length) {
@@ -435,7 +441,7 @@ router.put("/:id/weight-records/:recordId", authMiddleware, async (req, res) => 
         res.json({ record: result.rows[0], animal: updatedAnimal });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to update weight record" });
+        sendRouteError(res, err, "Failed to update weight record");
     }
 });
 
@@ -461,7 +467,7 @@ router.delete("/:id/weight-records/:recordId", authMiddleware, async (req, res) 
         res.json({ message: "Weight record deleted", animal: updatedAnimal });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to delete weight record" });
+        sendRouteError(res, err, "Failed to delete weight record");
     }
 });
 
@@ -475,7 +481,7 @@ router.get("/", authMiddleware, async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to fetch animals" });
+        sendRouteError(res, err, "Failed to fetch animals");
     }
 });
 
@@ -567,7 +573,7 @@ router.post(
 
     } catch (err) {
       console.error(err);
-      res.status(500).json({ error: "Upload failed" });
+      sendRouteError(res, err, "Upload failed");
     }
   }
 );
@@ -598,7 +604,7 @@ router.get("/:id/image-url", authMiddleware, async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to create image URL" });
+    sendRouteError(res, err, "Failed to create image URL");
   }
 });
 
@@ -644,7 +650,7 @@ router.get(
 
     } catch (err) {
       console.error(err);
-      res.status(500).json({ error: "Failed to retrieve image" });
+      sendRouteError(res, err, "Failed to retrieve image");
     }
   }
 );
@@ -679,7 +685,7 @@ router.delete(
       res.json({ message: "Image removed successfully" });
     } catch (err) {
       console.error(err);
-      res.status(500).json({ error: "Failed to remove image" });
+      sendRouteError(res, err, "Failed to remove image");
     }
   }
 );
@@ -696,7 +702,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to fetch animal" });
+        sendRouteError(res, err, "Failed to fetch animal");
     }
 });
 
@@ -730,7 +736,12 @@ router.post("/", authMiddleware, async (req, res) => {
     age = normalizeNullableInteger(age);
     weight = normalizeNullableDecimal(weight);
     birth_weight = normalizeNullableDecimal(birth_weight);
-    birthdate = normalizeNullableDate(birthdate);
+    const normalizedBirthdate = normalizeDateOnly(birthdate, { label: "Birthdate" });
+    const normalizedDeceasedDate = normalizeDateOnly(deceased_date, { label: "Deceased date" });
+    if (normalizedBirthdate.error) return res.status(400).json({ error: normalizedBirthdate.error });
+    if (normalizedDeceasedDate.error) return res.status(400).json({ error: normalizedDeceasedDate.error });
+    birthdate = normalizedBirthdate.value;
+    deceased_date = normalizedDeceasedDate.value;
     dam_id = normalizeNullableId(dam_id);
     sire_id = normalizeNullableId(sire_id);
     status = normalizeAnimalStatus(status);
@@ -769,7 +780,7 @@ router.post("/", authMiddleware, async (req, res) => {
         res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to create animal" });
+        sendRouteError(res, err, "Failed to create animal");
     }
 });
 
@@ -801,7 +812,12 @@ router.put("/:id", authMiddleware, async (req, res) => {
     species = String(species || "").trim();
     age = normalizeNullableInteger(age);
     weight = normalizeNullableDecimal(weight);
-    birthdate = normalizeNullableDate(birthdate);
+    const normalizedBirthdate = normalizeDateOnly(birthdate, { label: "Birthdate" });
+    const normalizedDeceasedDate = normalizeDateOnly(deceased_date, { label: "Deceased date" });
+    if (normalizedBirthdate.error) return res.status(400).json({ error: normalizedBirthdate.error });
+    if (normalizedDeceasedDate.error) return res.status(400).json({ error: normalizedDeceasedDate.error });
+    birthdate = normalizedBirthdate.value;
+    deceased_date = normalizedDeceasedDate.value;
     dam_id = normalizeNullableId(dam_id);
     sire_id = normalizeNullableId(sire_id);
     status = normalizeAnimalStatus(status);
@@ -858,7 +874,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to update animal" });
+        sendRouteError(res, err, "Failed to update animal");
     }
 });
 
@@ -883,7 +899,7 @@ router.put("/:id/birth-data", authMiddleware, async (req, res) => {
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to update birth data" });
+        sendRouteError(res, err, "Failed to update birth data");
     }
 });
 
@@ -933,7 +949,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
         res.json({ message: "Animal deleted successfully" });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to delete animal" });
+        sendRouteError(res, err, "Failed to delete animal");
     }
 });
 

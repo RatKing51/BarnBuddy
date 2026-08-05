@@ -1,6 +1,7 @@
 const express = require("express");
 const authMiddleware = require("../middleware/authMiddleware");
 const { createRateLimit } = require("../middleware/rateLimit");
+const { normalizeBoolean } = require("../utils/requestValues");
 const {
   getNewsletterSubscriptionByEmail,
   subscribeToNewsletter,
@@ -52,7 +53,7 @@ router.get("/me", authMiddleware, async (req, res) => {
 
 router.patch("/me", authMiddleware, async (req, res) => {
   try {
-    const subscribed = Boolean(req.body.subscribed);
+    const subscribed = normalizeBoolean(req.body.subscribed);
     const subscriber = subscribed
       ? await subscribeToNewsletter({
           email: req.user.email,

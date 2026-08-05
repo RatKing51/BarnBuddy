@@ -512,7 +512,7 @@ export default function AnimalGeneralData({
     } catch (err) {
       setSaveStatus("idle");
       console.error("Failed to update animal:", err.response?.data || err.message);
-      toast.error("Failed to save animal data!");
+      toast.error(err.response?.data?.error || "Failed to save animal data!");
     }
   }
 

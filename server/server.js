@@ -9,6 +9,7 @@ const cors = require("cors");
 const multer = require("multer");
 const { clerkMiddleware } = require("@clerk/express");
 const securityHeaders = require("./middleware/securityHeaders");
+const { getClientError } = require("./utils/routeErrors");
 
 const animalRoutes = require("./routes/animals");
 const herdRoutes = require("./routes/herds")
@@ -115,6 +116,11 @@ app.use((err, req, res, next) => {
 
     if (err.type === "entity.parse.failed") {
       return res.status(400).json({ error: "Request body contains invalid JSON." });
+    }
+
+    const clientError = getClientError(err);
+    if (clientError) {
+      return res.status(clientError.status).json({ error: clientError.message });
     }
 
     console.error("Server error:", err);

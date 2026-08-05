@@ -741,7 +741,7 @@ export default function Dashboard() {
       return null;
     } catch (err) {
       console.error(err);
-      toast.error("Failed to create new animal!");
+      toast.error(err.response?.data?.error || "Failed to create new animal!");
       return null;
     } finally {
       setAddingAnimal(false);

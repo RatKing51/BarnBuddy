@@ -2,6 +2,9 @@ const express = require("express");
 const pool = require("../data-source");
 const authMiddleware = require("../middleware/authMiddleware");
 const { ensurePremiumRecordSchema } = require("../services/ensureAppSchema");
+const { normalizeVaccinationPayload } = require("../utils/recordPayloads");
+const { isBlank, normalizeNumber, normalizePositiveId } = require("../utils/requestValues");
+const { sendRouteError } = require("../utils/routeErrors");
 
 const router = express.Router();
 
@@ -9,31 +12,41 @@ function normalizeAnimalIds(value) {
     if (!Array.isArray(value)) return [];
     return [...new Set(
         value
-            .map((id) => Number.parseInt(id, 10))
+            .map((id) => Number(id))
             .filter((id) => Number.isInteger(id) && id > 0)
     )];
 }
 
 function normalizeInventoryUsage(body) {
-    const inventoryItemId = Number.parseInt(body.inventory_item_id, 10);
-    const quantityUsed = Number.parseFloat(body.inventory_quantity_used);
-    if (!Number.isInteger(inventoryItemId) || inventoryItemId <= 0) {
+    if (isBlank(body.inventory_item_id)) {
         return { inventoryItemId: null, quantityUsed: 0 };
     }
+
+    const inventoryItemId = normalizePositiveId(body.inventory_item_id, { label: "Inventory item" });
+    if (inventoryItemId.error) return { error: inventoryItemId.error };
+    const quantityUsed = normalizeNumber(body.inventory_quantity_used, {
+        label: "Inventory amount used",
+        required: true,
+        min: 0,
+        exclusiveMin: true,
+    });
+    if (quantityUsed.error) return { error: quantityUsed.error };
+
     return {
-        inventoryItemId,
-        quantityUsed: Number.isFinite(quantityUsed) && quantityUsed > 0 ? quantityUsed : 0,
+        inventoryItemId: inventoryItemId.value,
+        quantityUsed: quantityUsed.value,
     };
 }
 
 async function consumeVaccinationInventory(client, userId, body, animalIds) {
-    const { inventoryItemId, quantityUsed } = normalizeInventoryUsage(body);
-    if (!inventoryItemId) return { inventoryItemId: null, quantityUsed: 0 };
-    if (!quantityUsed) {
-        const error = new Error("Inventory amount used must be greater than zero");
+    const usage = normalizeInventoryUsage(body);
+    if (usage.error) {
+        const error = new Error(usage.error);
         error.status = 400;
         throw error;
     }
+    const { inventoryItemId, quantityUsed } = usage;
+    if (!inventoryItemId) return { inventoryItemId: null, quantityUsed: 0 };
 
     const ids = Array.isArray(animalIds) ? animalIds : [animalIds];
     const totalUsed = quantityUsed * ids.length;
@@ -81,13 +94,7 @@ async function consumeVaccinationInventory(client, userId, body, animalIds) {
 // Create the same vaccination record for multiple owned animals.
 router.post("/bulk", authMiddleware, async (req, res) => {
     const animalIds = normalizeAnimalIds(req.body.animal_ids);
-    const {
-        vaccine_name,
-        date_given,
-        next_due_date,
-        dosage,
-        notes
-    } = req.body;
+    const normalized = normalizeVaccinationPayload(req.body);
 
     if (!animalIds.length) {
         return res.status(400).json({ error: "Select at least one animal" });
@@ -95,12 +102,8 @@ router.post("/bulk", authMiddleware, async (req, res) => {
     if (animalIds.length > 500) {
         return res.status(400).json({ error: "Bulk entries are limited to 500 animals" });
     }
-    if (!String(vaccine_name || "").trim()) {
-        return res.status(400).json({ error: "Vaccine name is required" });
-    }
-    if (!date_given) {
-        return res.status(400).json({ error: "Date given is required" });
-    }
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const vaccination = normalized.value;
 
     await ensurePremiumRecordSchema();
     const client = await pool.connect();
@@ -129,11 +132,11 @@ router.post("/bulk", authMiddleware, async (req, res) => {
              RETURNING *`,
             [
                 animalIds,
-                String(vaccine_name).trim(),
-                date_given,
-                next_due_date || null,
-                dosage || null,
-                notes || "",
+                vaccination.vaccineName,
+                vaccination.dateGiven,
+                vaccination.nextDueDate,
+                vaccination.dosage,
+                vaccination.notes,
                 usage.inventoryItemId,
                 usage.quantityUsed,
             ]
@@ -144,7 +147,7 @@ router.post("/bulk", authMiddleware, async (req, res) => {
     } catch (err) {
         await client.query("ROLLBACK");
         console.error(err);
-        res.status(err.status || 500).json({ error: err.status ? err.message : "Failed to create bulk vaccinations" });
+        sendRouteError(res, err, "Failed to create bulk vaccinations");
     } finally {
         client.release();
     }
@@ -170,20 +173,15 @@ router.get("/animal/:animalId", authMiddleware, async (req, res) => {
         res.json(result.rows);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Failed to fetch vaccinations" });
+        sendRouteError(res, err, "Failed to fetch vaccinations");
     }
 });
 
 // create a vaccination
 router.post("/", authMiddleware, async (req, res) =>{
-    const {
-        animal_id,
-        vaccine_name,
-        date_given,
-        next_due_date,
-        dosage,
-        notes
-    } = req.body;
+    const normalized = normalizeVaccinationPayload(req.body, { requireAnimalId: true });
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const vaccination = normalized.value;
 
     await ensurePremiumRecordSchema();
     const client = await pool.connect();
@@ -191,14 +189,14 @@ router.post("/", authMiddleware, async (req, res) =>{
         await client.query("BEGIN");
         const animalCheck = await client.query(
             "SELECT id FROM animals WHERE id = $1 AND user_id = $2",
-            [animal_id, req.user.id]
+            [vaccination.animalId, req.user.id]
         );
         if (!animalCheck.rowCount) {
             await client.query("ROLLBACK");
             return res.status(403).json({ error: "Unauthorized animal access" });
         }
 
-        const usage = await consumeVaccinationInventory(client, req.user.id, req.body, Number.parseInt(animal_id, 10));
+        const usage = await consumeVaccinationInventory(client, req.user.id, req.body, vaccination.animalId);
         const result = await client.query(
             `
             INSERT INTO vaccinations
@@ -206,7 +204,16 @@ router.post("/", authMiddleware, async (req, res) =>{
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
             `,
-            [animal_id, vaccine_name, date_given, next_due_date, dosage, notes, usage.inventoryItemId, usage.quantityUsed]
+            [
+                vaccination.animalId,
+                vaccination.vaccineName,
+                vaccination.dateGiven,
+                vaccination.nextDueDate,
+                vaccination.dosage,
+                vaccination.notes,
+                usage.inventoryItemId,
+                usage.quantityUsed,
+            ]
         );
 
         await client.query("COMMIT");
@@ -214,7 +221,7 @@ router.post("/", authMiddleware, async (req, res) =>{
     } catch (err) {
         await client.query("ROLLBACK");
         console.error(err);
-        res.status(err.status || 500).json({ error: err.status ? err.message : "Failed to create vaccination" });
+        sendRouteError(res, err, "Failed to create vaccination");
     } finally {
         client.release();
     }
@@ -223,13 +230,9 @@ router.post("/", authMiddleware, async (req, res) =>{
 // updating a vaccine
 router.put("/:id", authMiddleware, async (req, res) => {
     const { id } = req.params;
-    const {
-        vaccine_name,
-        date_given,
-        next_due_date,
-        dosage,
-        notes
-    } = req.body;
+    const normalized = normalizeVaccinationPayload(req.body);
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const vaccination = normalized.value;
 
     try {
         const result = await pool.query(
@@ -247,11 +250,11 @@ router.put("/:id", authMiddleware, async (req, res) => {
             RETURNING v.*
             `,
             [
-                vaccine_name,
-                date_given,
-                next_due_date,
-                dosage,
-                notes,
+                vaccination.vaccineName,
+                vaccination.dateGiven,
+                vaccination.nextDueDate,
+                vaccination.dosage,
+                vaccination.notes,
                 id,
                 req.user.id
             ]
@@ -265,7 +268,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to update vaccination" });
+        sendRouteError(res, err, "Failed to update vaccination");
     }
 });
 
@@ -293,7 +296,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
         res.json({ message: "Vaccination Deleted" });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to Delete vaccination" });
+        sendRouteError(res, err, "Failed to delete vaccination");
     }
 });
 

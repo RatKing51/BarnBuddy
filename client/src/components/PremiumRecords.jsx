@@ -408,7 +408,7 @@ export default function PremiumRecords({
       toast.success("Reproduction record created.");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to create reproduction record.");
+      toast.error(err.response?.data?.error || "Failed to create reproduction record.");
     } finally {
       setAddingReproduction(false);
     }
@@ -429,7 +429,7 @@ export default function PremiumRecords({
     } catch (err) {
       setSaveStatus("idle");
       console.error(err);
-      toast.error("Failed to save reproduction record.");
+      toast.error(err.response?.data?.error || "Failed to save reproduction record.");
     }
   };
 
@@ -469,7 +469,7 @@ export default function PremiumRecords({
       toast.success("Finance record created.");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to create finance record.");
+      toast.error(err.response?.data?.error || "Failed to create finance record.");
     } finally {
       setAddingFinance(false);
     }
@@ -491,7 +491,7 @@ export default function PremiumRecords({
     } catch (err) {
       setSaveStatus("idle");
       console.error(err);
-      toast.error("Failed to save finance record.");
+      toast.error(err.response?.data?.error || "Failed to save finance record.");
     }
   };
 
@@ -601,7 +601,7 @@ export default function PremiumRecords({
     } catch (err) {
       setSaveStatus("idle");
       console.error(err);
-      toast.error("Failed to save animal parents.");
+      toast.error(err.response?.data?.error || "Failed to save animal parents.");
     }
   };
   const addOffspring = async () => {
@@ -676,7 +676,7 @@ export default function PremiumRecords({
       toast.success("Offspring linked to this breeding.");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to add offspring.");
+      toast.error(err.response?.data?.error || "Failed to add offspring.");
     } finally {
       setAddingOffspring(false);
     }
