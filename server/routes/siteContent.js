@@ -99,6 +99,9 @@ function getPrimaryEmailFromClerkUser(clerkUser) {
 function normalizeClerkUser(clerkUser) {
   const publicMetadata = clerkUser.publicMetadata || clerkUser.public_metadata || {};
   const privateMetadata = clerkUser.privateMetadata || clerkUser.private_metadata || {};
+  const emailAddresses = clerkUser.emailAddresses || clerkUser.email_addresses || [];
+  const phoneNumbers = clerkUser.phoneNumbers || clerkUser.phone_numbers || [];
+  const externalAccounts = clerkUser.externalAccounts || clerkUser.external_accounts || [];
   const email = getPrimaryEmailFromClerkUser(clerkUser);
   const premiumExpiresAt = asTrimmedString(publicMetadata.premiumExpiresAt);
   const premiumExpiresTime = premiumExpiresAt ? Date.parse(premiumExpiresAt) : 0;
@@ -116,8 +119,31 @@ function normalizeClerkUser(clerkUser) {
     name,
     email,
     imageUrl: clerkUser.imageUrl || clerkUser.image_url || "",
+    username: clerkUser.username || "",
     createdAt: clerkUser.createdAt || clerkUser.created_at || null,
     lastSignInAt: clerkUser.lastSignInAt || clerkUser.last_sign_in_at || null,
+    lastActiveAt: clerkUser.lastActiveAt || clerkUser.last_active_at || null,
+    banned: clerkUser.banned === true,
+    locked: clerkUser.locked === true,
+    passwordEnabled: clerkUser.passwordEnabled === true || clerkUser.password_enabled === true,
+    twoFactorEnabled: clerkUser.twoFactorEnabled === true || clerkUser.two_factor_enabled === true,
+    emailAddresses: emailAddresses.map((address) => ({
+      id: address.id || "",
+      email: getEmailAddressValue(address),
+      verified: (address.verification?.status || address.verification?.status_code) === "verified",
+      primary: address.id === (clerkUser.primaryEmailAddressId || clerkUser.primary_email_address_id),
+    })),
+    phoneNumbers: phoneNumbers.map((phone) => ({
+      id: phone.id || "",
+      phoneNumber: phone.phoneNumber || phone.phone_number || "",
+      verified: (phone.verification?.status || phone.verification?.status_code) === "verified",
+      primary: phone.id === (clerkUser.primaryPhoneNumberId || clerkUser.primary_phone_number_id),
+    })),
+    connectedAccounts: externalAccounts.map((account) => ({
+      id: account.id || "",
+      provider: account.provider || account.provider_user_id || "Connected account",
+      email: account.emailAddress || account.email_address || "",
+    })),
     publicMetadata,
     adminFlags: Array.isArray(privateMetadata.adminFlags) ? privateMetadata.adminFlags : [],
     adminNote: asTrimmedString(privateMetadata.adminNote),
@@ -177,7 +203,21 @@ async function getLocalUserByClerkId(clerkUserId) {
             subscription_status,
             subscription_is_premium,
             subscription_source,
-            subscription_expires_at
+            subscription_expires_at,
+            onboarding_required,
+            onboarding_completed,
+            user_type,
+            primary_species,
+            herd_size_range,
+            main_goal,
+            setup_mode,
+            created_first_animal,
+            care_window_days,
+            dashboard_density,
+            app_theme,
+            animal_primary_identifier,
+            email_updates,
+            automatic_reminders
      FROM users
      WHERE clerk_user_id = $1
      LIMIT 1`,
@@ -289,6 +329,13 @@ async function getCountIfTablesExist(tableNames, query, params = []) {
   return Number(result.rows[0]?.count) || 0;
 }
 
+async function getRowsIfTableExists(tableName, query, params = []) {
+  if (!(await tableExists(tableName))) return [];
+
+  const result = await pool.query(query, params);
+  return result.rows;
+}
+
 async function getUserDetailsForAdmin(clerkUserId) {
   const localUser = await getLocalUserByClerkId(clerkUserId);
 
@@ -304,9 +351,26 @@ async function getUserDetailsForAdmin(clerkUserId) {
         healthEvents: 0,
         vetVisits: 0,
         vaccinations: 0,
+        weightRecords: 0,
+        financeRecords: 0,
+        feedRecords: 0,
+        inventoryRecords: 0,
+        reproductions: 0,
+        births: 0,
+        ffaProjects: 0,
+        ffaAnimals: 0,
+        ffaActivities: 0,
+        ffaFinances: 0,
+        importRequests: 0,
+        activityEvents: 0,
+        supportMessages: 0,
         premiumRecords: 0,
       },
       herds: [],
+      animals: [],
+      importRequests: [],
+      supportHistory: [],
+      newsletter: null,
       recentActivity: [],
     };
   }
@@ -320,6 +384,7 @@ async function getUserDetailsForAdmin(clerkUserId) {
     healthEventCount,
     vetVisitCount,
     vaccinationCount,
+    weightRecordCount,
     financeCount,
     feedCount,
     inventoryCount,
@@ -329,7 +394,14 @@ async function getUserDetailsForAdmin(clerkUserId) {
     ffaAnimalCount,
     ffaActivityCount,
     ffaFinanceCount,
+    importRequestCount,
+    activityEventCount,
+    supportMessageCount,
     herdsResult,
+    animals,
+    importRequests,
+    supportHistory,
+    newsletterRows,
     activity,
   ] = await Promise.all([
     getCountIfTableExists("herds", "SELECT COUNT(*)::int AS count FROM herds WHERE user_id = $1", [localUser.id]),
@@ -340,6 +412,7 @@ async function getUserDetailsForAdmin(clerkUserId) {
     getCountIfTablesExist(["health_events", "animals"], "SELECT COUNT(*)::int AS count FROM health_events he JOIN animals a ON a.id = he.animal_id WHERE a.user_id = $1", [localUser.id]),
     getCountIfTablesExist(["vet_visits", "animals"], "SELECT COUNT(*)::int AS count FROM vet_visits vv JOIN animals a ON a.id = vv.animal_id WHERE a.user_id = $1", [localUser.id]),
     getCountIfTablesExist(["vaccinations", "animals"], "SELECT COUNT(*)::int AS count FROM vaccinations v JOIN animals a ON a.id = v.animal_id WHERE a.user_id = $1", [localUser.id]),
+    getCountIfTablesExist(["weight_records", "animals"], "SELECT COUNT(*)::int AS count FROM weight_records wr JOIN animals a ON a.id = wr.animal_id WHERE a.user_id = $1", [localUser.id]),
     getCountIfTableExists("finance_records", "SELECT COUNT(*)::int AS count FROM finance_records WHERE user_id = $1", [localUser.id]),
     getCountIfTableExists("feed_records", "SELECT COUNT(*)::int AS count FROM feed_records WHERE user_id = $1", [localUser.id]),
     getCountIfTableExists("inventory_records", "SELECT COUNT(*)::int AS count FROM inventory_records WHERE user_id = $1", [localUser.id]),
@@ -349,6 +422,9 @@ async function getUserDetailsForAdmin(clerkUserId) {
     getCountIfTableExists("ffa_project_animals", "SELECT COUNT(*)::int AS count FROM ffa_project_animals WHERE user_id = $1", [localUser.id]),
     getCountIfTableExists("ffa_project_activities", "SELECT COUNT(*)::int AS count FROM ffa_project_activities WHERE user_id = $1", [localUser.id]),
     getCountIfTableExists("ffa_project_finances", "SELECT COUNT(*)::int AS count FROM ffa_project_finances WHERE user_id = $1", [localUser.id]),
+    getCountIfTableExists("import_assistant_requests", "SELECT COUNT(*)::int AS count FROM import_assistant_requests WHERE user_id = $1", [localUser.id]),
+    getCountIfTableExists("user_activity_log", "SELECT COUNT(*)::int AS count FROM user_activity_log WHERE user_id = $1", [localUser.id]),
+    getCountIfTableExists("contact_messages", "SELECT COUNT(*)::int AS count FROM contact_messages WHERE LOWER(email) = LOWER($1)", [localUser.email]),
     Promise.all([tableExists("herds"), tableExists("animals")]).then(([hasHerds, hasAnimals]) => {
       if (!hasHerds) return { rows: [] };
 
@@ -380,7 +456,42 @@ async function getUserDetailsForAdmin(clerkUserId) {
         [localUser.id]
       );
     }),
-    getUserActivity({ userId: localUser.id, limit: 8 }).catch((err) => {
+    getRowsIfTableExists(
+      "animals",
+      `SELECT id, herd_id, name, species, sex, tag_id, status, birthdate, weight, created_at
+       FROM animals
+       WHERE user_id = $1
+       ORDER BY created_at DESC NULLS LAST, id DESC
+       LIMIT 24`,
+      [localUser.id]
+    ),
+    getRowsIfTableExists(
+      "import_assistant_requests",
+      `SELECT id, record_format, transfer_priority, file_name, file_size, ai_extraction_status, status, created_at, updated_at
+       FROM import_assistant_requests
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 12`,
+      [localUser.id]
+    ),
+    getRowsIfTableExists(
+      "contact_messages",
+      `SELECT id, name, email, topic, message, status, created_at, updated_at
+       FROM contact_messages
+       WHERE LOWER(email) = LOWER($1)
+       ORDER BY created_at DESC
+       LIMIT 20`,
+      [localUser.email]
+    ),
+    getRowsIfTableExists(
+      "newsletter_subscribers",
+      `SELECT id, email, status, source, subscribed_at, unsubscribed_at, updated_at
+       FROM newsletter_subscribers
+       WHERE LOWER(email) = LOWER($1)
+       LIMIT 1`,
+      [localUser.email]
+    ),
+    getUserActivity({ userId: localUser.id, limit: 30 }).catch((err) => {
       console.warn("Failed to load recent user activity for admin details:", err.message);
       return [];
     }),
@@ -397,9 +508,26 @@ async function getUserDetailsForAdmin(clerkUserId) {
       healthEvents: healthEventCount,
       vetVisits: vetVisitCount,
       vaccinations: vaccinationCount,
+      weightRecords: weightRecordCount,
+      financeRecords: financeCount,
+      feedRecords: feedCount,
+      inventoryRecords: inventoryCount,
+      reproductions: reproductionCount,
+      births: birthCount,
+      ffaProjects: ffaProjectCount,
+      ffaAnimals: ffaAnimalCount,
+      ffaActivities: ffaActivityCount,
+      ffaFinances: ffaFinanceCount,
+      importRequests: importRequestCount,
+      activityEvents: activityEventCount,
+      supportMessages: supportMessageCount,
       premiumRecords: financeCount + feedCount + inventoryCount + reproductionCount + birthCount + ffaProjectCount + ffaAnimalCount + ffaActivityCount + ffaFinanceCount,
     },
     herds: herdsResult.rows,
+    animals,
+    importRequests,
+    supportHistory,
+    newsletter: newsletterRows[0] || null,
     recentActivity: activity,
   };
 }

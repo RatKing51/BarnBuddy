@@ -3,6 +3,7 @@ import { toast } from 'react-toastify'
 import { API_BASE_URL, API_URL } from '../config/env'
 import { useAuth } from '../context/AuthContext'
 import ImageCropModal from '../components/ImageCropModal'
+import AdminSupportDesk from '../components/AdminSupportDesk'
 import ReviewLandingCard from '../components/ReviewLandingCard'
 import { defaultSiteContent } from '../data/siteContent'
 import { getSiteAssetUrl, resolveSiteImageUrl } from '../config/siteImages'
@@ -214,6 +215,42 @@ const premiumDurationOptions = [
   ['custom', 'Custom date'],
 ]
 
+const websiteContentTabs = new Set([
+  'overview',
+  'announcement',
+  'maintenance',
+  'branding',
+  'carousel',
+  'news',
+  'reviews',
+  'status',
+  'media',
+  'links',
+])
+
+const adminTabHeaders = {
+  support: {
+    eyebrow: 'Customer support',
+    title: 'Understand the customer before you respond',
+    description: 'Account health, farm records, support history, and activity in one place.',
+  },
+  users: {
+    eyebrow: 'Account controls',
+    title: 'Manage customer access and retained data',
+    description: 'Subscription changes and destructive tools are kept in this dedicated area.',
+  },
+  activity: {
+    eyebrow: 'Administration',
+    title: 'Review changes made by admin members',
+    description: 'A traceable history of content, account, and support operations.',
+  },
+  userActivity: {
+    eyebrow: 'Customer activity',
+    title: 'Inspect the complete customer activity stream',
+    description: 'Successful record changes captured across BarnBuddy.',
+  },
+}
+
 function EmptyState({ title, text, action }) {
   return (
     <div className="rounded-lg border border-dashed border-slate-700 bg-slate-950/35 p-8 text-center">
@@ -260,7 +297,6 @@ export default function AdminContent() {
   const [savingAdminFlags, setSavingAdminFlags] = useState(false)
   const [mediaLibrary, setMediaLibrary] = useState([])
   const [supportMessages, setSupportMessages] = useState([])
-  const [newsletterSubscribers, setNewsletterSubscribers] = useState([])
   const [adminDataLoading, setAdminDataLoading] = useState(false)
   const [accessDenied, setAccessDenied] = useState(false)
   const [notAuthenticated, setNotAuthenticated] = useState(false)
@@ -338,10 +374,14 @@ export default function AdminContent() {
 
       const users = Array.isArray(data.users) ? data.users : []
       setAdminUsers(users)
-      setSelectedAdminUserId((current) => current || users[0]?.clerkUserId || '')
+      setSelectedAdminUserId((current) => (
+        users.some((user) => user.clerkUserId === current) ? current : users[0]?.clerkUserId || ''
+      ))
+      return users
     } catch (err) {
       console.warn('Failed to load admin users:', err.message)
       toast.error(err.message || 'Failed to load users.')
+      return []
     } finally {
       setAdminUsersLoading(false)
     }
@@ -357,6 +397,7 @@ export default function AdminContent() {
     try {
       setAdminUserDetailsLoading(true)
       setAdminUserDetailsError('')
+      setAdminUserDetails(null)
       const res = await authFetch(`${API_BASE_URL}/site-content/admin/users/${encodeURIComponent(clerkUserId)}/details`)
       const data = await res.json().catch(() => ({}))
 
@@ -394,7 +435,6 @@ export default function AdminContent() {
       if (mediaRes.ok) setMediaLibrary(Array.isArray(mediaData.media) ? mediaData.media : [])
       if (supportRes.ok) {
         setSupportMessages(Array.isArray(supportData.messages) ? supportData.messages : [])
-        setNewsletterSubscribers(Array.isArray(supportData.newsletterSubscribers) ? supportData.newsletterSubscribers : [])
       }
     } catch (err) {
       console.warn('Failed to load admin tools:', err.message)
@@ -510,11 +550,18 @@ export default function AdminContent() {
   const selectedCarouselSlide = (content.carouselSlides || [])[selectedCarouselIndex] || null
   const selectedAdminUser = adminUsers.find((user) => user.clerkUserId === selectedAdminUserId) || adminUsers[0] || null
   const selectedAdminUserFlags = useMemo(() => selectedAdminUser?.adminFlags || [], [selectedAdminUser?.adminFlags])
+  const unresolvedSupportCount = supportMessages.filter((message) => message.status !== 'closed').length
+  const isWebsiteContentTab = websiteContentTabs.has(activeTab)
   const featuredPostId = content.newsPosts.find((post) => post.featured)?.id || ''
   const hasUnsavedChanges = useMemo(
     () => JSON.stringify(content) !== JSON.stringify(lastSavedContent),
     [content, lastSavedContent]
   )
+  const activeHeader = adminTabHeaders[activeTab] || {
+    eyebrow: 'Website content',
+    title: 'Manage updates, posts, and service status',
+    description: hasUnsavedChanges ? 'Unsaved website changes' : 'All website changes saved',
+  }
 
   useEffect(() => {
     setAdminFlagsDraft(selectedAdminUserFlags)
@@ -830,6 +877,26 @@ export default function AdminContent() {
     await loadAdminUsers(userSearch)
   }
 
+  async function findSupportCustomer(identifier) {
+    const query = String(identifier || '').trim()
+    if (!query) return
+
+    setUserSearch(query)
+    const users = await loadAdminUsers(query)
+    if (!users.length) {
+      toast.info('No BarnBuddy account matched that support email.')
+      return
+    }
+
+    setSelectedAdminUserId(users[0].clerkUserId)
+  }
+
+  function openFullUserActivity(userId) {
+    if (!userId) return
+    setSelectedActivityUserId(String(userId))
+    setActiveTab('userActivity')
+  }
+
   function queueSiteImageCrop(event, target) {
     const file = event.target.files?.[0]
     event.target.value = ''
@@ -962,6 +1029,12 @@ export default function AdminContent() {
       }
 
       setSupportMessages((current) => current.map((message) => (message.id === id ? data.message : message)))
+      setAdminUserDetails((current) => current
+        ? {
+            ...current,
+            supportHistory: (current.supportHistory || []).map((message) => (message.id === id ? data.message : message)),
+          }
+        : current)
       toast.success('Support message updated.')
       await loadAdminActivity()
     } catch (err) {
@@ -1046,14 +1119,16 @@ export default function AdminContent() {
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">BarnBuddy</p>
               <h1 className="mt-1 text-xl font-semibold">Admin</h1>
             </div>
-            <button
-              type="button"
-              onClick={saveContent}
-              disabled={saving}
-              className="rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60 lg:hidden"
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </button>
+            {isWebsiteContentTab && (
+              <button
+                type="button"
+                onClick={saveContent}
+                disabled={saving}
+                className="rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60 lg:hidden"
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            )}
           </div>
 
           <a
@@ -1075,7 +1150,7 @@ export default function AdminContent() {
               ['status', 'Status'],
               ['media', 'Media'],
               ['links', 'Links'],
-              ['support', 'Support'],
+              ['support', 'Support desk'],
               ['users', 'Users'],
               ['activity', 'Admin activity'],
               ['userActivity', 'User activity'],
@@ -1090,7 +1165,14 @@ export default function AdminContent() {
                     : 'bg-slate-950/40 text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                {label}
+                <span className="flex items-center justify-between gap-2">
+                  <span>{label}</span>
+                  {id === 'support' && unresolvedSupportCount > 0 && (
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] ${activeTab === id ? 'bg-white/20 text-white' : 'bg-sky-500/15 text-sky-200'}`}>
+                      {unresolvedSupportCount}
+                    </span>
+                  )}
+                </span>
               </button>
             ))}
           </nav>
@@ -1107,13 +1189,13 @@ export default function AdminContent() {
         <section className="min-w-0 px-4 py-6 sm:px-6 lg:px-8">
           <header className="flex flex-col gap-4 border-b border-slate-800 pb-5 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Website content</p>
-              <h2 className="mt-2 text-3xl font-semibold leading-tight">Manage updates, posts, and service status</h2>
-              <p className={`mt-2 text-sm ${hasUnsavedChanges ? 'text-amber-300' : 'text-emerald-300'}`}>
-                {hasUnsavedChanges ? 'Unsaved changes' : 'All changes saved'}
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{activeHeader.eyebrow}</p>
+              <h2 className="mt-2 text-3xl font-semibold leading-tight">{activeHeader.title}</h2>
+              <p className={`mt-2 text-sm ${isWebsiteContentTab ? (hasUnsavedChanges ? 'text-amber-300' : 'text-emerald-300') : 'text-slate-400'}`}>
+                {activeHeader.description}
               </p>
             </div>
-            <div className="hidden gap-3 lg:flex">
+            {isWebsiteContentTab && <div className="hidden gap-3 lg:flex">
               <a
                 href="/"
                 className="rounded-md border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
@@ -1148,7 +1230,7 @@ export default function AdminContent() {
               >
                 {saving ? 'Saving...' : 'Save changes'}
               </button>
-            </div>
+            </div>}
           </header>
 
           {activeTab === 'overview' && (
@@ -2084,52 +2166,32 @@ export default function AdminContent() {
           )}
 
           {activeTab === 'support' && (
-            <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_22rem]">
-              <section className="rounded-lg border border-slate-800 bg-slate-900">
-                <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
-                  <div>
-                    <h3 className="text-xl font-semibold">Support inbox</h3>
-                    <p className="mt-1 text-sm text-slate-400">Contact form messages saved from the website.</p>
-                  </div>
-                  <button type="button" onClick={() => loadAdminTools()} className="rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800">
-                    Refresh
-                  </button>
-                </div>
-                <div className="divide-y divide-slate-800">
-                  {supportMessages.map((message) => (
-                    <article key={message.id} className="p-5">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <p className="font-semibold text-white">{message.name} - {message.topic}</p>
-                          <p className="mt-1 text-sm text-slate-400">{message.email} - {formatDateTime(message.created_at)}</p>
-                        </div>
-                        <select className={inputClass('w-fit')} value={message.status} onChange={(event) => updateSupportStatus(message.id, event.target.value)}>
-                          <option value="new">New</option>
-                          <option value="open">Open</option>
-                          <option value="closed">Closed</option>
-                        </select>
-                      </div>
-                      <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-slate-300">{message.message}</p>
-                    </article>
-                  ))}
-                  {!supportMessages.length && <div className="p-5"><EmptyState title="No support messages" text="New contact form submissions will appear here." /></div>}
-                </div>
-              </section>
-
-              <aside className="rounded-lg border border-slate-800 bg-slate-900 p-5">
-                <h3 className="font-semibold">Newsletter</h3>
-                <p className="mt-1 text-sm text-slate-400">Latest subscription records.</p>
-                <div className="mt-4 space-y-3">
-                  {newsletterSubscribers.slice(0, 12).map((subscriber) => (
-                    <div key={subscriber.id} className="rounded-md border border-slate-800 bg-slate-950/45 p-3">
-                      <p className="truncate text-sm font-semibold text-white">{subscriber.email}</p>
-                      <p className="mt-1 text-xs text-slate-500">{subscriber.status} - {subscriber.source}</p>
-                    </div>
-                  ))}
-                  {!newsletterSubscribers.length && <p className="text-sm text-slate-500">No newsletter subscribers yet.</p>}
-                </div>
-              </aside>
-            </div>
+            <AdminSupportDesk
+              users={adminUsers}
+              usersLoading={adminUsersLoading}
+              userSearch={userSearch}
+              onUserSearchChange={setUserSearch}
+              onSearchUsers={searchAdminUsers}
+              onFindUser={findSupportCustomer}
+              selectedUser={selectedAdminUser}
+              onSelectUser={setSelectedAdminUserId}
+              onRefreshUsers={() => loadAdminUsers(userSearch)}
+              details={adminUserDetails}
+              detailsLoading={adminUserDetailsLoading}
+              detailsError={adminUserDetailsError}
+              onRefreshDetails={() => loadAdminUserDetails(selectedAdminUser?.clerkUserId)}
+              onOpenAccountControls={() => setActiveTab('users')}
+              onOpenFullActivity={openFullUserActivity}
+              supportMessages={supportMessages}
+              onUpdateSupportStatus={updateSupportStatus}
+              adminFlagOptions={adminFlagOptions}
+              flagsDraft={adminFlagsDraft}
+              onToggleFlag={toggleAdminFlag}
+              noteDraft={adminNoteDraft}
+              onNoteChange={setAdminNoteDraft}
+              onSaveFlags={saveAdminFlags}
+              savingFlags={savingAdminFlags}
+            />
           )}
 
           {activeTab === 'users' && (
