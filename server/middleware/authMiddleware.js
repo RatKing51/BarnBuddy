@@ -135,6 +135,16 @@ async function authMiddleware(req, res, next) {
         );
         const userState = userStateResult.rows[0] || {};
         const subscription = getSubscriptionFromTrustedState(hasPremiumAccess, userState);
+        const localPremiumSource = normalizeValue(userState.subscription_source);
+        const localPremiumExpiresTime = userState.subscription_expires_at
+            ? new Date(userState.subscription_expires_at).getTime()
+            : 0;
+        const shouldRetainExpiredManualGrant = Boolean(
+            !subscription.isPremium &&
+            localPremiumSource === "manual_admin" &&
+            localPremiumExpiresTime &&
+            localPremiumExpiresTime <= Date.now()
+        );
         await pool.query(
             `UPDATE users
              SET subscription_plan = $1,
@@ -147,8 +157,8 @@ async function authMiddleware(req, res, next) {
                 subscription.plan || "free",
                 subscription.status || (subscription.isPremium ? "active" : "free"),
                 subscription.isPremium === true,
-                subscription.premiumSource || "",
-                subscription.premiumExpiresAt || null,
+                shouldRetainExpiredManualGrant ? "manual_admin" : (subscription.premiumSource || ""),
+                shouldRetainExpiredManualGrant ? userState.subscription_expires_at : (subscription.premiumExpiresAt || null),
                 user.id,
             ]
         );

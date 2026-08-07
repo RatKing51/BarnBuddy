@@ -448,8 +448,8 @@ export default function AdminSupportDesk({
                         {(details?.animals || []).map((animal) => (
                           <div key={animal.id} className="rounded-md border border-slate-800 bg-slate-950/45 p-3">
                             <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="font-semibold text-white">{animal.name || `Animal ${animal.id}`}</p>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-semibold text-white">{animal.name || `Animal ${animal.id}`}</p>
                                 <p className="mt-1 text-xs text-slate-500">
                                   {[humanize(animal.species), humanize(animal.sex), animal.tag_id ? `Tag ${animal.tag_id}` : ''].filter((value) => value && value !== 'Not set').join(' • ') || 'No details'}
                                 </p>

@@ -7,6 +7,33 @@ const { clerkClient } = require("@clerk/express");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+function normalizeMetadataValue(value) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function getManualPremiumMetadataState(metadata = {}, now = Date.now()) {
+  if (normalizeMetadataValue(metadata.premiumSource) !== "manual_admin") return "unmanaged";
+  if (!metadata.premiumExpiresAt) return "lifetime";
+
+  const expiresTime = new Date(metadata.premiumExpiresAt).getTime();
+  if (!Number.isFinite(expiresTime)) return "invalid";
+  return expiresTime <= now ? "expired" : "active";
+}
+
+function buildExpiredManualPremiumMetadata(metadata = {}) {
+  return {
+    ...metadata,
+    plan: "free",
+    subscriptionPlan: "free",
+    subscriptionStatus: "expired",
+    premiumSource: "",
+    premiumExpiresAt: "",
+    premium: false,
+    isPremium: false,
+    hasPremium: false,
+  };
+}
+
 function getExpiryReminderWindow(expiresAt, now = Date.now(), reminderDays = env.notifications.premiumExpiryReminderDays) {
   const expiresTime = new Date(expiresAt).getTime();
   if (!Number.isFinite(expiresTime) || expiresTime <= now) return null;
@@ -108,6 +135,127 @@ async function sendPremiumExpirationReminder(user, { now = Date.now() } = {}) {
   };
 }
 
+async function syncExpiredManualPremiumGrants({ limit = 100, now = Date.now() } = {}) {
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 100, 500));
+  const expiredUsers = await pool.query(
+    `SELECT id, clerk_user_id, email, subscription_expires_at
+     FROM users
+     WHERE COALESCE(subscription_source, '') = 'manual_admin'
+       AND subscription_expires_at IS NOT NULL
+       AND subscription_expires_at <= $1
+     ORDER BY subscription_expires_at ASC
+     LIMIT $2`,
+    [new Date(now).toISOString(), safeLimit]
+  );
+
+  const results = [];
+  for (const user of expiredUsers.rows) {
+    if (!user.clerk_user_id) {
+      await pool.query(
+        `UPDATE users
+         SET subscription_plan = 'free',
+             subscription_status = 'expired',
+             subscription_is_premium = false,
+             subscription_source = '',
+             subscription_expires_at = NULL
+         WHERE id = $1`,
+        [user.id]
+      );
+      results.push({ userId: user.id, expired: true, clerkUpdated: false, skipped: true, reason: "No linked Clerk user" });
+      continue;
+    }
+
+    try {
+      const clerkUser = await clerkClient.users.getUser(user.clerk_user_id);
+      const metadata = clerkUser.publicMetadata || clerkUser.public_metadata || {};
+      const metadataState = getManualPremiumMetadataState(metadata, now);
+
+      if (metadataState === "active" || metadataState === "lifetime") {
+        const clerkExpiration = metadataState === "active"
+          ? new Date(metadata.premiumExpiresAt).toISOString()
+          : null;
+        await pool.query(
+          `UPDATE users
+           SET subscription_plan = 'premium',
+               subscription_status = 'active',
+               subscription_is_premium = true,
+               subscription_source = 'manual_admin',
+               subscription_expires_at = $2
+           WHERE id = $1`,
+          [user.id, clerkExpiration]
+        );
+        results.push({
+          userId: user.id,
+          clerkUserId: user.clerk_user_id,
+          skipped: true,
+          reason: metadataState === "lifetime" ? "Clerk has a lifetime manual grant" : "Clerk has a newer manual expiration",
+        });
+        continue;
+      }
+
+      if (metadataState === "invalid") {
+        throw new Error("Clerk has an invalid manual Premium expiration");
+      }
+
+      if (metadataState === "unmanaged") {
+        const clerkPlan = normalizeMetadataValue(metadata.plan || metadata.subscriptionPlan);
+        const clerkStatus = normalizeMetadataValue(metadata.subscriptionStatus || metadata.subscription_status);
+        const clerkIsFree = clerkPlan === "free" || ["free", "expired"].includes(clerkStatus);
+
+        if (!clerkIsFree) {
+          throw new Error("Clerk Premium metadata is no longer marked as a manual grant");
+        }
+
+        await pool.query(
+          `UPDATE users
+           SET subscription_plan = 'free',
+               subscription_status = 'expired',
+               subscription_is_premium = false,
+               subscription_source = '',
+               subscription_expires_at = NULL
+           WHERE id = $1`,
+          [user.id]
+        );
+        results.push({ userId: user.id, clerkUserId: user.clerk_user_id, expired: true, clerkUpdated: false });
+        continue;
+      }
+
+      await clerkClient.users.updateUser(user.clerk_user_id, {
+        publicMetadata: buildExpiredManualPremiumMetadata(metadata),
+      });
+      await pool.query(
+        `UPDATE users
+         SET subscription_plan = 'free',
+             subscription_status = 'expired',
+             subscription_is_premium = false,
+             subscription_source = '',
+             subscription_expires_at = NULL
+         WHERE id = $1`,
+        [user.id]
+      );
+      results.push({
+        userId: user.id,
+        clerkUserId: user.clerk_user_id,
+        expired: true,
+        clerkUpdated: true,
+      });
+    } catch (err) {
+      console.warn("Could not expire manual Premium metadata in Clerk.", {
+        userId: user.id,
+        clerkUserId: user.clerk_user_id,
+        error: err.message,
+      });
+      results.push({
+        userId: user.id,
+        clerkUserId: user.clerk_user_id,
+        error: err.message || "Failed to expire manual Premium in Clerk",
+      });
+    }
+  }
+
+  return results;
+}
+
 async function sendPremiumExpirationReminders({ limit = 100 } = {}) {
   await ensureAppSchema();
   await ensureNotificationSchema();
@@ -149,12 +297,15 @@ async function sendPremiumExpirationReminders({ limit = 100 } = {}) {
     }
   }
 
+  const expiredManualResults = await syncExpiredManualPremiumGrants({ limit: safeLimit });
+
   await pool.query(
     `UPDATE users
      SET subscription_plan = 'free',
          subscription_status = 'expired',
          subscription_is_premium = false
      WHERE subscription_is_premium = true
+       AND COALESCE(subscription_source, '') <> 'manual_admin'
        AND subscription_expires_at IS NOT NULL
        AND subscription_expires_at <= CURRENT_TIMESTAMP`
   );
@@ -183,13 +334,16 @@ async function sendPremiumExpirationReminders({ limit = 100 } = {}) {
     }
   }
 
-  return results;
+  return [...expiredManualResults, ...results];
 }
 
 module.exports = {
+  buildExpiredManualPremiumMetadata,
   buildPremiumExpirationEmail,
   describeTimeRemaining,
   getExpiryReminderWindow,
+  getManualPremiumMetadataState,
   sendPremiumExpirationReminder,
   sendPremiumExpirationReminders,
+  syncExpiredManualPremiumGrants,
 };

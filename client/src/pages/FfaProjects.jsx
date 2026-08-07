@@ -197,11 +197,11 @@ function ProjectModal({ animals, onClose, onCreated }) {
             {animals.length ? (
               <div className="mt-3 grid max-h-52 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
                 {animals.map((animal) => (
-                  <label key={animal.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${selectedAnimals.includes(animal.id) ? "border-blue-400 bg-blue-500/10" : "border-slate-700 bg-slate-950 hover:border-slate-600"}`}>
-                    <input type="checkbox" className="h-4 w-4 accent-blue-500" checked={selectedAnimals.includes(animal.id)} onChange={() => toggleAnimal(animal.id)} />
-                    <span>
-                      <span className="block text-sm font-bold text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</span>
-                      <span className="block text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · Tag ${animal.tag_id}` : ""}</span>
+                  <label key={animal.id} className={`flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-xl border p-3 transition ${selectedAnimals.includes(animal.id) ? "border-blue-400 bg-blue-500/10" : "border-slate-700 bg-slate-950 hover:border-slate-600"}`}>
+                    <input type="checkbox" className="h-4 w-4 shrink-0 accent-blue-500" checked={selectedAnimals.includes(animal.id)} onChange={() => toggleAnimal(animal.id)} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</span>
+                      <span className="block truncate text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · Tag ${animal.tag_id}` : ""}</span>
                     </span>
                   </label>
                 ))}
@@ -285,13 +285,13 @@ function Overview({ details }) {
         {animals.length ? (
           <div className="grid gap-3 lg:grid-cols-2">
             {animals.map((animal) => (
-              <article key={animal.id} className={`${panelClass} p-5`}>
+              <article key={animal.id} className={`${panelClass} min-w-0 overflow-hidden p-5`}>
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h4 className="font-black text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</h4>
-                    <p className="mt-1 text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · Tag ${animal.tag_id}` : ""}</p>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="truncate font-black text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</h4>
+                    <p className="mt-1 truncate text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · Tag ${animal.tag_id}` : ""}</p>
                   </div>
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${animal.animal_id ? "bg-emerald-500/10 text-emerald-300" : "bg-slate-800 text-slate-400"}`}>{animal.animal_id ? "Linked" : "Snapshot only"}</span>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${animal.animal_id ? "bg-emerald-500/10 text-emerald-300" : "bg-slate-800 text-slate-400"}`}>{animal.animal_id ? "Linked" : "Snapshot only"}</span>
                 </div>
                 <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
                   <div><dt className="text-slate-500">Starting weight</dt><dd className="mt-1 font-bold text-white">{animal.starting_weight ? `${Number(animal.starting_weight).toLocaleString()} lb` : "Not set"}</dd></div>
@@ -486,7 +486,7 @@ function AnimalSetupCard({ projectId, animal, onChanged }) {
   }
   return (
     <article className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
-      <div className="flex items-start justify-between gap-3"><div><h4 className="font-black text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</h4><p className="mt-1 text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · Tag ${animal.tag_id}` : ""}</p></div><button type="button" onClick={remove} className="rounded-lg px-2 py-1 text-xs font-bold text-slate-500 hover:bg-rose-500/10 hover:text-rose-300">Remove</button></div>
+      <div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0 flex-1"><h4 className="truncate font-black text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</h4><p className="mt-1 truncate text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · Tag ${animal.tag_id}` : ""}</p></div><button type="button" onClick={remove} className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-slate-500 hover:bg-rose-500/10 hover:text-rose-300">Remove</button></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="text-xs font-bold text-slate-400">Starting weight<input className={fieldClass} type="number" name="starting_weight" min="0.01" step="0.01" value={form.starting_weight} onChange={change} /></label>
         <label className="text-xs font-bold text-slate-400">Starting value<input className={fieldClass} type="number" name="starting_value" min="0" step="0.01" value={form.starting_value} onChange={change} /></label>
@@ -580,7 +580,7 @@ function Setup({ details, allAnimals, onChanged, onDeleted }) {
         <div className="mt-5 grid gap-3 lg:grid-cols-2">{details.animals.map((animal) => <AnimalSetupCard key={animal.id} projectId={project.id} animal={animal} onChanged={onChanged} />)}</div>
         <div className="mt-6 border-t border-slate-800 pt-5">
           <h4 className="font-black text-white">Add existing animals</h4>
-          {availableAnimals.length ? <><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{availableAnimals.map((animal) => <label key={animal.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 ${selectedAnimals.includes(animal.id) ? "border-blue-400 bg-blue-500/10" : "border-slate-700 bg-slate-950"}`}><input type="checkbox" className="accent-blue-500" checked={selectedAnimals.includes(animal.id)} onChange={() => setSelectedAnimals((current) => current.includes(animal.id) ? current.filter((id) => id !== animal.id) : [...current, animal.id])} /><span><span className="block text-sm font-bold text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</span><span className="text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · ${animal.tag_id}` : ""}</span></span></label>)}</div><button type="button" onClick={addAnimals} disabled={!selectedAnimals.length || addingAnimals} className="mt-4 rounded-xl border border-blue-400/40 px-4 py-2.5 text-sm font-black text-blue-300 hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-40">{addingAnimals ? "Linking…" : `Link selected (${selectedAnimals.length})`}</button></> : <p className="mt-3 text-sm text-slate-500">All of your current animals are already linked to this project.</p>}
+          {availableAnimals.length ? <><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{availableAnimals.map((animal) => <label key={animal.id} className={`flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-xl border p-3 ${selectedAnimals.includes(animal.id) ? "border-blue-400 bg-blue-500/10" : "border-slate-700 bg-slate-950"}`}><input type="checkbox" className="shrink-0 accent-blue-500" checked={selectedAnimals.includes(animal.id)} onChange={() => setSelectedAnimals((current) => current.includes(animal.id) ? current.filter((id) => id !== animal.id) : [...current, animal.id])} /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</span><span className="block truncate text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · ${animal.tag_id}` : ""}</span></span></label>)}</div><button type="button" onClick={addAnimals} disabled={!selectedAnimals.length || addingAnimals} className="mt-4 rounded-xl border border-blue-400/40 px-4 py-2.5 text-sm font-black text-blue-300 hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-40">{addingAnimals ? "Linking…" : `Link selected (${selectedAnimals.length})`}</button></> : <p className="mt-3 text-sm text-slate-500">All of your current animals are already linked to this project.</p>}
         </div>
       </section>
 

@@ -1164,15 +1164,15 @@ export default function Dashboard() {
                 <button
                   key={animal.id}
                   onClick={() => handleSelectAnimal(animal)}
-                  className={`w-full text-left px-4 py-2 rounded-lg transition border cursor-pointer ${
+                  className={`w-full overflow-hidden text-left px-4 py-2 rounded-lg transition border cursor-pointer ${
                     selectedAnimal?.id === animal.id
                       ? "bg-blue-600 border-blue-500 text-white shadow"
                       : "border-gray-600 hover:bg-gray-700 text-gray-200"
                   }`}
                 >
-                  <span className="inline-flex items-center gap-2">
+                  <span className="flex w-full min-w-0 items-center gap-2">
                     <span
-                      className={`inline-block w-2 h-2 rounded-full ${
+                      className={`inline-block h-2 w-2 shrink-0 rounded-full ${
                         urgency === "red"
                           ? "bg-red-400"
                           : urgency === "yellow"
@@ -1184,7 +1184,7 @@ export default function Dashboard() {
                           : "bg-emerald-400"
                       }`}
                     ></span>
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span className="block truncate">{getAnimalPrimaryLabel(animal)}</span>
                       <span className="block truncate text-xs text-gray-400">{getAnimalSecondaryLabel(animal)}</span>
                     </span>
@@ -1342,15 +1342,15 @@ export default function Dashboard() {
                   key={animal.id}
                   type="button"
                   onClick={() => handleSelectAnimal(animal)}
-                  className={`min-w-32 max-w-40 shrink-0 rounded-xl border p-2.5 text-left md:min-w-44 md:max-w-52 md:p-3 ${
+                  className={`min-w-32 max-w-40 shrink-0 overflow-hidden rounded-xl border p-2.5 text-left md:min-w-44 md:max-w-52 md:p-3 ${
                     selectedAnimal?.id === animal.id
                       ? "border-blue-400 bg-blue-600/25"
                       : "border-gray-800 bg-gray-900"
                   }`}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
                     <span
-                      className={`h-2.5 w-2.5 rounded-full ${
+                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${
                         urgency === "red"
                           ? "bg-red-400"
                           : urgency === "yellow"
@@ -1362,7 +1362,7 @@ export default function Dashboard() {
                           : "bg-emerald-400"
                       }`}
                     />
-                    <span className="truncate text-sm font-semibold text-white">{getAnimalPrimaryLabel(animal)}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{getAnimalPrimaryLabel(animal)}</span>
                   </div>
                   <p className="mt-1 truncate text-xs text-gray-400">{animal.species || "Unknown"} - {getAnimalSecondaryLabel(animal)}</p>
                 </button>

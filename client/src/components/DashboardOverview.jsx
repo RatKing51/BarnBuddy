@@ -334,9 +334,9 @@ export default function DashboardOverview({
                     className={`w-full rounded-xl border p-3 text-left transition hover:border-blue-400 hover:bg-gray-800 sm:p-4 ${statusMeta[status].row}`}
                   >
                     <div className="flex items-center justify-between gap-4">
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold text-white">{getAnimalPrimaryLabel(animal)}</p>
-                        <p className="mt-1 text-sm text-gray-400">
+                        <p className="mt-1 truncate text-sm text-gray-400">
                           {animal.species || "Unknown species"} - {getAnimalSecondaryLabel(animal)}
                         </p>
                       </div>
@@ -448,7 +448,7 @@ export default function DashboardOverview({
                 className={`w-full rounded-xl border p-3 text-left transition ${statusMeta[animal.status].row}`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-white">{getAnimalPrimaryLabel(animal)}</p>
                     <p className="mt-1 truncate text-sm text-gray-400">
                       {animal.species || "Unknown"} - {primaryAnimalIdentifier === "tag" ? animal.name || "Name not set" : animal.tag_id || "Tag not set"}

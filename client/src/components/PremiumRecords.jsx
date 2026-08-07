@@ -843,9 +843,9 @@ export default function PremiumRecords({
               <div className="space-y-5">
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
                   {parentCards.map((card) => (
-                    <div key={card.key} className="rounded-xl border border-gray-700 bg-gray-900 p-4">
+                    <div key={card.key} className="min-w-0 overflow-hidden rounded-xl border border-gray-700 bg-gray-900 p-4">
                       <p className="text-xs uppercase tracking-[0.14em] text-gray-500">{card.label}</p>
-                      <p className="mt-2 text-lg font-semibold text-white">{getAnimalDisplayName(card.animal)}</p>
+                      <p className="mt-2 truncate text-lg font-semibold text-white">{getAnimalDisplayName(card.animal)}</p>
                       <p className="mt-1 text-sm text-gray-400">
                         {card.animal?.species || card.fallback}
                         {card.animal?.id === animal.id ? " - this animal" : ""}
