@@ -418,7 +418,7 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
       toast.success("Herd finance record created.");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to create herd finance record.");
+      toast.error(err.response?.data?.error || "Failed to create herd finance record.");
     } finally {
       setAddingFinance(false);
     }

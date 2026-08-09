@@ -5,6 +5,7 @@ const { ensurePremiumRecordSchema } = require("../services/ensureAppSchema");
 const { normalizeVaccinationPayload } = require("../utils/recordPayloads");
 const { isBlank, normalizeNumber, normalizePositiveId } = require("../utils/requestValues");
 const { sendRouteError } = require("../utils/routeErrors");
+const { MAX_BULK_RECORDS } = require("../config/usageLimits");
 
 const router = express.Router();
 
@@ -99,8 +100,8 @@ router.post("/bulk", authMiddleware, async (req, res) => {
     if (!animalIds.length) {
         return res.status(400).json({ error: "Select at least one animal" });
     }
-    if (animalIds.length > 500) {
-        return res.status(400).json({ error: "Bulk entries are limited to 500 animals" });
+    if (animalIds.length > MAX_BULK_RECORDS) {
+        return res.status(400).json({ error: `Bulk entries are limited to ${MAX_BULK_RECORDS} animals` });
     }
     if (normalized.error) return res.status(400).json({ error: normalized.error });
     const vaccination = normalized.value;

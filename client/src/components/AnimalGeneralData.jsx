@@ -500,7 +500,7 @@ export default function AnimalGeneralData({
           savedAnimal = weightRes.data?.animal || savedAnimal;
         } catch (weightErr) {
           console.error("Failed to add weight history record:", weightErr.response?.data || weightErr.message);
-          toast.warning("Animal saved, but weight history was not added.");
+          toast.warning(weightErr.response?.data?.error || "Animal saved, but weight history was not added.");
         }
       }
 

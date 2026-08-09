@@ -2,6 +2,7 @@ const { getAuth } = require("@clerk/express");
 const pool = require("../data-source");
 const { findOrCreateLocalUserFromAuth } = require("../services/clerkUserSync");
 const { attachActivityLogger } = require("../services/userActivity");
+const { enforceUsageLimits } = require("./usageLimits");
 
 function normalizeValue(value) {
     return typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -180,7 +181,7 @@ async function authMiddleware(req, res, next) {
             },
         };
         attachActivityLogger(req, res);
-        next();
+        return enforceUsageLimits(req, res, next);
     } catch (err) {
         console.error("Auth middleware failed:", {
             method: req.method,

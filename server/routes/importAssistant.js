@@ -4,29 +4,20 @@ const pool = require("../data-source");
 const env = require("../config/env");
 const authMiddleware = require("../middleware/authMiddleware");
 const { createRateLimit } = require("../middleware/rateLimit");
+const { MAX_BULK_RECORDS } = require("../config/usageLimits");
 const {
   isR2Configured,
   uploadObject,
 } = require("../services/r2Storage");
 
 const router = express.Router();
-const importRateLimit = createRateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 30,
-  message: "Too many imports. Please wait before trying again.",
-});
-const aiExtractionRateLimit = createRateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 10,
-  message: "AI extraction limit reached. Please wait before trying again.",
-});
 const helpRequestRateLimit = createRateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
   message: "Too many transfer-help requests. Please wait before trying again.",
 });
 
-const MAX_IMPORT_ROWS = 500;
+const MAX_IMPORT_ROWS = MAX_BULK_RECORDS;
 const MAX_HELP_FILE_SIZE = 15 * 1024 * 1024;
 const MAX_AI_FILE_SIZE = 15 * 1024 * 1024;
 const HELP_FILE_TYPES = new Set([
@@ -338,7 +329,7 @@ async function getHerdIdForName(client, userId, herdName) {
   return created.rows[0].id;
 }
 
-router.post("/import", authMiddleware, importRateLimit, async (req, res) => {
+router.post("/import", authMiddleware, async (req, res) => {
   const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
   const skipDuplicates = req.body?.skipDuplicates !== false;
 
@@ -443,7 +434,7 @@ const aiUpload = multer({
   },
 });
 
-router.post("/extract", authMiddleware, aiExtractionRateLimit, aiUpload.single("file"), async (req, res) => {
+router.post("/extract", authMiddleware, aiUpload.single("file"), async (req, res) => {
   if (!env.openai.apiKey) {
     return res.status(503).json({ error: "AI extraction is not configured yet. Add OPENAI_API_KEY on the server." });
   }
