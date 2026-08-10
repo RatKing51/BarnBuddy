@@ -72,19 +72,29 @@ const dotClasses = {
   blue: 'bg-sky-300',
   yellow: 'bg-amber-300',
   red: 'bg-red-300',
+  emerald: 'bg-emerald-300',
+  sky: 'bg-sky-300',
+  amber: 'bg-amber-300',
+}
+
+const statCardClasses = {
+  emerald: 'border-emerald-300/20 bg-emerald-400/[0.06]',
+  sky: 'border-sky-300/20 bg-sky-400/[0.06]',
+  amber: 'border-amber-300/20 bg-amber-400/[0.06]',
+  red: 'border-red-300/20 bg-red-400/[0.06]',
 }
 
 function Field({ label, children, span = '' }) {
   return (
     <label className={`block ${span}`}>
-      <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</span>
-      <div className="mt-2">{children}</div>
+      <span className="text-xs font-bold uppercase tracking-[0.13em] text-slate-400">{label}</span>
+      <div className="mt-2.5">{children}</div>
     </label>
   )
 }
 
 function inputClass(extra = '') {
-  return `w-full rounded-md border border-slate-700/80 bg-slate-950/70 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-sky-300 ${extra}`
+  return `min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2.5 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-sky-300 focus:ring-2 focus:ring-sky-400/15 sm:text-sm ${extra}`
 }
 
 function slugify(value) {
@@ -228,32 +238,134 @@ const websiteContentTabs = new Set([
   'links',
 ])
 
+const adminNavigationGroups = [
+  {
+    label: 'Control center',
+    items: [
+      { id: 'overview', label: 'Overview' },
+    ],
+  },
+  {
+    label: 'Website',
+    items: [
+      { id: 'announcement', label: 'Announcement' },
+      { id: 'maintenance', label: 'Maintenance' },
+      { id: 'branding', label: 'Branding' },
+      { id: 'carousel', label: 'Carousel' },
+      { id: 'news', label: 'News' },
+      { id: 'reviews', label: 'Reviews' },
+      { id: 'status', label: 'Status' },
+      { id: 'media', label: 'Media library' },
+    ],
+  },
+  {
+    label: 'Customers',
+    items: [
+      { id: 'support', label: 'Support desk' },
+      { id: 'users', label: 'Account controls' },
+      { id: 'userActivity', label: 'User activity' },
+    ],
+  },
+  {
+    label: 'System',
+    items: [
+      { id: 'activity', label: 'Admin activity' },
+      { id: 'links', label: 'Quick links' },
+    ],
+  },
+]
+
+const adminPreviewLinks = {
+  overview: [
+    { label: 'Landing page', href: '/' },
+    { label: 'News page', href: '/news' },
+    { label: 'Status page', href: '/status' },
+  ],
+  announcement: [{ label: 'Landing page', href: '/' }],
+  maintenance: [{ label: 'Landing page', href: '/' }],
+  branding: [{ label: 'Landing page', href: '/' }],
+  carousel: [{ label: 'Landing page', href: '/' }],
+  news: [{ label: 'News page', href: '/news' }],
+  reviews: [{ label: 'Landing page', href: '/' }],
+  status: [{ label: 'Status page', href: '/status' }],
+}
+
 const adminTabHeaders = {
+  overview: {
+    eyebrow: 'Control center',
+    title: 'Admin overview',
+    description: 'The signals and shortcuts that matter most right now.',
+  },
+  announcement: {
+    eyebrow: 'Website',
+    title: 'Announcement banner',
+    description: 'Publish a targeted message across BarnBuddy.',
+  },
+  maintenance: {
+    eyebrow: 'Website',
+    title: 'Maintenance mode',
+    description: 'Control the public maintenance screen and expected return time.',
+  },
+  branding: {
+    eyebrow: 'Website',
+    title: 'Brand assets',
+    description: 'Manage the icons and logos used across the product.',
+  },
+  carousel: {
+    eyebrow: 'Website',
+    title: 'Landing carousel',
+    description: 'Curate the product images shown on the landing page.',
+  },
+  news: {
+    eyebrow: 'Website',
+    title: 'News publishing',
+    description: 'Write, preview, and publish BarnBuddy updates.',
+  },
+  reviews: {
+    eyebrow: 'Website',
+    title: 'Customer reviews',
+    description: 'Manage the customer stories shown on the landing page.',
+  },
+  status: {
+    eyebrow: 'Operations',
+    title: 'Service status',
+    description: 'Keep the public status page accurate and trustworthy.',
+  },
+  media: {
+    eyebrow: 'Website',
+    title: 'Media library',
+    description: 'Browse uploaded assets and copy their public URLs.',
+  },
+  links: {
+    eyebrow: 'System',
+    title: 'Admin quick links',
+    description: 'Jump to the external tools used to operate BarnBuddy.',
+  },
   support: {
-    eyebrow: 'Customer support',
-    title: 'Understand the customer before you respond',
-    description: 'Account health, farm records, support history, and activity in one place.',
+    eyebrow: 'Customers',
+    title: 'Support desk',
+    description: 'Customer context, account health, and support history in one workspace.',
   },
   users: {
-    eyebrow: 'Account controls',
-    title: 'Manage customer access and retained data',
-    description: 'Subscription changes and destructive tools are kept in this dedicated area.',
+    eyebrow: 'Customers',
+    title: 'Account controls',
+    description: 'Manage access, internal flags, and retained Premium data.',
   },
   activity: {
-    eyebrow: 'Administration',
-    title: 'Review changes made by admin members',
+    eyebrow: 'System',
+    title: 'Admin activity',
     description: 'A traceable history of content, account, and support operations.',
   },
   userActivity: {
-    eyebrow: 'Customer activity',
-    title: 'Inspect the complete customer activity stream',
-    description: 'Successful record changes captured across BarnBuddy.',
+    eyebrow: 'Customers',
+    title: 'User activity',
+    description: 'Successful customer record changes captured across BarnBuddy.',
   },
 }
 
 function EmptyState({ title, text, action }) {
   return (
-    <div className="rounded-lg border border-dashed border-slate-700 bg-slate-950/35 p-8 text-center">
+    <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-950/35 p-8 text-center sm:p-10">
       <h3 className="text-lg font-semibold text-white">{title}</h3>
       <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-400">{text}</p>
       {action}
@@ -269,6 +381,8 @@ export default function AdminContent() {
   const [selectedPostIndex, setSelectedPostIndex] = useState(0)
   const [selectedReviewIndex, setSelectedReviewIndex] = useState(0)
   const [selectedCarouselIndex, setSelectedCarouselIndex] = useState(0)
+  const [mobileEditorTab, setMobileEditorTab] = useState('')
+  const [mobilePreviewTab, setMobilePreviewTab] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
@@ -527,23 +641,46 @@ export default function AdminContent() {
     const draftPosts = content.newsPosts.length - publishedPosts
     const publishedReviews = (content.reviews || []).filter((review) => review.published !== false).length
     const publishedCarouselSlides = (content.carouselSlides || []).filter((slide) => slide.published !== false).length
+    const draftReviews = (content.reviews || []).length - publishedReviews
+    const draftCarouselSlides = (content.carouselSlides || []).length - publishedCarouselSlides
     const flaggedServices = (content.status.services || []).filter((service) =>
       ['yellow', 'red'].includes(service.tone)
     ).length
+    const openSupport = supportMessages.filter((message) => message.status !== 'closed').length
 
     return [
-      { label: 'Published posts', value: publishedPosts },
-      { label: 'Draft posts', value: draftPosts },
-      { label: 'Reviews', value: publishedReviews },
-      { label: 'Carousel', value: publishedCarouselSlides },
-      { label: 'Services', value: content.status.services?.length || 0 },
-      { label: 'Support', value: supportMessages.length },
-      { label: 'Users', value: adminUsers.length },
-      { label: 'Admin activity', value: adminActivity.length },
-      { label: 'Tracked users', value: activityUsers.length },
-      { label: 'Needs attention', value: flaggedServices },
+      {
+        label: 'Open support',
+        value: openSupport,
+        helper: `${supportMessages.length} total messages`,
+        tone: openSupport ? 'amber' : 'emerald',
+      },
+      {
+        label: 'Users loaded',
+        value: adminUsers.length,
+        helper: `${activityUsers.length} with tracked activity`,
+        tone: 'sky',
+      },
+      {
+        label: 'Published news',
+        value: publishedPosts,
+        helper: `${publishedReviews} reviews live`,
+        tone: 'sky',
+      },
+      {
+        label: 'Draft content',
+        value: draftPosts + draftReviews + draftCarouselSlides,
+        helper: 'Posts, reviews, and slides',
+        tone: draftPosts + draftReviews + draftCarouselSlides ? 'amber' : 'emerald',
+      },
+      {
+        label: 'Service alerts',
+        value: flaggedServices,
+        helper: `${content.status.services?.length || 0} services monitored`,
+        tone: flaggedServices ? 'red' : 'emerald',
+      },
     ]
-  }, [activityUsers.length, adminActivity.length, adminUsers.length, content, supportMessages.length])
+  }, [activityUsers.length, adminUsers.length, content, supportMessages])
 
   const selectedPost = content.newsPosts[selectedPostIndex] || null
   const selectedReview = (content.reviews || [])[selectedReviewIndex] || null
@@ -562,6 +699,20 @@ export default function AdminContent() {
     title: 'Manage updates, posts, and service status',
     description: hasUnsavedChanges ? 'Unsaved website changes' : 'All website changes saved',
   }
+  const activePreviewLinks = adminPreviewLinks[activeTab] || []
+  const showContentActions = isWebsiteContentTab || hasUnsavedChanges
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return undefined
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
 
   useEffect(() => {
     setAdminFlagsDraft(selectedAdminUserFlags)
@@ -588,6 +739,7 @@ export default function AdminContent() {
     }))
     setSelectedPostIndex(0)
     setActiveTab('news')
+    setMobileEditorTab('news')
   }
 
   function removePost(index) {
@@ -596,6 +748,7 @@ export default function AdminContent() {
       newsPosts: current.newsPosts.filter((_, postIndex) => postIndex !== index),
     }))
     setSelectedPostIndex((current) => Math.max(current - 1, 0))
+    if (content.newsPosts.length <= 1) setMobileEditorTab('')
   }
 
   function updateReview(index, changes) {
@@ -614,6 +767,7 @@ export default function AdminContent() {
     }))
     setSelectedReviewIndex(0)
     setActiveTab('reviews')
+    setMobileEditorTab('reviews')
   }
 
   function removeReview(index) {
@@ -622,6 +776,7 @@ export default function AdminContent() {
       reviews: (current.reviews || []).filter((_, reviewIndex) => reviewIndex !== index),
     }))
     setSelectedReviewIndex((current) => Math.max(current - 1, 0))
+    if ((content.reviews || []).length <= 1) setMobileEditorTab('')
   }
 
   function updateCarouselSlide(index, changes) {
@@ -640,6 +795,7 @@ export default function AdminContent() {
     }))
     setSelectedCarouselIndex(0)
     setActiveTab('carousel')
+    setMobileEditorTab('carousel')
   }
 
   function removeCarouselSlide(index) {
@@ -648,6 +804,7 @@ export default function AdminContent() {
       carouselSlides: (current.carouselSlides || []).filter((_, slideIndex) => slideIndex !== index),
     }))
     setSelectedCarouselIndex((current) => Math.max(current - 1, 0))
+    if ((content.carouselSlides || []).length <= 1) setMobileEditorTab('')
   }
 
   function setFeaturedPost(index) {
@@ -879,16 +1036,17 @@ export default function AdminContent() {
 
   async function findSupportCustomer(identifier) {
     const query = String(identifier || '').trim()
-    if (!query) return
+    if (!query) return false
 
     setUserSearch(query)
     const users = await loadAdminUsers(query)
     if (!users.length) {
       toast.info('No BarnBuddy account matched that support email.')
-      return
+      return false
     }
 
     setSelectedAdminUserId(users[0].clerkUserId)
+    return true
   }
 
   function openFullUserActivity(userId) {
@@ -1111,74 +1269,98 @@ export default function AdminContent() {
         onConfirm={uploadCroppedSiteImage}
       />
     )}
-    <main className="min-h-screen bg-slate-950 text-white">
-      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[16rem_1fr]">
-        <aside className="border-b border-slate-800 bg-slate-900/90 px-4 py-4 lg:border-b-0 lg:border-r lg:px-5 lg:py-6">
-          <div className="flex items-center justify-between gap-3 lg:block">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">BarnBuddy</p>
-              <h1 className="mt-1 text-xl font-semibold">Admin</h1>
-            </div>
-            {isWebsiteContentTab && (
-              <button
-                type="button"
-                onClick={saveContent}
-                disabled={saving}
-                className="rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60 lg:hidden"
-              >
-                {saving ? 'Saving...' : 'Save'}
-              </button>
-            )}
+    <main className="admin-page min-h-screen overflow-x-hidden bg-[#070b16] text-white">
+      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[17.5rem_minmax(0,1fr)]">
+        <aside className="border-b border-slate-800 bg-slate-900/90 px-4 py-4 backdrop-blur lg:sticky lg:top-0 lg:h-dvh lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5 lg:py-6">
+          <div className="flex items-center justify-between gap-4 lg:block">
+            <a href="/" target="_blank" rel="noreferrer" className="group block w-fit" aria-label="Open BarnBuddy in a new tab">
+              <span className="text-2xl font-bold tracking-tight">
+                <span className="text-sky-400 transition group-hover:text-sky-300">Barn</span>
+                <span className="text-slate-200">Buddy.</span>
+              </span>
+              <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Control center</span>
+            </a>
+            <a
+              href="/"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-700 bg-slate-950/55 px-3 text-sm font-semibold text-slate-200 transition hover:border-sky-400/50 hover:text-white lg:hidden"
+            >
+              View site
+            </a>
           </div>
 
           <a
             href="/"
-            className="mt-5 hidden rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-center text-sm font-semibold text-slate-200 transition hover:bg-slate-800 hover:text-white lg:block"
+            target="_blank"
+            rel="noreferrer"
+            className="mt-6 hidden min-h-11 items-center justify-center rounded-xl border border-slate-700 bg-slate-950/55 px-3 text-center text-sm font-semibold text-slate-200 transition hover:border-sky-400/50 hover:bg-slate-800 hover:text-white lg:flex"
           >
-            Back to site
+            View live site
           </a>
 
-          <nav className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-1">
-            {[
-              ['overview', 'Overview'],
-              ['announcement', 'Banner'],
-              ['maintenance', 'Maintenance'],
-              ['branding', 'Branding'],
-              ['carousel', 'Carousel'],
-              ['news', 'News'],
-              ['reviews', 'Reviews'],
-              ['status', 'Status'],
-              ['media', 'Media'],
-              ['links', 'Links'],
-              ['support', 'Support desk'],
-              ['users', 'Users'],
-              ['activity', 'Admin activity'],
-              ['userActivity', 'User activity'],
-            ].map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setActiveTab(id)}
-                className={`rounded-md px-3 py-2 text-left text-sm font-semibold transition ${
-                  activeTab === id
-                    ? 'bg-sky-500 text-white'
-                    : 'bg-slate-950/40 text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <span className="flex items-center justify-between gap-2">
-                  <span>{label}</span>
-                  {id === 'support' && unresolvedSupportCount > 0 && (
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] ${activeTab === id ? 'bg-white/20 text-white' : 'bg-sky-500/15 text-sky-200'}`}>
-                      {unresolvedSupportCount}
-                    </span>
-                  )}
-                </span>
-              </button>
+          <div className="mt-4 lg:hidden">
+            <label htmlFor="admin-mobile-section" className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+              Admin workspace
+            </label>
+            <select
+              id="admin-mobile-section"
+              value={activeTab}
+              onChange={(event) => {
+                setActiveTab(event.target.value)
+                setMobileEditorTab('')
+                setMobilePreviewTab('')
+              }}
+              className="min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 text-base font-semibold text-white outline-none focus:border-sky-300"
+            >
+              {adminNavigationGroups.map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.items.map((item) => (
+                    <option key={item.id} value={item.id}>{item.label}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+
+          <nav aria-label="Admin navigation" className="mt-7 hidden space-y-6 lg:block">
+            {adminNavigationGroups.map((group) => (
+              <div key={group.label}>
+                <p className="px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-600">{group.label}</p>
+                <div className="mt-2 space-y-1.5">
+                  {group.items.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(item.id)
+                        setMobileEditorTab('')
+                        setMobilePreviewTab('')
+                      }}
+                      aria-current={activeTab === item.id ? 'page' : undefined}
+                      className={`w-full rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition ${
+                        activeTab === item.id
+                          ? 'border-sky-400/55 bg-sky-500/15 text-white shadow-[0_10px_28px_rgba(14,165,233,0.08)]'
+                          : 'border-transparent text-slate-400 hover:border-slate-700 hover:bg-slate-800/70 hover:text-white'
+                      }`}
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span>{item.label}</span>
+                        {item.id === 'support' && unresolvedSupportCount > 0 && (
+                          <span className="rounded-full border border-sky-300/25 bg-sky-500/15 px-2 py-0.5 text-[11px] text-sky-100">
+                            {unresolvedSupportCount}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </nav>
 
-          <div className="mt-6 hidden rounded-lg border border-slate-800 bg-slate-950/55 p-4 lg:block">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Current status</p>
+          <div className="mt-8 hidden rounded-2xl border border-slate-800 bg-slate-950/55 p-4 lg:block">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Public status</p>
             <div className={`mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${toneClasses[content.status.overallTone] || toneClasses.green}`}>
               <span className={`h-2 w-2 rounded-full ${dotClasses[content.status.overallTone] || dotClasses.green}`} />
               {content.status.overallStatus || 'Operational'}
@@ -1186,67 +1368,87 @@ export default function AdminContent() {
           </div>
         </aside>
 
-        <section className="min-w-0 px-4 py-6 sm:px-6 lg:px-8">
-          <header className="flex flex-col gap-4 border-b border-slate-800 pb-5 xl:flex-row xl:items-end xl:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{activeHeader.eyebrow}</p>
-              <h2 className="mt-2 text-3xl font-semibold leading-tight">{activeHeader.title}</h2>
-              <p className={`mt-2 text-sm ${isWebsiteContentTab ? (hasUnsavedChanges ? 'text-amber-300' : 'text-emerald-300') : 'text-slate-400'}`}>
-                {activeHeader.description}
-              </p>
+        <section className="min-w-0">
+          <header className="admin-command-bar sticky top-0 z-30 border-b border-slate-800 bg-[#070b16]/92 backdrop-blur-xl">
+            <div className="mx-auto flex w-full max-w-[1520px] flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8 xl:flex-row xl:items-center xl:justify-between">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-400/80">{activeHeader.eyebrow}</p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-3">
+                  <h2 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{activeHeader.title}</h2>
+                  {showContentActions && (
+                    <span
+                      aria-live="polite"
+                      className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                        hasUnsavedChanges
+                          ? 'border-amber-300/25 bg-amber-400/10 text-amber-100'
+                          : 'border-emerald-300/25 bg-emerald-400/10 text-emerald-100'
+                      }`}
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${hasUnsavedChanges ? 'bg-amber-300' : 'bg-emerald-300'}`} />
+                      {saving ? 'Saving' : hasUnsavedChanges ? 'Unsaved' : 'Saved'}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-slate-400">{activeHeader.description}</p>
+              </div>
+
+              {showContentActions && (
+                <div className="flex w-full items-center gap-2 xl:w-auto xl:justify-end">
+                  {activePreviewLinks.length > 0 && (
+                    <details className="relative hidden sm:block">
+                      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center justify-center rounded-xl border border-slate-700 bg-slate-900 px-4 text-sm font-semibold text-slate-200 transition hover:border-sky-400/40 hover:bg-slate-800">
+                        Preview
+                      </summary>
+                      <div className="absolute right-0 z-40 mt-2 w-48 rounded-xl border border-slate-700 bg-slate-900 p-2 shadow-2xl shadow-black/35">
+                        {activePreviewLinks.map((link) => (
+                          <a key={link.href} href={link.href} target="_blank" rel="noreferrer" className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-800 hover:text-white">
+                            {link.label}
+                          </a>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                  <button
+                    type="button"
+                    onClick={discardChanges}
+                    disabled={!hasUnsavedChanges || saving}
+                    className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-slate-700 bg-slate-900 px-4 text-sm font-semibold text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-45 xl:flex-none"
+                  >
+                    Discard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveContent}
+                    disabled={saving || !hasUnsavedChanges}
+                    className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-sky-400/40 bg-sky-500 px-5 text-sm font-semibold text-white shadow-lg shadow-sky-950/25 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50 xl:flex-none"
+                  >
+                    {saving ? 'Saving...' : 'Save changes'}
+                  </button>
+                </div>
+              )}
             </div>
-            {isWebsiteContentTab && <div className="hidden gap-3 lg:flex">
-              <a
-                href="/"
-                className="rounded-md border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
-              >
-                Landing
-              </a>
-              <a
-                href="/news"
-                className="rounded-md border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
-              >
-                View news
-              </a>
-              <a
-                href="/status"
-                className="rounded-md border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
-              >
-                View status
-              </a>
-              <button
-                type="button"
-                onClick={discardChanges}
-                disabled={!hasUnsavedChanges || saving}
-                className="rounded-md border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Discard
-              </button>
-              <button
-                type="button"
-                onClick={saveContent}
-                disabled={saving || !hasUnsavedChanges}
-                className="rounded-md bg-sky-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {saving ? 'Saving...' : 'Save changes'}
-              </button>
-            </div>}
           </header>
 
+          <div className="mx-auto w-full max-w-[1520px] px-4 pb-24 sm:px-6 lg:px-8">
+
           {activeTab === 'overview' && (
-            <div className="mt-6 space-y-6">
-              <div className="grid grid-cols-2 gap-3 xl:grid-cols-10">
+            <div className="mt-6 space-y-5 sm:mt-8 sm:space-y-6">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 {dashboardStats.map((stat) => (
-                  <div key={stat.label} className="rounded-lg border border-slate-800 bg-slate-900 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{stat.label}</p>
-                    <p className="mt-3 text-3xl font-semibold">{stat.value}</p>
+                  <div key={stat.label} className={`rounded-2xl border p-5 shadow-lg shadow-black/10 ${statCardClasses[stat.tone] || statCardClasses.sky}`}>
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2 w-2 rounded-full ${dotClasses[stat.tone] || dotClasses.sky}`} aria-hidden="true" />
+                      <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate-400">{stat.label}</p>
+                    </div>
+                    <p className="mt-4 text-3xl font-semibold tracking-tight text-white">{stat.value}</p>
+                    <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{stat.helper}</p>
                   </div>
                 ))}
               </div>
 
               <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-                <section className="rounded-lg border border-slate-800 bg-slate-900">
-                  <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+                <section className="rounded-2xl border border-slate-800 bg-slate-900">
+                  <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h3 className="font-semibold">Recent news</h3>
                       <p className="mt-1 text-sm text-slate-400">Newest content at a glance.</p>
@@ -1267,6 +1469,7 @@ export default function AdminContent() {
                         onClick={() => {
                           setSelectedPostIndex(index)
                           setActiveTab('news')
+                          setMobileEditorTab('news')
                         }}
                         className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left hover:bg-slate-800/55"
                       >
@@ -1279,10 +1482,23 @@ export default function AdminContent() {
                         </span>
                       </button>
                     ))}
+                    {!content.newsPosts.length && (
+                      <div className="p-5">
+                        <EmptyState
+                          title="No news posts yet"
+                          text="Create the first update when you are ready to publish something."
+                          action={(
+                            <button type="button" onClick={addPost} className="mt-5 rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600">
+                              Create a post
+                            </button>
+                          )}
+                        />
+                      </div>
+                    )}
                   </div>
                 </section>
 
-                <section className="rounded-lg border border-slate-800 bg-slate-900 p-5">
+                <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
                   <h3 className="font-semibold">Status summary</h3>
                   <p className="mt-3 text-2xl font-semibold">{content.status.headline}</p>
                   <p className="mt-2 text-sm leading-relaxed text-slate-400">{content.status.summary}</p>
@@ -1296,12 +1512,18 @@ export default function AdminContent() {
                         </span>
                       </div>
                     ))}
+                    {!content.status.services?.length && (
+                      <p className="rounded-xl border border-dashed border-slate-700 px-4 py-5 text-center text-sm text-slate-500">
+                        No services are configured yet.
+                      </p>
+                    )}
                   </div>
                 </section>
               </div>
 
-              <section className="rounded-lg border border-slate-800 bg-slate-900">
-                <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+              <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+              <section className="rounded-2xl border border-slate-800 bg-slate-900">
+                <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="font-semibold">Recent admin activity</h3>
                     <p className="mt-1 text-sm text-slate-400">Latest website saves, uploads, and support changes.</p>
@@ -1334,8 +1556,8 @@ export default function AdminContent() {
                 </div>
               </section>
 
-              <section className="rounded-lg border border-slate-800 bg-slate-900 p-5">
-                <div className="flex items-center justify-between gap-3">
+              <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="font-semibold">Quick links</h3>
                     <p className="mt-1 text-sm text-slate-400">Jump to admin tools outside BarnBuddy.</p>
@@ -1356,6 +1578,7 @@ export default function AdminContent() {
                   ))}
                 </div>
               </section>
+              </div>
             </div>
           )}
 
@@ -1407,7 +1630,14 @@ export default function AdminContent() {
                 </div>
               </section>
 
-              <aside className="rounded-lg border border-slate-800 bg-slate-900 p-5">
+              <button
+                type="button"
+                onClick={() => setMobilePreviewTab((current) => current === 'announcement' ? '' : 'announcement')}
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-semibold text-slate-200 xl:hidden"
+              >
+                {mobilePreviewTab === 'announcement' ? 'Hide preview' : 'Show announcement preview'}
+              </button>
+              <aside className={`${mobilePreviewTab === 'announcement' ? '' : 'hidden xl:block'} rounded-lg border border-slate-800 bg-slate-900 p-5`}>
                 <h3 className="font-semibold">Preview</h3>
                 <div className={`mt-4 rounded-lg border p-5 ${announcementPreviewClasses[content.announcement?.tone || 'blue'] || announcementPreviewClasses.blue}`}>
                   {content.announcement?.title && (
@@ -1462,7 +1692,14 @@ export default function AdminContent() {
                 </div>
               </section>
 
-              <aside className="rounded-lg border border-slate-800 bg-slate-900 p-5">
+              <button
+                type="button"
+                onClick={() => setMobilePreviewTab((current) => current === 'maintenance' ? '' : 'maintenance')}
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-semibold text-slate-200 xl:hidden"
+              >
+                {mobilePreviewTab === 'maintenance' ? 'Hide preview' : 'Show maintenance preview'}
+              </button>
+              <aside className={`${mobilePreviewTab === 'maintenance' ? '' : 'hidden xl:block'} rounded-lg border border-slate-800 bg-slate-900 p-5`}>
                 <h3 className="font-semibold">Public preview</h3>
                 <div className="mt-4 rounded-lg border border-sky-300/20 bg-[#0f2650] p-6 text-center">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">Maintenance Mode</p>
@@ -1533,7 +1770,7 @@ export default function AdminContent() {
 
           {activeTab === 'carousel' && (
             <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[24rem_1fr]">
-              <section className="rounded-lg border border-slate-800 bg-slate-900">
+              <section className={`${mobileEditorTab === 'carousel' ? 'hidden xl:block' : ''} rounded-lg border border-slate-800 bg-slate-900 xl:sticky xl:top-32 xl:self-start`}>
                 <div className="flex items-center justify-between border-b border-slate-800 px-4 py-4">
                   <div>
                     <h3 className="font-semibold">Landing carousel</h3>
@@ -1548,13 +1785,16 @@ export default function AdminContent() {
                   </button>
                 </div>
 
-                <div className="max-h-[calc(100vh-15rem)] overflow-y-auto p-3">
+                <div className="p-3 xl:max-h-[calc(100vh-15rem)] xl:overflow-y-auto">
                   {(content.carouselSlides || []).length ? (
                     (content.carouselSlides || []).map((slide, index) => (
                       <button
                         key={slide.id || `${slide.title || 'slide'}-${index}`}
                         type="button"
-                        onClick={() => setSelectedCarouselIndex(index)}
+                        onClick={() => {
+                          setSelectedCarouselIndex(index)
+                          setMobileEditorTab('carousel')
+                        }}
                         className={`mb-2 w-full rounded-md border p-3 text-left transition ${
                           selectedCarouselIndex === index
                             ? 'border-sky-300 bg-sky-500/12'
@@ -1586,11 +1826,18 @@ export default function AdminContent() {
                 </div>
               </section>
 
-              <section className="rounded-lg border border-slate-800 bg-slate-900">
+              <section className={`${mobileEditorTab === 'carousel' ? '' : 'hidden xl:block'} rounded-lg border border-slate-800 bg-slate-900`}>
                 {selectedCarouselSlide ? (
                   <>
                     <div className="flex flex-col gap-4 border-b border-slate-800 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
                       <div className="min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => setMobileEditorTab('')}
+                          className="mb-3 rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm font-semibold text-slate-200 xl:hidden"
+                        >
+                          Back to slides
+                        </button>
                         <h3 className="truncate text-xl font-semibold">{selectedCarouselSlide.title || 'Untitled slide'}</h3>
                         <p className="mt-1 text-sm text-slate-400">{selectedCarouselSlide.eyebrow || 'No eyebrow'}</p>
                       </div>
@@ -1598,6 +1845,7 @@ export default function AdminContent() {
                         <button
                           type="button"
                           onClick={() => updateCarouselSlide(selectedCarouselIndex, { published: selectedCarouselSlide.published === false })}
+                          aria-pressed={selectedCarouselSlide.published !== false}
                           className={`rounded-md border px-3 py-2 text-sm font-semibold ${
                             selectedCarouselSlide.published === false
                               ? 'border-amber-300/25 bg-amber-400/10 text-amber-100'
@@ -1649,7 +1897,14 @@ export default function AdminContent() {
                         </div>
                       </div>
 
-                      <aside className="rounded-lg border border-slate-800 bg-slate-950/45 p-4">
+                      <button
+                        type="button"
+                        onClick={() => setMobilePreviewTab((current) => current === 'carousel-editor' ? '' : 'carousel-editor')}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-sm font-semibold text-slate-200 2xl:hidden"
+                      >
+                        {mobilePreviewTab === 'carousel-editor' ? 'Hide preview' : 'Show carousel preview'}
+                      </button>
+                      <aside className={`${mobilePreviewTab === 'carousel-editor' ? '' : 'hidden 2xl:block'} rounded-lg border border-slate-800 bg-slate-950/45 p-4`}>
                         <h4 className="font-semibold">Carousel preview</h4>
                         <div className="mt-4 overflow-hidden rounded-md border border-slate-800 bg-[#07102a]">
                           <div className="aspect-[16/10] bg-slate-950">
@@ -1695,7 +1950,7 @@ export default function AdminContent() {
 
           {activeTab === 'news' && (
             <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[24rem_1fr]">
-              <section className="rounded-lg border border-slate-800 bg-slate-900">
+              <section className={`${mobileEditorTab === 'news' ? 'hidden xl:block' : ''} rounded-lg border border-slate-800 bg-slate-900 xl:sticky xl:top-32 xl:self-start`}>
                 <div className="flex items-center justify-between border-b border-slate-800 px-4 py-4">
                   <div>
                     <h3 className="font-semibold">News posts</h3>
@@ -1710,7 +1965,7 @@ export default function AdminContent() {
                   </button>
                 </div>
 
-                <div className="max-h-[42rem] overflow-y-auto p-2">
+                <div className="p-2 xl:max-h-[42rem] xl:overflow-y-auto">
                   {content.newsPosts.length === 0 ? (
                     <EmptyState title="No posts yet" text="Create the first news update for the public website." />
                   ) : (
@@ -1718,7 +1973,10 @@ export default function AdminContent() {
                       <button
                         key={post.id || index}
                         type="button"
-                        onClick={() => setSelectedPostIndex(index)}
+                        onClick={() => {
+                          setSelectedPostIndex(index)
+                          setMobileEditorTab('news')
+                        }}
                         className={`mb-2 w-full rounded-md border p-3 text-left transition ${
                           selectedPostIndex === index
                             ? 'border-sky-300 bg-sky-500/12'
@@ -1741,11 +1999,18 @@ export default function AdminContent() {
                 </div>
               </section>
 
-              <section className="rounded-lg border border-slate-800 bg-slate-900">
+              <section className={`${mobileEditorTab === 'news' ? '' : 'hidden xl:block'} rounded-lg border border-slate-800 bg-slate-900`}>
                 {selectedPost ? (
                   <>
                     <div className="flex flex-col gap-4 border-b border-slate-800 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
                       <div className="min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => setMobileEditorTab('')}
+                          className="mb-3 rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm font-semibold text-slate-200 xl:hidden"
+                        >
+                          Back to posts
+                        </button>
                         <h3 className="truncate text-xl font-semibold">{selectedPost.title || 'Untitled post'}</h3>
                         <p className="mt-1 text-sm text-slate-400">{selectedPost.category || 'Updates'} - {formatDate(selectedPost.date)}</p>
                       </div>
@@ -1753,6 +2018,7 @@ export default function AdminContent() {
                         <button
                           type="button"
                           onClick={() => setFeaturedPost(selectedPostIndex)}
+                          aria-pressed={featuredPostId === selectedPost.id}
                           className={`rounded-md border px-3 py-2 text-sm font-semibold ${
                             featuredPostId === selectedPost.id
                               ? 'border-sky-300 bg-sky-500/15 text-sky-100'
@@ -1764,6 +2030,7 @@ export default function AdminContent() {
                         <button
                           type="button"
                           onClick={() => updatePost(selectedPostIndex, { published: selectedPost.published === false })}
+                          aria-pressed={selectedPost.published !== false}
                           className={`rounded-md border px-3 py-2 text-sm font-semibold ${
                             selectedPost.published === false
                               ? 'border-amber-300/25 bg-amber-400/10 text-amber-100'
@@ -1803,7 +2070,14 @@ export default function AdminContent() {
                         </div>
                       </div>
 
-                      <aside className="rounded-lg border border-slate-800 bg-slate-950/45 p-4">
+                      <button
+                        type="button"
+                        onClick={() => setMobilePreviewTab((current) => current === 'news-editor' ? '' : 'news-editor')}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-sm font-semibold text-slate-200 2xl:hidden"
+                      >
+                        {mobilePreviewTab === 'news-editor' ? 'Hide image and preview' : 'Show image and preview'}
+                      </button>
+                      <aside className={`${mobilePreviewTab === 'news-editor' ? '' : 'hidden 2xl:block'} rounded-lg border border-slate-800 bg-slate-950/45 p-4`}>
                         <h4 className="font-semibold">Preview</h4>
                         <div className="mt-4 overflow-hidden rounded-md border border-slate-800 bg-slate-950">
                           <div className="aspect-[16/10] bg-slate-900">
@@ -1870,7 +2144,7 @@ export default function AdminContent() {
 
           {activeTab === 'reviews' && (
             <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[24rem_1fr]">
-              <section className="rounded-lg border border-slate-800 bg-slate-900">
+              <section className={`${mobileEditorTab === 'reviews' ? 'hidden xl:block' : ''} rounded-lg border border-slate-800 bg-slate-900 xl:sticky xl:top-32 xl:self-start`}>
                 <div className="flex items-center justify-between border-b border-slate-800 px-4 py-4">
                   <div>
                     <h3 className="font-semibold">Reviews</h3>
@@ -1885,13 +2159,16 @@ export default function AdminContent() {
                   </button>
                 </div>
 
-                <div className="max-h-[calc(100vh-15rem)] overflow-y-auto p-3">
+                <div className="p-3 xl:max-h-[calc(100vh-15rem)] xl:overflow-y-auto">
                   {(content.reviews || []).length ? (
                     (content.reviews || []).map((review, index) => (
                       <button
                         key={`${review.name || 'review'}-${index}`}
                         type="button"
-                        onClick={() => setSelectedReviewIndex(index)}
+                        onClick={() => {
+                          setSelectedReviewIndex(index)
+                          setMobileEditorTab('reviews')
+                        }}
                         className={`mb-2 w-full rounded-md border p-3 text-left transition ${
                           selectedReviewIndex === index
                             ? 'border-sky-300 bg-sky-500/12'
@@ -1923,11 +2200,18 @@ export default function AdminContent() {
                 </div>
               </section>
 
-              <section className="rounded-lg border border-slate-800 bg-slate-900">
+              <section className={`${mobileEditorTab === 'reviews' ? '' : 'hidden xl:block'} rounded-lg border border-slate-800 bg-slate-900`}>
                 {selectedReview ? (
                   <>
                     <div className="flex flex-col gap-4 border-b border-slate-800 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
                       <div className="min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => setMobileEditorTab('')}
+                          className="mb-3 rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm font-semibold text-slate-200 xl:hidden"
+                        >
+                          Back to reviews
+                        </button>
                         <h3 className="truncate text-xl font-semibold">{selectedReview.name || 'Unnamed review'}</h3>
                         <p className="mt-1 text-sm text-slate-400">{selectedReview.role || 'No role'} - {selectedReview.date || 'No date'}</p>
                       </div>
@@ -1935,6 +2219,7 @@ export default function AdminContent() {
                         <button
                           type="button"
                           onClick={() => updateReview(selectedReviewIndex, { published: selectedReview.published === false })}
+                          aria-pressed={selectedReview.published !== false}
                           className={`rounded-md border px-3 py-2 text-sm font-semibold ${
                             selectedReview.published === false
                               ? 'border-amber-300/25 bg-amber-400/10 text-amber-100'
@@ -1983,7 +2268,14 @@ export default function AdminContent() {
                         </div>
                       </div>
 
-                      <aside className="rounded-lg border border-slate-800 bg-slate-950/45 p-4">
+                      <button
+                        type="button"
+                        onClick={() => setMobilePreviewTab((current) => current === 'reviews-editor' ? '' : 'reviews-editor')}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-sm font-semibold text-slate-200 2xl:hidden"
+                      >
+                        {mobilePreviewTab === 'reviews-editor' ? 'Hide preview' : 'Show landing page preview'}
+                      </button>
+                      <aside className={`${mobilePreviewTab === 'reviews-editor' ? '' : 'hidden 2xl:block'} rounded-lg border border-slate-800 bg-slate-950/45 p-4`}>
                         <h4 className="font-semibold">Landing page preview</h4>
                         <div className="mt-4 rounded-lg bg-slate-950 p-3">
                           <ReviewLandingCard
@@ -2064,9 +2356,9 @@ export default function AdminContent() {
                 <div className="mt-4 space-y-3">
                   {(content.status.services || []).map((service, index) => (
                     <div key={`${service.name}-${index}`} className="grid grid-cols-1 gap-3 rounded-lg border border-slate-800 bg-slate-950/45 p-4 lg:grid-cols-[1fr_1fr_11rem_auto]">
-                      <input className={inputClass()} value={service.name} onChange={(event) => updateService(index, { name: event.target.value })} placeholder="Service" />
-                      <input className={inputClass()} value={service.status} onChange={(event) => updateService(index, { status: event.target.value })} placeholder="Status" />
-                      <select className={inputClass()} value={service.tone} onChange={(event) => updateService(index, { tone: event.target.value })}>
+                      <input aria-label={`Service ${index + 1} name`} className={inputClass()} value={service.name} onChange={(event) => updateService(index, { name: event.target.value })} placeholder="Service" />
+                      <input aria-label={`Service ${index + 1} status`} className={inputClass()} value={service.status} onChange={(event) => updateService(index, { status: event.target.value })} placeholder="Status" />
+                      <select aria-label={`Service ${index + 1} tone`} className={inputClass()} value={service.tone} onChange={(event) => updateService(index, { tone: event.target.value })}>
                         {toneOptions.map(([value, label]) => (
                           <option key={value} value={value}>{label}</option>
                         ))}
@@ -2079,7 +2371,14 @@ export default function AdminContent() {
                 </div>
               </section>
 
-              <aside className="rounded-lg border border-slate-800 bg-slate-900 p-5">
+              <button
+                type="button"
+                onClick={() => setMobilePreviewTab((current) => current === 'status' ? '' : 'status')}
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-semibold text-slate-200 xl:hidden"
+              >
+                {mobilePreviewTab === 'status' ? 'Hide preview' : 'Show status preview'}
+              </button>
+              <aside className={`${mobilePreviewTab === 'status' ? '' : 'hidden xl:block'} rounded-lg border border-slate-800 bg-slate-900 p-5`}>
                 <h3 className="font-semibold">Public preview</h3>
                 <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950/55 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-300">Status</p>
@@ -2180,7 +2479,10 @@ export default function AdminContent() {
               detailsLoading={adminUserDetailsLoading}
               detailsError={adminUserDetailsError}
               onRefreshDetails={() => loadAdminUserDetails(selectedAdminUser?.clerkUserId)}
-              onOpenAccountControls={() => setActiveTab('users')}
+              onOpenAccountControls={() => {
+                setActiveTab('users')
+                setMobileEditorTab('users')
+              }}
               onOpenFullActivity={openFullUserActivity}
               supportMessages={supportMessages}
               onUpdateSupportStatus={updateSupportStatus}
@@ -2196,7 +2498,7 @@ export default function AdminContent() {
 
           {activeTab === 'users' && (
             <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[22rem_1fr]">
-              <aside className="rounded-lg border border-slate-800 bg-slate-900">
+              <aside className={`${mobileEditorTab === 'users' ? 'hidden xl:block' : ''} rounded-lg border border-slate-800 bg-slate-900 xl:sticky xl:top-32 xl:self-start`}>
                 <div className="border-b border-slate-800 px-5 py-4">
                   <h3 className="text-xl font-semibold">Users</h3>
                   <p className="mt-1 text-sm text-slate-400">Search Clerk accounts and manage BarnBuddy access.</p>
@@ -2220,12 +2522,15 @@ export default function AdminContent() {
                   </button>
                 </form>
 
-                <div className="max-h-[36rem] space-y-2 overflow-y-auto p-5">
+                <div className="space-y-2 p-5 xl:max-h-[36rem] xl:overflow-y-auto">
                   {adminUsers.map((user) => (
                     <button
                       key={user.clerkUserId}
                       type="button"
-                      onClick={() => setSelectedAdminUserId(user.clerkUserId)}
+                      onClick={() => {
+                        setSelectedAdminUserId(user.clerkUserId)
+                        setMobileEditorTab('users')
+                      }}
                       className={`w-full rounded-md border px-3 py-3 text-left transition ${
                         user.clerkUserId === selectedAdminUser?.clerkUserId
                           ? 'border-sky-300/50 bg-sky-500/15'
@@ -2260,9 +2565,16 @@ export default function AdminContent() {
                 </div>
               </aside>
 
-              <section className="rounded-lg border border-slate-800 bg-slate-900">
+              <section className={`${mobileEditorTab === 'users' ? '' : 'hidden xl:block'} rounded-lg border border-slate-800 bg-slate-900`}>
                 <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
+                    <button
+                      type="button"
+                      onClick={() => setMobileEditorTab('')}
+                      className="mb-3 rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm font-semibold text-slate-200 xl:hidden"
+                    >
+                      Back to users
+                    </button>
                     <h3 className="text-xl font-semibold">User management</h3>
                     <p className="mt-1 text-sm text-slate-400">
                       {selectedAdminUser?.email || selectedAdminUser?.clerkUserId || 'Choose a user to manage.'}
@@ -2458,7 +2770,16 @@ export default function AdminContent() {
                         )}
                       </div>
 
-                      <div className="rounded-lg border border-red-300/20 bg-red-500/5 p-5">
+                      <details className="group rounded-lg border border-red-300/20 bg-red-500/5">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-[0.14em] text-red-300">Danger zone</p>
+                            <p className="mt-1 text-sm text-slate-400">Review retained Premium data controls.</p>
+                          </div>
+                          <span className="shrink-0 text-sm font-semibold text-red-100 group-open:hidden">Open</span>
+                          <span className="hidden shrink-0 text-sm font-semibold text-red-100 group-open:inline">Close</span>
+                        </summary>
+                        <div className="border-t border-red-300/15 p-5">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                           <div>
                             <h4 className="font-semibold text-red-100">Stored Premium data</h4>
@@ -2481,20 +2802,36 @@ export default function AdminContent() {
                             {deletingPremiumData ? 'Deleting...' : `Delete Premium data (${adminUserDetails?.counts?.premiumRecords || 0})`}
                           </button>
                         </div>
-                      </div>
+                        </div>
+                      </details>
 
-                      <div className="rounded-lg border border-slate-800 bg-slate-950/45 p-5">
-                        <h4 className="font-semibold">Clerk public metadata</h4>
-                        <p className="mt-1 text-sm text-slate-400">Grant premium writes the exact values BarnBuddy checks for access.</p>
-                        <pre className="mt-4 overflow-x-auto rounded-md border border-slate-800 bg-slate-950 p-4 text-xs leading-relaxed text-slate-200">
+                      <details className="group rounded-lg border border-slate-800 bg-slate-950/45">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
+                          <div>
+                            <h4 className="font-semibold">Technical metadata</h4>
+                            <p className="mt-1 text-sm text-slate-400">Clerk values used for Premium access.</p>
+                          </div>
+                          <span className="text-sm font-semibold text-sky-200 group-open:hidden">Show</span>
+                          <span className="hidden text-sm font-semibold text-sky-200 group-open:inline">Hide</span>
+                        </summary>
+                        <div className="border-t border-slate-800 p-5">
+                        <pre className="overflow-x-auto rounded-md border border-slate-800 bg-slate-950 p-4 text-xs leading-relaxed text-slate-200">
 {JSON.stringify(selectedAdminUser.publicMetadata || {}, null, 2)}
                         </pre>
-                      </div>
+                        </div>
+                      </details>
                     </div>
 
-                    <aside className="rounded-lg border border-slate-800 bg-slate-950/45 p-5">
-                      <h4 className="font-semibold">BarnBuddy account</h4>
-                      <div className="mt-4 space-y-3 text-sm">
+                    <details className="group rounded-lg border border-slate-800 bg-slate-950/45">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4">
+                        <div>
+                          <h4 className="font-semibold">Technical account details</h4>
+                          <p className="mt-1 text-sm text-slate-400">Local IDs, dates, flags, and required metadata.</p>
+                        </div>
+                        <span className="text-sm font-semibold text-sky-200 group-open:hidden">Show</span>
+                        <span className="hidden text-sm font-semibold text-sky-200 group-open:inline">Hide</span>
+                      </summary>
+                      <div className="space-y-3 border-t border-slate-800 p-5 text-sm">
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Local user ID</p>
                           <p className="mt-1 text-slate-200">{selectedAdminUser.localUser?.id || 'Not synced yet'}</p>
@@ -2528,7 +2865,7 @@ export default function AdminContent() {
 }`}</pre>
                         </div>
                       </div>
-                    </aside>
+                    </details>
                   </div>
                 ) : (
                   <div className="p-5">
@@ -2557,28 +2894,32 @@ export default function AdminContent() {
 
               <div className="divide-y divide-slate-800">
                 {adminActivity.map((item) => (
-                  <article key={item.id} className="grid grid-cols-1 gap-4 px-5 py-5 xl:grid-cols-[14rem_1fr_13rem]">
-                    <div>
-                      <p className="text-sm font-semibold text-white">{item.actor?.name || 'Unknown admin'}</p>
-                      <p className="mt-1 truncate text-xs text-slate-500">{item.actor?.email || item.actor?.clerkUserId || 'No actor details'}</p>
-                    </div>
-
-                    <div>
-                      <p className="font-semibold text-white">{activityLabel(item.action)}</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
+                  <details key={item.id} className="group">
+                    <summary className="grid cursor-pointer list-none grid-cols-1 gap-3 px-5 py-4 transition hover:bg-slate-800/45 sm:grid-cols-[minmax(0,1fr)_auto] xl:grid-cols-[14rem_minmax(0,1fr)_13rem] xl:items-center">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-white">{item.actor?.name || 'Unknown admin'}</p>
+                        <p className="mt-1 truncate text-xs text-slate-500">{item.actor?.email || item.actor?.clerkUserId || 'No actor details'}</p>
+                      </div>
+                      <div className="min-w-0 sm:col-span-2 xl:col-span-1">
+                        <p className="font-semibold text-white">{activityLabel(item.action)}</p>
+                        <p className="mt-1 text-xs text-sky-300 group-open:hidden">View details</p>
+                        <p className="mt-1 hidden text-xs text-sky-300 group-open:block">Hide details</p>
+                      </div>
+                      <time className="text-sm text-slate-500 sm:row-start-1 sm:text-right xl:col-start-3 xl:row-auto" dateTime={item.createdAt}>
+                        {formatDateTime(item.createdAt)}
+                      </time>
+                    </summary>
+                    {!!Object.keys(item.details || {}).length && (
+                      <div className="flex flex-wrap gap-2 border-t border-slate-800/70 bg-slate-950/35 px-5 py-4">
                         {Object.entries(item.details || {}).map(([key, value]) => (
-                          <span key={key} className="rounded-md border border-slate-800 bg-slate-950/55 px-2.5 py-1 text-xs text-slate-300">
+                          <span key={key} className="max-w-full break-all rounded-md border border-slate-800 bg-slate-950/70 px-2.5 py-1 text-xs text-slate-300">
                             <span className="text-slate-500">{key}: </span>
                             {formatActivityDetail(value)}
                           </span>
                         ))}
                       </div>
-                    </div>
-
-                    <time className="text-sm text-slate-500 xl:text-right" dateTime={item.createdAt}>
-                      {formatDateTime(item.createdAt)}
-                    </time>
-                  </article>
+                    )}
+                  </details>
                 ))}
 
                 {!adminActivity.length && (
@@ -2614,7 +2955,7 @@ export default function AdminContent() {
                     ))}
                   </select>
 
-                  <div className="mt-4 max-h-[32rem] space-y-2 overflow-y-auto pr-1">
+                  <div className="mt-4 hidden max-h-[32rem] space-y-2 overflow-y-auto pr-1 xl:block">
                     {activityUsers.map((user) => (
                       <button
                         key={user.id}
@@ -2682,6 +3023,7 @@ export default function AdminContent() {
               </section>
             </div>
           )}
+          </div>
         </section>
       </div>
     </main>

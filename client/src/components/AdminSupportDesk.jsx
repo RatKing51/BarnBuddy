@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { toast } from 'react-toastify'
 
 function formatDateTime(value) {
@@ -60,7 +60,7 @@ function initials(name, email) {
 }
 
 function inputClass(extra = '') {
-  return `w-full rounded-md border border-slate-700/80 bg-slate-950/70 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-sky-300 ${extra}`
+  return `min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2.5 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-sky-300 focus:ring-2 focus:ring-sky-400/15 sm:text-sm ${extra}`
 }
 
 function StatusBadge({ children, tone = 'slate' }) {
@@ -88,9 +88,31 @@ function Detail({ label, value, mono = false }) {
   )
 }
 
-function Section({ title, description, action, children, className = '' }) {
+function Section({ title, description, action, children, className = '', collapsible = false, defaultOpen = false }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen)
+
+  if (collapsible) {
+    return (
+      <details
+        className={`group rounded-2xl border border-slate-800 bg-slate-900 ${className}`}
+        open={isOpen}
+        onToggle={(event) => setIsOpen(event.currentTarget.open)}
+      >
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
+          <div>
+            <h4 className="font-semibold text-white">{title}</h4>
+            {description && <p className="mt-1 text-sm text-slate-400">{description}</p>}
+          </div>
+          <span className="shrink-0 text-sm font-semibold text-sky-200 group-open:hidden">Show</span>
+          <span className="hidden shrink-0 text-sm font-semibold text-sky-200 group-open:inline">Hide</span>
+        </summary>
+        <div className="border-t border-slate-800 p-5">{children}</div>
+      </details>
+    )
+  }
+
   return (
-    <section className={`rounded-lg border border-slate-800 bg-slate-900 ${className}`}>
+    <section className={`rounded-2xl border border-slate-800 bg-slate-900 ${className}`}>
       <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h4 className="font-semibold text-white">{title}</h4>
@@ -105,7 +127,7 @@ function Section({ title, description, action, children, className = '' }) {
 
 function Empty({ title, text }) {
   return (
-    <div className="rounded-lg border border-dashed border-slate-700 bg-slate-950/35 p-7 text-center">
+    <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-950/35 p-7 text-center">
       <p className="font-semibold text-white">{title}</p>
       <p className="mt-2 text-sm leading-relaxed text-slate-400">{text}</p>
     </div>
@@ -149,6 +171,7 @@ export default function AdminSupportDesk({
   onSaveFlags,
   savingFlags,
 }) {
+  const [mobilePickerOpen, setMobilePickerOpen] = useState(true)
   const localUser = details?.localUser || selectedUser?.localUser || null
   const counts = details?.counts || {}
   const unresolvedMessages = useMemo(
@@ -210,7 +233,7 @@ export default function AdminSupportDesk({
       </section>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[21rem_minmax(0,1fr)]">
-        <aside className="space-y-5">
+        <aside className={`${mobilePickerOpen ? '' : 'hidden xl:block'} space-y-5 xl:sticky xl:top-32 xl:self-start`}>
           <section className="rounded-lg border border-slate-800 bg-slate-900">
             <div className="border-b border-slate-800 px-5 py-4">
               <h3 className="text-lg font-semibold text-white">Find a customer</h3>
@@ -234,12 +257,15 @@ export default function AdminSupportDesk({
                 </button>
               </div>
             </form>
-            <div className="max-h-[31rem] space-y-2 overflow-y-auto p-4">
+            <div className="space-y-2 p-4 xl:max-h-[31rem] xl:overflow-y-auto">
               {users.map((user) => (
                 <button
                   key={user.clerkUserId}
                   type="button"
-                  onClick={() => onSelectUser(user.clerkUserId)}
+                  onClick={() => {
+                    onSelectUser(user.clerkUserId)
+                    setMobilePickerOpen(false)
+                  }}
                   className={`w-full rounded-md border p-3 text-left transition ${
                     user.clerkUserId === selectedUser?.clerkUserId
                       ? 'border-sky-300/50 bg-sky-500/15'
@@ -280,12 +306,15 @@ export default function AdminSupportDesk({
               <h3 className="text-lg font-semibold text-white">Support queue</h3>
               <p className="mt-1 text-sm text-slate-400">Open the customer behind a message.</p>
             </div>
-            <div className="max-h-[28rem] space-y-2 overflow-y-auto p-4">
+            <div className="space-y-2 p-4 xl:max-h-[28rem] xl:overflow-y-auto">
               {unresolvedMessages.slice(0, 12).map((message) => (
                 <button
                   key={message.id}
                   type="button"
-                  onClick={() => onFindUser(message.email)}
+                  onClick={async () => {
+                    const found = await onFindUser(message.email)
+                    if (found) setMobilePickerOpen(false)
+                  }}
                   className="w-full rounded-md border border-slate-800 bg-slate-950/45 p-3 text-left hover:bg-slate-800"
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -301,12 +330,19 @@ export default function AdminSupportDesk({
           </section>
         </aside>
 
-        <div className="min-w-0 space-y-5">
+        <div className={`${mobilePickerOpen ? 'hidden xl:block' : ''} min-w-0 space-y-5`}>
           {!selectedUser ? (
             <Empty title="Choose a customer" text="Search or select a customer to open their complete support profile." />
           ) : (
             <>
               <section className="rounded-lg border border-slate-800 bg-slate-900 p-5">
+                <button
+                  type="button"
+                  onClick={() => setMobilePickerOpen(true)}
+                  className="mb-4 rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm font-semibold text-slate-200 xl:hidden"
+                >
+                  Change customer
+                </button>
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                   <div className="flex min-w-0 items-start gap-4">
                     {selectedUser.imageUrl ? (
@@ -366,7 +402,7 @@ export default function AdminSupportDesk({
                   </div>
 
                   <div className="grid grid-cols-1 gap-5 2xl:grid-cols-2">
-                    <Section title="Account context" description="What the customer told BarnBuddy during setup.">
+                    <Section title="Account context" description="What the customer told BarnBuddy during setup." collapsible>
                       <dl className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                         <Detail label="Onboarding" value={localUser?.onboarding_completed ? 'Completed' : localUser?.onboarding_required ? 'Required' : 'Not required'} />
                         <Detail label="First animal" value={localUser?.created_first_animal ? 'Created' : 'Not created'} />
@@ -379,7 +415,7 @@ export default function AdminSupportDesk({
                       </dl>
                     </Section>
 
-                    <Section title="Preferences and communications" description="Current display, reminder, and email choices.">
+                    <Section title="Preferences and communications" description="Current display, reminder, and email choices." collapsible>
                       <dl className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                         <Detail label="Theme" value={humanize(localUser?.app_theme)} />
                         <Detail label="Dashboard density" value={humanize(localUser?.dashboard_density)} />
@@ -391,7 +427,7 @@ export default function AdminSupportDesk({
                     </Section>
                   </div>
 
-                  <Section title="Data footprint" description="Counts across every BarnBuddy record type available to this account.">
+                  <Section title="Data footprint" description="Counts across every BarnBuddy record type available to this account." collapsible>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                       {dataCounts.map(([label, value]) => (
                         <div key={label} className="rounded-md border border-slate-800 bg-slate-950/45 p-3">
@@ -426,7 +462,7 @@ export default function AdminSupportDesk({
                   </Section>
 
                   <div className="grid grid-cols-1 gap-5 2xl:grid-cols-2">
-                    <Section title="Herds" description={`${counts.herds || 0} total herds on the account.`}>
+                    <Section title="Herds" description={`${counts.herds || 0} total herds on the account.`} collapsible>
                       <div className="space-y-2">
                         {(details?.herds || []).map((herd) => (
                           <div key={herd.id} className="rounded-md border border-slate-800 bg-slate-950/45 p-3">
@@ -443,8 +479,8 @@ export default function AdminSupportDesk({
                       </div>
                     </Section>
 
-                    <Section title="Recent animals" description="The latest 24 animal records on the account.">
-                      <div className="max-h-[28rem] space-y-2 overflow-y-auto pr-1">
+                    <Section title="Recent animals" description="The latest 24 animal records on the account." collapsible>
+                      <div className="space-y-2 pr-1 xl:max-h-[28rem] xl:overflow-y-auto">
                         {(details?.animals || []).map((animal) => (
                           <div key={animal.id} className="rounded-md border border-slate-800 bg-slate-950/45 p-3">
                             <div className="flex items-start justify-between gap-3">
@@ -465,7 +501,7 @@ export default function AdminSupportDesk({
                   </div>
 
                   <div className="grid grid-cols-1 gap-5 2xl:grid-cols-2">
-                    <Section title="Support history" description="Contact submissions matching this customer's email.">
+                    <Section title="Support history" description="Contact submissions matching this customer's email." collapsible defaultOpen>
                       <div className="space-y-3">
                         {supportHistory.map((message) => (
                           <article key={message.id} className="rounded-md border border-slate-800 bg-slate-950/45 p-4">
@@ -487,7 +523,7 @@ export default function AdminSupportDesk({
                       </div>
                     </Section>
 
-                    <Section title="Import assistant requests" description="Recent transfers and their processing state.">
+                    <Section title="Import assistant requests" description="Recent transfers and their processing state." collapsible>
                       <div className="space-y-2">
                         {(details?.importRequests || []).map((request) => (
                           <div key={request.id} className="rounded-md border border-slate-800 bg-slate-950/45 p-3">
@@ -507,7 +543,7 @@ export default function AdminSupportDesk({
                   </div>
 
                   <div className="grid grid-cols-1 gap-5 2xl:grid-cols-2">
-                    <Section title="Authentication and identifiers" description="Useful account references and sign-in health.">
+                    <Section title="Authentication and identifiers" description="Useful account references and sign-in health." collapsible>
                       <dl className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                         <Detail label="Clerk user ID" value={selectedUser.clerkUserId} mono />
                         <Detail label="Local user ID" value={localUser?.id ? String(localUser.id) : 'Not linked'} mono />
@@ -546,7 +582,7 @@ export default function AdminSupportDesk({
                     </Section>
                   </div>
 
-                  <Section title="Subscription snapshot" description="Access state from Clerk and the BarnBuddy database.">
+                  <Section title="Subscription snapshot" description="Access state from Clerk and the BarnBuddy database." collapsible>
                     <dl className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
                       <Detail label="Clerk plan" value={humanize(selectedUser.plan)} />
                       <Detail label="Clerk status" value={humanize(selectedUser.subscriptionStatus)} />
