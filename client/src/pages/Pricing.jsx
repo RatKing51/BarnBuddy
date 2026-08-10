@@ -147,14 +147,14 @@ export default function Pricing() {
   const requestedPremiumFeature = location.state?.premiumFeature || "";
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#0b1730] text-white">
+    <div className="public-page flex min-h-screen flex-col text-white">
       <main className="flex-grow">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto mb-10 max-w-3xl text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-300">Pricing</p>
             <h1 className="mt-3 text-4xl font-semibold sm:text-5xl">Choose your BarnBuddy plan</h1>
-            <p className="mt-4 text-white/78">
-              Upgrade through Clerk Billing for Premium exports, reminders, FFA Project Mode, planning tools, and deeper herd insight.
+            <p className="mt-4 text-base leading-relaxed text-white/78 sm:text-lg">
+              Start with essential animal and herd records for free. Upgrade when you need advanced exports, reminders, FFA Project Mode, and deeper herd insight.
             </p>
           </div>
 
@@ -176,7 +176,7 @@ export default function Pricing() {
               checkoutProps={{ appearance: clerkPricingAppearance }}
               fallback={
                 <div className="rounded-xl border border-white/10 bg-[#0f2650] p-5 text-sm text-white/70">
-                  Loading Clerk plans...
+                  Loading plans...
                 </div>
               }
             />
@@ -184,10 +184,29 @@ export default function Pricing() {
 
           <section className="mt-10 overflow-hidden rounded-2xl border border-white/10 bg-white/6">
             <div className="border-b border-white/10 px-5 py-4 sm:px-6">
-              <h2 className="text-xl font-semibold">Pricing sheet</h2>
-              <p className="mt-1 text-sm text-white/68">Compare what is included in each BarnBuddy plan.</p>
+              <h2 className="text-xl font-semibold">Compare plans</h2>
+              <p className="mt-1 text-sm text-white/68">See what is included with Free and Premium.</p>
             </div>
-            <div className="overflow-x-auto">
+
+            <div className="space-y-4 p-4 md:hidden">
+              {PRICING_FEATURES.map((feature) => (
+                <article key={feature.label} className="rounded-xl border border-white/10 bg-[#0f2650] p-4">
+                  <h3 className="font-semibold leading-snug text-white">{feature.label}</h3>
+                  <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border border-white/8 bg-white/5 p-3">
+                      <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-white/55">Free</dt>
+                      <dd className="mt-1.5 text-sm leading-relaxed text-white/75">{feature.free}</dd>
+                    </div>
+                    <div className="rounded-lg border border-blue-300/20 bg-blue-500/10 p-3">
+                      <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-200">Premium</dt>
+                      <dd className="mt-1.5 text-sm leading-relaxed text-white/90">{feature.premium}</dd>
+                    </div>
+                  </dl>
+                </article>
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[720px] text-left text-sm">
                 <caption className="sr-only">BarnBuddy Free and Premium feature comparison</caption>
                 <thead className="bg-white/8 text-xs uppercase tracking-[0.14em] text-white/60">
@@ -214,14 +233,14 @@ export default function Pricing() {
             <div>
               <h2 className="text-xl font-semibold">Schools, chapters, and group licenses</h2>
               <p className="mt-2 text-sm text-white/75">
-                Discounted plans can include multiple seats, centralized billing, shared farm access, and priority support.
+                Ask about options for multiple seats, centralized billing, shared farm access, and priority support.
               </p>
             </div>
             <Link
-              to="/contact"
+              to="/contact?topic=School%20or%20chapter%20pricing"
               className="inline-flex items-center justify-center rounded-lg bg-white px-5 py-3 font-semibold text-blue-700 transition hover:bg-blue-50"
             >
-              Contact sales
+              Ask about group plans
             </Link>
           </section>
         </div>

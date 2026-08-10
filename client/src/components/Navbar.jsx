@@ -1,168 +1,215 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { UserButton, useAuth as useClerkAuth, useUser } from '@clerk/clerk-react'
-import { Link, useLocation } from 'react-router'
-import { ADMIN_CLERK_USER_IDS, ADMIN_EMAILS } from '../config/env'
-import { useAuth as useBarnBuddyAuth } from '../context/AuthContext'
-import PremiumExpiryBadge from './PremiumExpiryBadge'
-import '../index.css'
+import { useEffect, useRef, useState } from "react";
+import { UserButton, useAuth as useClerkAuth, useUser } from "@clerk/clerk-react";
+import { Link, NavLink, useLocation } from "react-router";
+import { ADMIN_CLERK_USER_IDS, ADMIN_EMAILS } from "../config/env";
+import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";
+import PremiumExpiryBadge from "./PremiumExpiryBadge";
 
-const Navbar = () => {
-  const [open, setOpen] = useState(false)
-  const menuButtonRef = useRef(null)
-  const location = useLocation()
-  const { isLoaded, isSignedIn } = useClerkAuth()
-  const { subscription } = useBarnBuddyAuth()
-  const { user } = useUser()
-  const showSignedIn = isLoaded && isSignedIn
-  const primaryEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || ''
+const publicLinks = [
+  { to: "/aboutus", label: "About" },
+  { to: "/pricing", label: "Pricing" },
+  { to: "/news", label: "News" },
+  { to: "/help", label: "Help" },
+];
+
+function Brand() {
+  return (
+    <span className="flex items-center">
+      <span className="leading-none">
+        <span className="block text-2xl font-bold sm:text-3xl">
+          <span className="text-blue-500">Barn</span>
+          <span className="text-gray-300">Buddy.</span>
+        </span>
+        <span className="mt-1 block text-[10px] font-bold text-slate-400 sm:text-xs">
+          Doing for the Small
+        </span>
+      </span>
+    </span>
+  );
+}
+
+export default function Navbar() {
+  const [open, setOpen] = useState(false);
+  const menuButtonRef = useRef(null);
+  const location = useLocation();
+  const { isLoaded, isSignedIn } = useClerkAuth();
+  const { subscription } = useBarnBuddyAuth();
+  const { user } = useUser();
+  const showSignedIn = isLoaded && isSignedIn;
+  const primaryEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || "";
   const showAdmin = Boolean(
     showSignedIn &&
       ((primaryEmail && ADMIN_EMAILS.includes(primaryEmail)) ||
         (user?.id && ADMIN_CLERK_USER_IDS.includes(user.id)))
-  )
-
-  const closeMenu = () => setOpen(false)
-  const isCurrent = (path) => location.pathname === path
+  );
 
   useEffect(() => {
-    if (!open) return undefined
+    setOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!open) return undefined;
 
     function handleEscape(event) {
-      if (event.key === 'Escape') {
-        setOpen(false)
-        menuButtonRef.current?.focus()
+      if (event.key === "Escape") {
+        setOpen(false);
+        menuButtonRef.current?.focus();
       }
     }
 
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [open])
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [open]);
+
+  const desktopLinkClass = ({ isActive }) =>
+    `inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold transition-colors ${
+      isActive
+        ? "bg-white/10 text-white"
+        : "text-slate-300 hover:bg-white/6 hover:text-white"
+    }`;
+
+  const mobileLinkClass = ({ isActive }) =>
+    `flex min-h-12 items-center justify-between rounded-xl border px-4 text-base font-semibold transition-colors ${
+      isActive
+        ? "border-blue-400/35 bg-blue-500/15 text-white"
+        : "border-transparent text-slate-200 hover:border-white/10 hover:bg-white/6"
+    }`;
 
   return (
-    <header className="bg-[#101D42] text-white">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0b1730]/95 text-white shadow-lg shadow-black/15 backdrop-blur-xl">
       <nav aria-label="Primary navigation">
-      <div className="max-w-10xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-        <div className="flex items-center justify-between h-16">
-          {/* Left: Logo */}
-          <Link to="/" onClick={closeMenu} aria-label="BarnBuddy home" aria-current={isCurrent('/') ? 'page' : undefined} className="flex min-h-11 items-center flex-shrink-0 z-20">
-            <span className="text-3xl font-bold leading-none">
-              <span className="text-blue-500">Barn</span>
-              <span className="text-gray-300">Buddy.</span>
-            </span>
-          </Link>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-[4.5rem] items-center justify-between gap-5">
+            <Link to="/" aria-label="BarnBuddy home" className="shrink-0 rounded-xl">
+              <Brand />
+            </Link>
 
-          {/* Center: Tagline only on desktop */}
-          <div className="hidden md:flex md:flex-1 md:justify-center">
-            <p className="mx-auto text-center text-white text-lg font-bold md:text-lg lg:text-xl">
-              Doing for the Small
-            </p>
-          </div>
+            <div className="hidden items-center gap-1 lg:flex">
+              {publicLinks.map((link) => (
+                <NavLink key={link.to} to={link.to} className={desktopLinkClass}>
+                  {link.label}
+                </NavLink>
+              ))}
+            </div>
 
-          {/* Right: Desktop links */}
-          <div className="hidden md:flex md:items-center md:space-x-6 z-20">
-            <Link to="/aboutus" aria-current={isCurrent('/aboutus') ? 'page' : undefined} className="inline-flex min-h-11 items-center text-white text-xl font-bold hover:text-blue-300 transition-colors">
-              About Us
-            </Link>
-            <Link to="/pricing" aria-current={isCurrent('/pricing') ? 'page' : undefined} className="inline-flex min-h-11 items-center text-white text-xl font-bold hover:text-blue-300 transition-colors">
-              Pricing
-            </Link>
-            <Link to="/news" aria-current={isCurrent('/news') ? 'page' : undefined} className="inline-flex min-h-11 items-center text-white text-xl font-bold hover:text-blue-300 transition-colors">
-              News
-            </Link>
-            {showSignedIn ? (
-              <>
-                {showAdmin && (
-                  <Link to="/admin" className="inline-flex min-h-11 items-center text-white text-xl font-bold hover:text-blue-300 transition-colors">
-                    Admin
+            <div className="hidden shrink-0 items-center gap-2 lg:flex">
+              {showSignedIn ? (
+                <>
+                  {showAdmin && (
+                    <NavLink to="/admin" className={desktopLinkClass}>
+                      Admin
+                    </NavLink>
+                  )}
+                  <PremiumExpiryBadge subscription={subscription} className="hidden xl:inline-flex" />
+                  <Link
+                    to="/dashboard"
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white shadow-lg shadow-blue-950/25 transition hover:bg-blue-500"
+                  >
+                    Dashboard
                   </Link>
-                )}
-                <Link to="/dashboard" aria-current={location.pathname.startsWith('/dashboard') ? 'page' : undefined} className="inline-flex min-h-11 items-center bg-blue-600 hover:bg-blue-700 text-white text-xl font-bold py-2 px-4 rounded-md transition-colors">
-                  Dashboard
-                </Link>
-                <PremiumExpiryBadge subscription={subscription} />
-                <UserButton afterSignOutUrl="/" />
-              </>
-            ) : (
-              <>
-                <Link to="/signup" aria-current={location.pathname.startsWith('/signup') ? 'page' : undefined} className="inline-flex min-h-11 items-center bg-blue-600 hover:bg-blue-700 text-white text-xl font-bold py-2 px-4 rounded-md transition-colors">
-                Sign Up
-                </Link>
-                <Link to="/login" aria-current={location.pathname.startsWith('/login') ? 'page' : undefined} className="inline-flex min-h-11 items-center text-white text-xl font-bold hover:text-orange-400 transition-colors">
-                  Login
-                </Link>
-              </>
-            )}
-          </div>
+                  <div className="ml-1 grid min-h-11 min-w-11 place-items-center rounded-full border border-white/10 bg-white/5">
+                    <UserButton afterSignOutUrl="/" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-slate-200 transition hover:bg-white/6 hover:text-white"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-950/25 transition hover:bg-blue-500"
+                  >
+                    Get started free
+                  </Link>
+                </>
+              )}
+            </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center z-20">
             <button
               ref={menuButtonRef}
-              onClick={() => setOpen(!open)}
+              type="button"
+              onClick={() => setOpen((current) => !current)}
               aria-expanded={open}
               aria-controls="mobile-primary-menu"
-              aria-label={open ? 'Close navigation menu' : 'Open navigation menu'}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-md text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white"
+              aria-label={open ? "Close navigation menu" : "Open navigation menu"}
+              className="grid min-h-11 min-w-11 place-items-center rounded-xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10 focus:outline-none lg:hidden"
             >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true" focusable="false">
-                {open ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
+              <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
+              <span aria-hidden="true" className="text-2xl font-light leading-none">
+                {open ? "×" : "≡"}
+              </span>
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Mobile menu (collapsible) */}
-      {open && <div id="mobile-primary-menu" className="md:hidden">
-        <div className="px-4 pt-2 pb-4 space-y-2">
-          <Link to="/aboutus" onClick={closeMenu} aria-current={isCurrent('/aboutus') ? 'page' : undefined} className="flex min-h-11 items-center text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
-            About Us
-          </Link>
-          <Link to="/pricing" onClick={closeMenu} aria-current={isCurrent('/pricing') ? 'page' : undefined} className="flex min-h-11 items-center text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
-            Pricing
-          </Link>
-          <Link to="/news" onClick={closeMenu} aria-current={isCurrent('/news') ? 'page' : undefined} className="flex min-h-11 items-center text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
-            News
-          </Link>
-          {showSignedIn ? (
-            <>
-              {showAdmin && (
-                <Link to="/admin" onClick={closeMenu} className="flex min-h-11 items-center text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
-                  Admin
-                </Link>
+        {open && (
+          <div id="mobile-primary-menu" className="border-t border-white/10 bg-[#0b1730] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 lg:hidden">
+            <div className="mx-auto max-w-7xl space-y-1">
+              {publicLinks.map((link) => (
+                <NavLink key={link.to} to={link.to} className={mobileLinkClass}>
+                  <span>{link.label}</span>
+                  <span aria-hidden="true" className="text-blue-300">→</span>
+                </NavLink>
+              ))}
+
+              <div className="my-3 border-t border-white/10" />
+
+              {showSignedIn ? (
+                <div className="space-y-2">
+                  {showAdmin && (
+                    <NavLink to="/admin" className={mobileLinkClass}>
+                      <span>Admin</span>
+                      <span aria-hidden="true" className="text-blue-300">→</span>
+                    </NavLink>
+                  )}
+                  <Link
+                    to="/settings/account"
+                    className="flex min-h-12 items-center justify-between rounded-xl px-4 font-semibold text-slate-200 hover:bg-white/6"
+                  >
+                    <span>Account settings</span>
+                    <span aria-hidden="true" className="text-blue-300">→</span>
+                  </Link>
+                  <Link
+                    to="/dashboard"
+                    className="flex min-h-12 items-center justify-center rounded-xl bg-blue-600 px-4 font-bold text-white shadow-lg shadow-blue-950/25 hover:bg-blue-500"
+                  >
+                    Open dashboard
+                  </Link>
+                  <div className="flex min-h-14 items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4">
+                    <div>
+                      <p className="text-sm font-semibold text-white">Signed in</p>
+                      <p className="max-w-[14rem] truncate text-xs text-slate-400">{primaryEmail || "BarnBuddy account"}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <PremiumExpiryBadge subscription={subscription} />
+                      <UserButton afterSignOutUrl="/" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <Link
+                    to="/login"
+                    className="flex min-h-12 items-center justify-center rounded-xl border border-white/12 bg-white/5 font-semibold text-white hover:bg-white/10"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="flex min-h-12 items-center justify-center rounded-xl bg-blue-600 font-bold text-white hover:bg-blue-500"
+                  >
+                    Get started free
+                  </Link>
+                </div>
               )}
-              <Link to="/dashboard" onClick={closeMenu} aria-current={location.pathname.startsWith('/dashboard') ? 'page' : undefined} className="flex min-h-11 items-center bg-blue-600 hover:bg-blue-700 text-white text-base font-medium py-2 px-3 rounded-md">
-                Dashboard
-              </Link>
-              <div className="py-2 px-2">
-                <PremiumExpiryBadge subscription={subscription} className="mr-3" />
-                <UserButton afterSignOutUrl="/" />
-              </div>
-            </>
-          ) : (
-            <>
-              <Link to="/signup" onClick={closeMenu} aria-current={location.pathname.startsWith('/signup') ? 'page' : undefined} className="flex min-h-11 items-center bg-blue-600 hover:bg-blue-700 text-white text-base font-medium py-2 px-3 rounded-md">
-                Sign Up
-              </Link>
-              <Link to="/login" onClick={closeMenu} aria-current={location.pathname.startsWith('/login') ? 'page' : undefined} className="flex min-h-11 items-center text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
-                Login
-              </Link>
-            </>
-          )}
-
-          {/* Optional: show tagline on mobile */}
-          <div className="pt-2 border-t border-white/10">
-            <p className="text-sm text-white/90">Doing for the Small</p>
+            </div>
           </div>
-        </div>
-      </div>}
+        )}
       </nav>
     </header>
-  )
+  );
 }
-
-export default Navbar

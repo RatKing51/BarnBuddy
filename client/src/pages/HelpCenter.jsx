@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router'
 import Footer from '../components/Footer'
 
 const helpTopics = [
@@ -23,12 +24,12 @@ const helpTopics = [
 const quickAnswers = [
   ['Can I use BarnBuddy for one animal?', 'Yes. It works for a single project animal or a small herd.'],
   ['Where can I find detailed guides?', 'Open the BarnBuddy documentation for step-by-step account, record, and Premium feature guides.'],
-  ['Where do I ask for help?', 'Use the Contact page for now and include your account email plus what you were trying to do.'],
+  ['Where do I ask for help?', 'Contact BarnBuddy support and include your account email, what you were trying to do, and any error message you saw.'],
 ]
 
 export default function HelpCenter() {
   return (
-    <div className="min-h-screen bg-[#0b1730] text-white flex flex-col">
+    <div className="public-page flex min-h-screen flex-col text-white">
       <main className="flex-grow">
         <section className="px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
           <div className="max-w-7xl mx-auto">
@@ -38,6 +39,20 @@ export default function HelpCenter() {
               <p className="mt-4 text-white/78 text-lg leading-relaxed">
                 Find quick answers for common workflows, then open the full documentation when you need step-by-step guidance.
               </p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  to="/docs"
+                  className="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
+                >
+                  Browse step-by-step guides
+                </Link>
+                <Link
+                  to="/contact"
+                  className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/14 bg-white/6 px-5 py-3 font-semibold text-white transition-colors hover:bg-white/10"
+                >
+                  Contact support
+                </Link>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -55,9 +70,9 @@ export default function HelpCenter() {
                   <h2 className="text-2xl font-semibold">Quick answers</h2>
                   <p className="mt-2 text-sm text-white/65">Common answers for accounts, records, and support.</p>
                 </div>
-                <a href="/contact" className="inline-flex min-h-11 items-center rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700">
-                  Contact support
-                </a>
+                <Link to="/docs" className="inline-flex min-h-11 items-center rounded-lg bg-white px-4 py-2 font-semibold text-blue-700 hover:bg-blue-50">
+                  Open documentation
+                </Link>
               </div>
 
               <div className="mt-6 divide-y divide-white/10">

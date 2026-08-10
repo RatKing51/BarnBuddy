@@ -1,57 +1,48 @@
-import React from 'react'
-import '../index.css'
-import { getSiteAssetUrl } from '../config/siteImages'
+import { Link } from "react-router";
+import { getSiteAssetUrl } from "../config/siteImages";
 
 export default function LargeAboutMeLanding() {
   return (
-    <section className="bg-[#101D42] text-white py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="border border-white/14 rounded-2xl p-5 sm:p-8 md:p-10 bg-white/4 shadow-2xl shadow-black/20">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 items-center">
-            <div className="w-full flex justify-center lg:justify-end">
-              <div className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-white/12 bg-white/5 shadow-xl shadow-black/25">
-                <div className="aspect-[4/3] sm:aspect-[16/11] lg:aspect-[4/5] xl:aspect-[5/4]">
-                  <img
-                    src={getSiteAssetUrl("IMG_5761.JPEG")}
-                    alt="Gage Billinger at a Kansas FFA event"
-                    className="h-full w-full object-cover object-[center_38%]"
-                  />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-[#06112b]/45 via-transparent to-transparent" aria-hidden="true" />
-                <div className="absolute bottom-4 left-4 rounded-lg border border-white/14 bg-[#07102a]/78 px-4 py-3 backdrop-blur">
-                  <p className="text-sm font-semibold">Built by someone in ag</p>
-                  <p className="text-xs text-white/72">FFA roots, small-farm focus</p>
-                </div>
+    <section className="px-4 py-14 text-white sm:px-6 sm:py-20 lg:px-8">
+      <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl border border-white/10 bg-[#0f2650] shadow-2xl shadow-black/20">
+        <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="relative min-h-80 overflow-hidden lg:min-h-[34rem]">
+            <img
+              src={getSiteAssetUrl("IMG_5761.JPEG")}
+              alt="BarnBuddy founder Gage Billinger at a Kansas FFA event"
+              className="absolute inset-0 h-full w-full object-cover object-[center_38%]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#07102a]/80 via-transparent to-transparent" aria-hidden="true" />
+            <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/15 bg-[#07102a]/80 p-4 backdrop-blur-md sm:bottom-7 sm:left-7 sm:right-auto sm:max-w-sm">
+              <p className="font-bold text-white">Built by someone in agriculture</p>
+              <p className="mt-1 text-sm text-slate-300">Kansas FFA roots and firsthand small-farm experience.</p>
+            </div>
+          </div>
+
+          <div className="flex items-center p-6 sm:p-9 lg:p-12">
+            <div className="max-w-2xl">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">The story behind BarnBuddy</p>
+              <h2 className="mt-4 text-3xl font-black tracking-[-0.035em] sm:text-4xl">Farm software should understand the farm.</h2>
+              <p className="mt-5 text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
+                I&apos;m Gage Billinger. My family raises meat goats on a small rural Kansas farm, and I saw how quickly health notes, dates, and project records could scatter across notebooks and spreadsheets.
+              </p>
+              <p className="mt-4 text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
+                I built BarnBuddy to keep those details together in a system that is straightforward enough for everyday chores and capable enough to grow with your herd.
+              </p>
+
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Link
+                  to="/aboutus"
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl bg-blue-600 px-5 font-bold text-white transition hover:bg-blue-500"
+                >
+                  Read our story
+                </Link>
+                <span className="text-sm font-semibold text-slate-400">Doing for the Small</span>
               </div>
             </div>
-
-            <aside className="w-full flex justify-center lg:justify-start">
-              <div className="w-full bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-6 sm:p-8 md:p-10 shadow-lg border border-white/10">
-                <h2 className="text-white text-2xl sm:text-3xl font-semibold mb-4">About Us</h2>
-
-                <p className="text-white/90 text-sm sm:text-base lg:text-lg leading-relaxed mb-6">
-                  Hi, I’m <strong>Gage Billinger</strong>, a 16-year-old who lives on a small rural farm in KS where we raise meat goats. I built this site because I know firsthand how hard it is to keep items neat, organized, simple, and useful. So I built this site to help.
-                </p>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mr-3">
-                      <svg className="w-6 h-6 text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-sm text-white/80">Built from the farm for the farm</p>
-                      <p className="text-xs text-white/60 mt-1">Small farm workflow, made simple</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </aside>
           </div>
         </div>
       </div>
     </section>
-  )
+  );
 }

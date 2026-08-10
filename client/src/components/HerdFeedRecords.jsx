@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import * as premiumRecordsAPI from "../api/premiumRecords";
+import EmptyState from "./EmptyState";
 import { SkeletonBlock } from "./LoadingSpinner";
 
 function today() {
@@ -254,7 +255,11 @@ export default function HerdFeedRecords({ selectedHerd, isPremium = false, autom
           <h3 className="text-lg font-semibold text-white">Feed reminders</h3>
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {reminders.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-gray-700 bg-gray-900 p-4 text-sm text-gray-400">No feed purchases due soon.</div>
+              <EmptyState
+                title="No feed purchases due soon"
+                description="Upcoming purchase dates will appear here when they are within 14 days."
+                className="md:col-span-2 xl:col-span-3"
+              />
             ) : reminders.map(({ record, days }) => (
               <div key={record.id} className={`rounded-xl border p-4 ${days < 0 ? "border-red-400/30 bg-red-500/10" : "border-amber-300/30 bg-amber-400/10"}`}>
                 <p className="font-semibold text-white">{record.feed_type || "Feed purchase"}</p>
@@ -269,19 +274,30 @@ export default function HerdFeedRecords({ selectedHerd, isPremium = false, autom
       )}
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_1fr]">
-        <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
+        <div className={`rounded-2xl border border-gray-700 bg-gray-800 p-5 ${feedRecords.length === 0 ? "xl:col-span-2" : ""}`}>
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-lg font-semibold text-white">Feed records</h3>
-            <button
-              onClick={addFeed}
-              disabled={addingFeed}
-              className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60"
-            >
-              {addingFeed ? "Adding..." : "Add"}
-            </button>
+            {feedRecords.length > 0 && (
+              <button
+                onClick={addFeed}
+                disabled={addingFeed}
+                className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60"
+              >
+                {addingFeed ? "Adding..." : "Add"}
+              </button>
+            )}
           </div>
           {feedRecords.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-700 bg-gray-900 p-4 text-sm text-gray-400">No feed records yet.</div>
+            <EmptyState
+              variant="full"
+              title="Start the herd's feed log"
+              description="Record a purchase to track feed amounts, costs, and the next time you expect to buy."
+              primaryAction={{
+                label: addingFeed ? "Adding record..." : "Add first feed record",
+                onClick: addFeed,
+                disabled: addingFeed,
+              }}
+            />
           ) : feedRecords.map((record) => (
             <button
               key={record.id}
@@ -295,9 +311,14 @@ export default function HerdFeedRecords({ selectedHerd, isPremium = false, autom
           ))}
         </div>
 
+        {feedRecords.length > 0 && (
         <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
           {!selectedFeed ? (
-            <div className="rounded-xl border border-dashed border-gray-700 bg-gray-900 p-6 text-sm text-gray-400">Select or add a feed record.</div>
+            <EmptyState
+              variant="full"
+              title="Choose a feed record"
+              description="Select a record from the list to review or update its amount, cost, and purchase date."
+            />
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -350,6 +371,7 @@ export default function HerdFeedRecords({ selectedHerd, isPremium = false, autom
             </div>
           )}
         </div>
+        )}
       </section>
       <ToastContainer autoClose="1000" />
     </div>

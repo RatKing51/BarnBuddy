@@ -1,11 +1,10 @@
 import api from "./axios";
 
-
 export const getHerdsForUser = () =>
-  api.get("/herds/");
+  api.get("/herds");
 
 export const createHerd = (data) =>
-  api.post("/herds/", data);
+  api.post("/herds", data);
 
 export const updateHerd = (id, data) =>
   api.put(`/herds/${id}`, data);

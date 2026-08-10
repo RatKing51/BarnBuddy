@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router'
 import { resolveSiteImageUrl } from '../config/siteImages'
 
 export default function RecentNewsCard({
@@ -16,26 +17,26 @@ export default function RecentNewsCard({
   }).format(new Date(`${date}T12:00:00`))
 
   return (
-    <article className="flex flex-col sm:flex-row items-stretch gap-6 bg-transparent">
-      <div className="w-full sm:w-1/3 lg:w-1/4 h-72 sm:h-48 lg:h-56 bg-[#f8fbff] border border-white/14 rounded-lg overflow-hidden shadow-lg shadow-black/20">
+    <article className="bb-card-lift grid grid-cols-1 overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-xl shadow-black/15 sm:grid-cols-[13rem_1fr] lg:grid-cols-[17rem_1fr]">
+      <div className="aspect-[16/10] w-full overflow-hidden bg-[#f8fbff] sm:aspect-auto sm:min-h-52">
         <img
           src={resolveSiteImageUrl(image)}
           alt={imageAlt}
-          className={`min-h-full w-full ${imageFit === 'contain' ? 'object-contain p-5' : 'object-cover object-center'}`}
+          className={`h-full w-full ${imageFit === 'contain' ? 'object-contain p-5' : 'object-cover object-center'}`}
         />
       </div>
 
-      <div className="flex-1 bg-blue-600/95 text-white rounded-lg p-8 lg:p-8 shadow-md flex flex-col justify-between">
+      <div className="flex min-w-0 flex-col justify-between p-6 text-white sm:p-7">
         <div>
-          <h3 className="text-lg lg:text-2xl font-semibold mb-2 leading-tight">{title}</h3>
-          <p className="text-sm lg:text-base text-white/90 leading-relaxed">{excerpt}</p>
+          <h3 className="text-xl font-bold leading-tight lg:text-2xl">{title}</h3>
+          <p className="mt-3 text-sm leading-6 text-slate-300 lg:text-base lg:leading-7">{excerpt}</p>
         </div>
 
-        <div className="mt-4 flex items-center justify-between">
-          <time className="text-xs text-white/70" dateTime={date}>{formattedDate}</time>
-          <a className="text-sm bg-white text-blue-700 px-3 py-1.5 rounded-md font-semibold hover:bg-blue-100 transition-colors" href="/news">
-            Read
-          </a>
+        <div className="mt-6 flex items-center justify-between gap-4 border-t border-white/10 pt-4">
+          <time className="text-xs font-semibold text-slate-400" dateTime={date}>{formattedDate}</time>
+          <Link className="inline-flex min-h-11 items-center text-sm font-bold text-blue-200 transition hover:text-blue-100" to="/news">
+            View update →
+          </Link>
         </div>
       </div>
     </article>

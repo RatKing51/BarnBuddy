@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getVetVisitsForAnimal, createVetVisit, updateVetVisit, deleteVetVisit } from "../api/vetVisits";
 import { toast, ToastContainer } from "react-toastify";
+import EmptyState from "./EmptyState";
 import { SkeletonBlock } from "./LoadingSpinner";
 
 const emptyVisit = (animalId) => ({
@@ -336,6 +337,20 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
     return <VetVisitsSkeleton />;
   }
 
+  if (visits.length === 0 && !selectedVisit) {
+    return (
+      <>
+        <EmptyState
+          variant="full"
+          title="Start this animal's care timeline"
+          description="Add the first vet visit to keep care details, costs, follow-ups, and notes together."
+          primaryAction={{ label: "Create first visit", onClick: handleAddVisit }}
+        />
+        <ToastContainer autoClose="1000" />
+      </>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(280px,360px)_1fr] gap-6">
       <aside className="space-y-4">
@@ -369,6 +384,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
           </div>
         </div>
 
+        {visits.length > 0 && (
         <div className="rounded-2xl border border-gray-700 bg-gray-800 p-4">
           <div className="grid grid-cols-3 gap-2">
             {[
@@ -390,9 +406,13 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
 
           <div className="mt-4 max-h-[32rem] space-y-2 overflow-y-auto pr-1">
             {filteredVisits.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-gray-600 p-5 text-center text-sm text-gray-400">
-                No visits in this view.
-              </div>
+              <EmptyState
+                title={filter === "upcoming" ? "No visits due soon" : "No past visits yet"}
+                description={filter === "upcoming"
+                  ? "There are no scheduled visits or follow-ups in the next 10 days."
+                  : "Completed and earlier visits will appear here."}
+                secondaryAction={{ label: "Show all visits", onClick: () => setFilter("all") }}
+              />
             ) : (
               filteredVisits.map((visit) => {
                 const status = getVisitStatus(visit);
@@ -434,6 +454,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
             )}
           </div>
         </div>
+        )}
       </aside>
 
       <section className="rounded-2xl border border-gray-700 bg-gray-800 p-5 sm:p-6">
@@ -587,22 +608,13 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
             </div>
           </>
         ) : (
-          <div className="flex min-h-96 flex-col items-center justify-center rounded-xl border border-dashed border-gray-600 p-8 text-center">
-            <h3 className="text-xl font-semibold text-white">
-              {visits.length ? "Select a vet visit" : "No vet visits yet"}
-            </h3>
-            <p className="mt-2 max-w-md text-sm text-gray-400">
-              {visits.length
-                ? "Choose a visit from the timeline to edit it, or start a new visit record."
-                : "Create the first vet visit when you are ready to track care, costs, follow-ups, and notes."}
-            </p>
-            <button
-              onClick={handleAddVisit}
-              className="mt-5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
-            >
-              {visits.length ? "New visit" : "Create first visit"}
-            </button>
-          </div>
+          <EmptyState
+            variant="full"
+            title="Choose a vet visit"
+            description="Select a visit from the timeline to review it, or start a new care record."
+            primaryAction={{ label: "New visit", onClick: handleAddVisit }}
+            className="min-h-96"
+          />
         )}
       </section>
 

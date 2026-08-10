@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { UserButton, useUser } from "@clerk/clerk-react";
-import { toast, ToastContainer } from "react-toastify";
+import { useUser } from "@clerk/clerk-react";
+import { toast } from "react-toastify";
 import BillingAction from "../components/BillingAction";
 import { useAuth } from "../context/AuthContext";
 import { usePreferences } from "../context/PreferencesContext";
 import { API_BASE_URL, API_URL } from "../config/env";
 import { PREMIUM_FEATURES, PLANS, PLAN_IDS } from "../config/subscription";
-import PremiumExpiryBadge from "../components/PremiumExpiryBadge";
+import SettingsHeader from "../components/SettingsHeader";
 
 function reminderBadgeClass(urgency) {
   if (urgency === "critical" || urgency === "overdue") {
@@ -278,32 +278,8 @@ export default function AccountSettings() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100">
-      <header className="border-b border-gray-700 bg-gray-800">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <div>
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard")}
-              className="text-left text-2xl font-bold tracking-tight hover:opacity-85"
-            >
-              <span className="text-blue-500">Barn</span>Buddy
-            </button>
-            <p className="mt-1 text-sm text-gray-400">Account settings</p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate("/dashboard")}
-              className="rounded-xl bg-gray-700 px-4 py-2 font-semibold text-white hover:bg-gray-600"
-            >
-              Dashboard
-            </button>
-            <PremiumExpiryBadge subscription={subscription} />
-            <UserButton afterSignOutUrl="/" />
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-950 text-gray-100">
+      <SettingsHeader />
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8 max-w-3xl">
@@ -378,7 +354,7 @@ export default function AccountSettings() {
                   <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${subscription.isPremium ? "text-gray-500" : "text-blue-300"}`}>Billing</p>
                   <h2 className="mt-2 text-xl font-semibold text-white">Subscription</h2>
                   <p className={`mt-2 text-sm ${subscription.isPremium ? "text-gray-400" : "text-blue-100/80"}`}>
-                    BarnBuddy uses Clerk Billing for upgrades and subscription management.
+                    Review your current plan, available features, and billing options in one place.
                   </p>
                 </div>
                 {!subscription.isPremium && (
@@ -418,7 +394,7 @@ export default function AccountSettings() {
 
             <section className="rounded-2xl border border-gray-700 bg-gray-800 p-6">
               <h2 className="text-xl font-semibold text-white">Profile</h2>
-              <p className="mt-2 text-sm text-gray-400">These basics come from your Clerk account.</p>
+              <p className="mt-2 text-sm text-gray-400">These details are connected to your BarnBuddy sign-in.</p>
 
               <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block">
@@ -635,7 +611,6 @@ export default function AccountSettings() {
         </div>
       </main>
 
-      <ToastContainer autoClose="1000" />
     </div>
   );
 }

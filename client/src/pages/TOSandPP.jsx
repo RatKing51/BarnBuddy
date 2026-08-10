@@ -6,7 +6,7 @@ export default function TOSandPP({ documentType = 'terms' }) {
     const showPrivacy = documentType === 'privacy'
 
     return (
-        <div className="min-h-screen bg-[#0b1730] text-white flex flex-col">
+        <div className="public-page flex min-h-screen flex-col text-white">
 
             {/* Main Content */}
             <main className="flex-grow flex flex-col items-center px-4 py-10">

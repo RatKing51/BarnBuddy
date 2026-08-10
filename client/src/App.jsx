@@ -198,10 +198,9 @@ function AppContent() {
       <Seo />
       <a className="skip-link" href="#main-content" onClick={skipToMainContent}>Skip to main content</a>
       <PageLoadingBar active={pageLoading} />
-      <ToastContainer autoClose={1000} />
-      <div id="main-content" tabIndex="-1">
+      <ToastContainer autoClose={2600} position="top-right" theme="dark" newestOnTop closeOnClick />
       {showMaintenance ? (
-        <main className="grid min-h-screen place-items-center bg-[#07111f] px-4 text-center text-white">
+        <main id="main-content" tabIndex="-1" className="grid min-h-screen place-items-center bg-[#07111f] px-4 text-center text-white">
           <section className="w-full max-w-3xl rounded-lg border border-sky-300/20 bg-[#0f2650] p-8 shadow-2xl shadow-black/30 sm:p-10">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-200">Maintenance Mode</p>
             <h1 className="mt-4 text-4xl font-semibold leading-tight sm:text-5xl">
@@ -221,7 +220,7 @@ function AppContent() {
       <>
       {showShell && <Navbar />}
       {showAnnouncement && (
-        <section aria-live="polite" aria-atomic="true" className={`border-b px-4 py-5 text-white shadow-lg shadow-black/15 ${announcementStyle.shell}`}>
+        <section aria-live="polite" aria-atomic="true" className={`border-b px-4 py-3 text-white shadow-lg shadow-black/15 sm:py-4 ${announcementStyle.shell}`}>
           <div className="mx-auto flex max-w-7xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="max-w-4xl">
               {announcement.title && (
@@ -229,7 +228,7 @@ function AppContent() {
                   {announcement.title}
                 </p>
               )}
-              <p className="mt-1 text-xl font-semibold leading-snug sm:text-2xl">
+              <p className="mt-1 text-base font-semibold leading-snug sm:text-lg">
                 {announcement.message}
               </p>
             </div>
@@ -241,6 +240,7 @@ function AppContent() {
           </div>
         </section>
       )}
+      <div id="main-content" tabIndex="-1">
       <Suspense fallback={(
         <main className="grid min-h-[70vh] place-items-center bg-[#0b1730] text-white">
           <LoadingSpinner label="Loading page..." />
@@ -276,9 +276,9 @@ function AppContent() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       </Suspense>
+      </div>
       </>
       )}
-      </div>
     </>
   );
 }

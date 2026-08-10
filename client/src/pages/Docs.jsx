@@ -142,7 +142,7 @@ function SuccessNote({ children }) {
 
 export default function Docs() {
   return (
-    <div className="min-h-screen bg-[#0b1730] text-white flex flex-col">
+    <div className="public-page flex min-h-screen flex-col text-white">
       <main className="flex-grow">
         <section className="px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
           <div className="max-w-7xl mx-auto">

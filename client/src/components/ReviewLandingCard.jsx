@@ -16,7 +16,8 @@ const ReviewLandingCard = ({
   rating = 4.5,
   text = 'BarnBuddy saved me hours every month. Easy tracking, reliable reminders, and clear herd reports.',
   date = 'Sep 2025',
-  tag = 'Verified user',
+  tag = 'BarnBuddy user',
+  verified = false,
 }) => {
   const initials = name
     .split(' ')
@@ -50,11 +51,11 @@ const ReviewLandingCard = ({
           {hasHalfStar && <StarIcon type="half" />}
         </div>
 
-        <p className="mt-5 flex-1 text-sm leading-relaxed text-white/84">"{text}"</p>
+        <p className="mt-5 flex-1 text-sm leading-relaxed text-white/84">“{text}”</p>
 
         <div className="mt-6 flex items-center justify-between gap-3 border-t border-white/10 pt-4">
           <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-medium text-white/82">{tag}</span>
-          <span className="text-xs font-semibold text-blue-200">Verified</span>
+          {verified && <span className="text-xs font-semibold text-blue-200">Verified</span>}
         </div>
       </div>
     </article>

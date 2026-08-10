@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import Footer from '../components/Footer'
 import { API_URL } from '../config/env'
 
@@ -8,11 +8,12 @@ const contactMethods = [
     label: 'Email',
     value: 'barnbuddyapp@gmail.com',
     detail: 'Best for product questions, support, and partnership ideas.',
+    href: 'mailto:barnbuddyapp@gmail.com',
   },
   {
     label: 'Location',
     value: 'Kansas, United States',
-    detail: 'Built with small farms, FFA, and 4H communities in mind.',
+    detail: 'Built with small farms, FFA, and 4-H communities in mind.',
   },
 ]
 
@@ -103,7 +104,7 @@ export default function Contact() {
       })
       window.localStorage.setItem(CONTACT_COOLDOWN_KEY, String(Date.now()))
       setCooldown(getContactCooldown())
-      setStatus({ type: 'success', message: 'Message sent. We will get back to you soon.' })
+      setStatus({ type: 'success', message: 'Thanks — your message was sent. We will reply by email as soon as we can.' })
     } catch (err) {
       setStatus({ type: 'error', message: err.message })
     } finally {
@@ -112,15 +113,15 @@ export default function Contact() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b1730] text-white flex flex-col">
+    <div className="public-page flex min-h-screen flex-col text-white">
       <main className="flex-grow">
         <section className="px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
           <div className="max-w-7xl mx-auto">
             <div className="max-w-3xl mb-10">
               <p className="text-blue-300 text-sm font-semibold uppercase tracking-[0.18em]">Contact</p>
-              <h1 className="mt-3 text-4xl sm:text-5xl font-semibold leading-tight">Talk to BarnBuddy</h1>
+              <h1 className="mt-3 text-4xl sm:text-5xl font-semibold leading-tight">Get in touch with BarnBuddy</h1>
               <p className="mt-4 text-white/78 text-lg leading-relaxed">
-                Questions, feedback, farm-program ideas, or support needs can start here. Use the form below or email BarnBuddy directly.
+                Send a product question, ask for account help, share feedback, or start a conversation about a school or chapter plan.
               </p>
             </div>
 
@@ -136,7 +137,13 @@ export default function Contact() {
                     {contactMethods.map((method) => (
                       <div key={method.label} className="rounded-lg border border-white/10 bg-white/6 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-200">{method.label}</p>
-                        <p className="mt-2 text-lg font-semibold text-white">{method.value}</p>
+                        {method.href ? (
+                          <a className="mt-2 inline-block break-all text-lg font-semibold text-white underline decoration-white/30 underline-offset-4 hover:text-blue-200" href={method.href}>
+                            {method.value}
+                          </a>
+                        ) : (
+                          <p className="mt-2 text-lg font-semibold text-white">{method.value}</p>
+                        )}
                         <p className="mt-1 text-sm leading-relaxed text-white/62">{method.detail}</p>
                       </div>
                     ))}
@@ -144,7 +151,7 @@ export default function Contact() {
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-white/6 p-6">
-                  <h3 className="text-lg font-semibold">Good things to include</h3>
+                  <h3 className="text-lg font-semibold">What we can help with</h3>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {supportTopics.map((topic) => (
                       <span key={topic} className="rounded-full border border-white/10 bg-white/7 px-3 py-1.5 text-sm text-white/78">
@@ -152,6 +159,9 @@ export default function Contact() {
                       </span>
                     ))}
                   </div>
+                  <p className="mt-5 text-sm leading-relaxed text-white/65">
+                    Looking for a walkthrough first? <Link className="font-semibold text-blue-200 underline decoration-blue-200/30 underline-offset-4 hover:text-white" to="/help">Visit the Help Center</Link>.
+                  </p>
                 </div>
               </aside>
 
@@ -159,9 +169,9 @@ export default function Contact() {
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <h2 className="text-2xl font-semibold">Send a message</h2>
-                    <p className="mt-2 text-sm text-white/65">Send questions, support notes, or program inquiries straight to the BarnBuddy inbox.</p>
+                    <p className="mt-2 text-sm text-white/65">Share the details below and BarnBuddy will reply to the email you provide.</p>
                   </div>
-                  <span className="rounded-full bg-emerald-500/16 px-3 py-1 text-xs font-semibold text-emerald-100">Email enabled</span>
+                  <span className="rounded-full bg-emerald-500/16 px-3 py-1 text-xs font-semibold text-emerald-100">Replies by email</span>
                 </div>
 
                 <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
@@ -229,9 +239,9 @@ export default function Contact() {
                   <button
                     type="submit"
                     disabled={submitting || cooldown.active}
-                    className="min-h-11 w-full rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                    className="min-h-11 w-full rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
                   >
-                    {submitting ? 'Sending...' : cooldown.active ? 'Message sent this week' : 'Send message'}
+                    {submitting ? 'Sending...' : cooldown.active ? 'Message already sent' : 'Send message'}
                   </button>
                   {cooldown.active && (
                     <p className="text-sm text-white/60">
@@ -245,7 +255,7 @@ export default function Contact() {
             <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 ['For farmers', 'Ask about setup, animal records, reminders, or keeping workflows simple.'],
-                ['For students', 'Use this for FFA, 4H, SAE, or project record questions.'],
+                ['For students', 'Use this for FFA, 4-H, SAE, or project record questions.'],
                 ['For programs', 'Reach out for school, chapter, or group-license conversations.'],
               ].map(([title, copy]) => (
                 <div key={title} className="rounded-lg border border-white/8 bg-white/5 p-5">

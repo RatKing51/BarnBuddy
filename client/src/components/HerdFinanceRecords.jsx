@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import * as premiumRecordsAPI from "../api/premiumRecords";
 import { getAnimalDisplayName } from "../utils/animalLabel";
+import EmptyState from "./EmptyState";
 import { SkeletonBlock } from "./LoadingSpinner";
 
 const EXPENSE_CATEGORIES = [
@@ -544,21 +545,32 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
       </section>
 
       <section className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]">
-        <div className="min-w-0 rounded-2xl border border-gray-700 bg-gray-800 p-5">
+        <div className={`min-w-0 rounded-2xl border border-gray-700 bg-gray-800 p-5 ${financeRecords.length === 0 && ledger.length === 0 ? "xl:col-span-2" : ""}`}>
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-lg font-semibold text-white">Herd ledger</h3>
-            <button
-              onClick={addFinance}
-              disabled={addingFinance}
-              className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60"
-            >
-              {addingFinance ? "Adding..." : "Add"}
-            </button>
+            {financeRecords.length > 0 && (
+              <button
+                onClick={addFinance}
+                disabled={addingFinance}
+                className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60"
+              >
+                {addingFinance ? "Adding..." : "Add"}
+              </button>
+            )}
           </div>
 
           <div className="space-y-2">
             {financeRecords.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-gray-700 bg-gray-900 p-4 text-sm text-gray-400">No manual finance records yet.</div>
+              <EmptyState
+                variant={ledger.length === 0 ? "full" : "compact"}
+                title="Add your first ledger entry"
+                description="Record income or expenses that are not already captured by feed and vet records."
+                primaryAction={{
+                  label: addingFinance ? "Adding entry..." : "Add ledger entry",
+                  onClick: addFinance,
+                  disabled: addingFinance,
+                }}
+              />
             ) : financeRecords.map((record) => (
               <button
                 key={record.id}
@@ -573,10 +585,16 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
           </div>
         </div>
 
+        {(financeRecords.length > 0 || ledger.length > 0) && (
         <div className="min-w-0 space-y-6">
+          {financeRecords.length > 0 && (
           <div className="min-w-0 rounded-2xl border border-gray-700 bg-gray-800 p-5">
             {!selectedFinance ? (
-              <div className="rounded-xl border border-dashed border-gray-700 bg-gray-900 p-6 text-sm text-gray-400">Select or add a ledger record.</div>
+              <EmptyState
+                variant="full"
+                title="Choose a ledger entry"
+                description="Select an entry from the list to review or update its amount, category, and details."
+              />
             ) : (
               <div className="space-y-4">
                 <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -630,6 +648,7 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
               </div>
             )}
           </div>
+          )}
 
           <div className="min-w-0 rounded-2xl border border-gray-700 bg-gray-800 p-5">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -646,6 +665,12 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
                 </button>
               </div>
             </div>
+            {ledger.length === 0 ? (
+              <EmptyState
+                title="No finance activity to show yet"
+                description="Ledger entries, feed costs, and vet costs will appear here automatically."
+              />
+            ) : (
             <div className="max-h-[26rem] overflow-auto rounded-xl border border-gray-700">
               <table className="w-full min-w-[680px] text-left text-sm">
                 <thead className="sticky top-0 bg-gray-900 text-xs uppercase tracking-[0.12em] text-gray-500">
@@ -658,9 +683,7 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
                   </tr>
                 </thead>
                 <tbody>
-                  {ledger.length === 0 ? (
-                    <tr><td colSpan="5" className="px-3 py-6 text-center text-gray-400">No finance activity yet.</td></tr>
-                  ) : ledger.map((item) => (
+                  {ledger.map((item) => (
                     <tr key={item.id} className="border-t border-gray-700">
                       <td className="px-3 py-2 text-gray-300">{formatDate(item.date) || "No date"}</td>
                       <td className="px-3 py-2 text-gray-300">{item.source}</td>
@@ -672,8 +695,10 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         </div>
+        )}
       </section>
       <ToastContainer autoClose="1000" />
     </div>

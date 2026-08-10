@@ -24,7 +24,7 @@ function validateHerdInput({ name, description, location }) {
 router.get("/", authMiddleware, async (req, res) => {
     try {
         const result = await pool.query(
-            "SELECT * FROM herds WHERE user_id = $1",
+            "SELECT * FROM herds WHERE user_id = $1 ORDER BY LOWER(name) ASC, id ASC",
             [req.user.id]
         );
         res.json(result.rows);

@@ -1,149 +1,176 @@
-import React, { useState } from 'react'
-import { API_BASE_URL } from '../config/env'
+import { useState } from "react";
+import { Link } from "react-router";
+import { API_BASE_URL } from "../config/env";
+
+const footerLinks = [
+  {
+    label: "Product",
+    links: [
+      ["Pricing", "/pricing"],
+      ["Help Center", "/help"],
+      ["Documentation", "https://doc.barnbuddy.pro"],
+      ["Service status", "/status"],
+    ],
+  },
+  {
+    label: "Company",
+    links: [
+      ["About BarnBuddy", "/aboutus"],
+      ["News", "/news"],
+      ["Contact", "/contact"],
+      ["Share feedback", "/contact?topic=Review%20or%20feedback"],
+    ],
+  },
+];
+
+const socialLinks = [
+  ["GitHub", "https://github.com/RatKing51/BarnBuddy"],
+  ["Instagram", "https://www.instagram.com/barnbuddypro/"],
+  ["Facebook", "https://www.facebook.com/share/14i7xVZnNJS/?mibextid=wwXIfr"],
+  ["TikTok", "https://www.tiktok.com/@barnbuddypro?is_from_webapp=1&sender_device=pc"],
+];
+
+function FooterLink({ href, children }) {
+  const className = "inline-flex min-h-11 items-center text-sm text-slate-300 transition hover:text-white";
+
+  if (href.startsWith("http")) {
+    return (
+      <a href={href} className={className}>
+        {children}
+      </a>
+    );
+  }
+
+  return (
+    <Link to={href} className={className}>
+      {children}
+    </Link>
+  );
+}
 
 export default function Footer() {
-  const [email, setEmail] = useState('')
-  const [status, setStatus] = useState({ type: '', message: '' })
-  const [submitting, setSubmitting] = useState(false)
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState({ type: "", message: "" });
+  const [submitting, setSubmitting] = useState(false);
 
-  async function handleNewsletterSubmit(e) {
-    e.preventDefault()
-    setStatus({ type: '', message: '' })
+  async function handleNewsletterSubmit(event) {
+    event.preventDefault();
+    setStatus({ type: "", message: "" });
 
     try {
-      setSubmitting(true)
-      const res = await fetch(`${API_BASE_URL}/newsletter/subscribe`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          source: 'footer',
-        }),
-      })
-      const data = await res.json().catch(() => ({}))
+      setSubmitting(true);
+      const response = await fetch(`${API_BASE_URL}/newsletter/subscribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, source: "footer" }),
+      });
+      const data = await response.json().catch(() => ({}));
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Could not subscribe right now.')
-      }
+      if (!response.ok) throw new Error(data.error || "Could not subscribe right now.");
 
-      setEmail('')
-      setStatus({ type: 'success', message: 'You are on the list.' })
-    } catch (err) {
-      setStatus({ type: 'error', message: err.message })
+      setEmail("");
+      setStatus({ type: "success", message: "You are on the list. Watch your inbox for BarnBuddy updates." });
+    } catch (error) {
+      setStatus({ type: "error", message: error.message });
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
   }
 
   return (
-    <footer className="bg-[#07102a] text-white mt-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Brand / about */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-md bg-blue-600 flex items-center justify-center font-bold text-white">BB.</div>
-              <span className="text-lg font-semibold">BarnBuddy.</span>
-            </div>
-            <p className="text-sm text-white/80 max-w-sm">
-              Simple, practical tools for small farms. Built from the farm for the farm — record keeping that actually gets used.
+    <footer className="mt-auto border-t border-white/10 bg-[#07102a] text-white">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-14 lg:px-8">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr] lg:gap-12">
+          <div>
+            <Link to="/" className="inline-flex rounded-xl" aria-label="BarnBuddy home">
+              <span className="leading-none">
+                <span className="block text-3xl font-bold">
+                  <span className="text-blue-500">Barn</span>
+                  <span className="text-gray-300">Buddy.</span>
+                </span>
+                <span className="mt-1 block text-xs font-bold text-slate-400">Doing for the Small</span>
+              </span>
+            </Link>
+            <p className="mt-5 max-w-md text-sm leading-6 text-slate-300">
+              Practical livestock records for small farms, FFA and 4-H projects, and hobby herds. Built from the farm for the farm.
             </p>
-            <div className="flex space-x-3">
-              <a href="https://github.com/RatKing51/BarnBuddy" className="inline-flex h-11 w-11 items-center justify-center rounded-md text-white/70 hover:text-white transition-colors" aria-label="GitHub">
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M12 .5A12 12 0 0 0 0 12.7c0 5.3 3.4 9.8 8.2 11.4.6.1.8-.2.8-.5v-2c-3.3.7-4-1.6-4-1.6-.5-1.3-1.2-1.7-1.2-1.7-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 .1 1.6.7 2 .7.1-.6.4-1 .7-1.2-2.6-.3-5.3-1.3-5.3-6 0-1.3.5-2.3 1.1-3.1-.1-.3-.5-1.6.1-3.2 0 0 .9-.3 3 .9.8-.2 1.7-.3 2.6-.3s1.8.1 2.6.3c2-.1 3-.9 3-.9.6 1.6.2 2.9.1 3.2.7.8 1.1 1.8 1.1 3.1 0 4.7-2.7 5.6-5.3 6 .4.4.8 1 .8 2v3c0 .3.2.6.8.5A12 12 0 0 0 24 .5 12 12 0 0 0 12 .5z"/>
-                </svg>
-              </a>
-              <a href="https://www.facebook.com/share/14i7xVZnNJS/?mibextid=wwXIfr" className="inline-flex h-11 w-11 items-center justify-center rounded-md text-white/70 hover:text-white transition-colors" aria-label="Facebook">
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M22 12.06C22 6.49 17.52 2 12 2S2 6.49 2 12.06c0 5.02 3.66 9.19 8.44 9.94v-7.03H7.9v-2.91h2.54V9.84c0-2.52 1.49-3.91 3.77-3.91 1.09 0 2.23.2 2.23.2v2.47h-1.26c-1.24 0-1.63.78-1.63 1.57v1.89h2.77l-.44 2.91h-2.33V22C18.34 21.25 22 17.08 22 12.06z" />
-                </svg>
-              </a>
-              <a href="https://www.tiktok.com/@barnbuddypro?is_from_webapp=1&sender_device=pc" className="inline-flex h-11 w-11 items-center justify-center rounded-md text-white/70 hover:text-white transition-colors" aria-label="TikTok">
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.35 6.35 0 0 0-5.46 10.96 6.34 6.34 0 0 0 10.87-4.43v-7a8.16 8.16 0 0 0 4.77 1.52V7a4.84 4.84 0 0 1-.95-.31z" />
-                </svg>
-              </a>
-              <a href="https://www.instagram.com/barnbuddypro/" className="inline-flex h-11 w-11 items-center justify-center rounded-md text-white/70 hover:text-white transition-colors" aria-label="Instagram">
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M7.75 2h8.5A5.76 5.76 0 0 1 22 7.75v8.5A5.76 5.76 0 0 1 16.25 22h-8.5A5.76 5.76 0 0 1 2 16.25v-8.5A5.76 5.76 0 0 1 7.75 2zm0 2A3.75 3.75 0 0 0 4 7.75v8.5A3.75 3.75 0 0 0 7.75 20h8.5A3.75 3.75 0 0 0 20 16.25v-8.5A3.75 3.75 0 0 0 16.25 4h-8.5zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm5.25-2.75a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5z" />
-                </svg>
-              </a>
+            <div className="mt-5 flex flex-wrap gap-x-5 gap-y-1">
+              {socialLinks.map(([label, href]) => (
+                <a
+                  key={label}
+                  href={href}
+                  className="inline-flex min-h-11 items-center text-sm font-semibold text-slate-400 transition hover:text-white"
+                  aria-label={`BarnBuddy on ${label}`}
+                >
+                  {label}
+                </a>
+              ))}
             </div>
           </div>
 
-          {/* Links */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-            <div>
-              <h2 className="text-sm font-semibold mb-3">Product</h2>
-              <ul className="space-y-2 text-sm text-white/80">
-                <li><a href="/pricing" className="hover:text-white">Pricing</a></li>
-                <li><a href="https://doc.barnbuddy.pro" className="hover:text-white">Docs</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h2 className="text-sm font-semibold mb-3">Company</h2>
-              <ul className="space-y-2 text-sm text-white/80">
-                <li><a href="/aboutus" className="hover:text-white">About</a></li>
-                <li><a href="/news" className="hover:text-white">News</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h2 className="text-sm font-semibold mb-3">Support</h2>
-              <ul className="space-y-2 text-sm text-white/80">
-                <li><a href="/help" className="hover:text-white">Help Center</a></li>
-                <li><a href="/contact" className="hover:text-white">Contact</a></li>
-                <li><a href="/contact?topic=Review%20or%20feedback" className="hover:text-white">Leave a review</a></li>
-                <li><a href="/status" className="hover:text-white">Status</a></li>
-              </ul>
-            </div>
+          <div className="grid grid-cols-2 gap-6 sm:gap-8">
+            {footerLinks.map((group) => (
+              <div key={group.label}>
+                <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300">{group.label}</h2>
+                <ul className="mt-3 space-y-0.5">
+                  {group.links.map(([label, href]) => (
+                    <li key={label}>
+                      <FooterLink href={href}>{label}</FooterLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
 
-          {/* Newsletter / CTA */}
-          <div className="md:col-span-3 lg:col-span-1">
-            <h2 className="text-sm font-semibold mb-3">Get updates</h2>
-            <p className="text-sm text-white/80 mb-4">Short updates about new features, guides, and tips for small farms.</p>
-            <form className="flex flex-col gap-3 sm:flex-row sm:items-center" onSubmit={handleNewsletterSubmit}>
-              <label className="sr-only" htmlFor="newsletter-email">Email address for BarnBuddy updates</label>
-              <input
-                id="newsletter-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@farm.com"
-                required
-                className="min-h-11 w-full px-3 py-2 rounded-md bg-white/6 placeholder-white/60 text-white focus:outline-none border border-white/8"
-              />
-              <button
-                type="submit"
-                disabled={submitting}
-                className="min-h-11 w-full sm:w-auto px-4 py-2 bg-blue-600 rounded-md font-semibold hover:bg-blue-700 transition-colors disabled:cursor-wait disabled:opacity-70"
-              >
-                {submitting ? 'Saving...' : 'Subscribe'}
-              </button>
-            </form>
-            {status.message && (
-              <p role={status.type === 'error' ? 'alert' : 'status'} aria-live="polite" aria-atomic="true" className={`mt-3 text-sm ${
-                status.type === 'success' ? 'text-emerald-200' : 'text-red-200'
-              }`}>
-                {status.message}
+          <div className="md:col-span-2 lg:col-span-1">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300">From the barn</p>
+              <h2 className="mt-2 text-xl font-bold">Useful updates, not inbox clutter.</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                Get occasional product news, record-keeping tips, and practical guides for smaller operations.
               </p>
-            )}
+              <form className="mt-5 flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row" onSubmit={handleNewsletterSubmit}>
+                <label className="sr-only" htmlFor="newsletter-email">Email address for BarnBuddy updates</label>
+                <input
+                  id="newsletter-email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@farm.com"
+                  autoComplete="email"
+                  required
+                  className="min-h-12 min-w-0 flex-1 rounded-xl border border-white/12 bg-[#0b1730] px-4 text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="min-h-12 shrink-0 rounded-xl bg-blue-600 px-5 font-bold text-white transition hover:bg-blue-500 disabled:cursor-wait disabled:opacity-70"
+                >
+                  {submitting ? "Joining..." : "Join updates"}
+                </button>
+              </form>
+              {status.message && (
+                <p
+                  role={status.type === "error" ? "alert" : "status"}
+                  aria-live="polite"
+                  className={`mt-3 text-sm ${status.type === "success" ? "text-emerald-200" : "text-red-200"}`}
+                >
+                  {status.message}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="border-t border-white/6 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between text-sm text-white/70">
-          <p>© {new Date().getFullYear()} BarnBuddy. All rights reserved.</p>
-          <div className="flex items-center space-x-4 mt-4 sm:mt-0">
-            <a href="/privacy" className="inline-flex min-h-11 items-center hover:text-white">Privacy</a>
-            <a href="/terms" className="inline-flex min-h-11 items-center hover:text-white">Terms</a>
+        <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+          <p>&copy; {new Date().getFullYear()} BarnBuddy. Built in Kansas for smaller livestock operations.</p>
+          <div className="flex gap-5">
+            <FooterLink href="/privacy">Privacy</FooterLink>
+            <FooterLink href="/terms">Terms</FooterLink>
           </div>
         </div>
       </div>
     </footer>
-  )
+  );
 }

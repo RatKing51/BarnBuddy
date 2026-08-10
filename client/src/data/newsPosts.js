@@ -2,15 +2,15 @@ export const newsPosts = [
   // Add new posts at the top so the newest stories appear first.
   {
     id: "weight-tracking",
-    title: "Weight Tracking Added for All Tiers",
+    title: "Weight tracking is now available to everyone",
     date: "2026-06-18",
     category: "Updates",
     excerpt:
-      "Now track your animals weight from day to day, week to week, or however you please -- all in one location!",
+      "Log weights on your own schedule and follow each animal's progress from one organized history.",
     body:
-      "Weight tracking is now available for all BarnBuddy users. You can log animal weights as often as you need, whether that is daily, weekly, or whenever you check in. Each entry stays connected to the animal profile, making it easier to watch growth over time, compare progress, and keep better records in one place.",
+      "Weight tracking is now available for every BarnBuddy account. Log weights daily, weekly, or whenever you check in. Each entry stays connected to the animal profile, making it easier to follow growth over time and keep a useful history in one place.",
     image: "/api/site-content/assets/weight-graph.png",
-    imageAlt: "BarnBuddy logo",
+    imageAlt: "BarnBuddy animal weight trend chart",
     imageFit: "contain",
     featured: true,
     published: true,
@@ -25,7 +25,7 @@ export const newsPosts = [
     body:
       "This release focuses on the basics that matter every day: animal profiles, herd organization, vaccinations, vet visits, and health history. The goal is simple record-keeping that feels light enough to use after chores, but structured enough to help when decisions matter.",
     image: "/api/site-content/assets/img_5761.jpeg",
-    imageAlt: "Livestock in a pasture",
+    imageAlt: "BarnBuddy founder Gage Billinger at a Kansas FFA event",
     imageFit: "cover",
     featured: false,
     published: true,
@@ -47,7 +47,7 @@ export const newsPosts = [
   },
   {
     id: "ffa-4h-small-farm-focus",
-    title: "Built with FFA, 4H, and small farms in mind",
+    title: "Built with FFA, 4-H, and small farms in mind",
     date: "2026-05-10",
     category: "Company",
     excerpt:

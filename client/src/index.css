@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+:root {
+  color-scheme: dark;
+  --bb-navy-950: #07102a;
+  --bb-navy-900: #0b1730;
+  --bb-navy-800: #101d42;
+  --bb-surface: #0f2650;
+  --bb-blue: #3b82f6;
+  --bb-blue-strong: #2563eb;
+  --bb-text: #f8fafc;
+  --bb-muted: #a8b5c9;
+}
+
+html.bb-light {
+  color-scheme: light;
+}
+
 html,
 body,
 #root {
@@ -23,7 +39,35 @@ body {
   min-height: 100vh;
   margin: 0;
   overflow-x: hidden;
+  color: var(--bb-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.public-page {
+  background:
+    radial-gradient(circle at 10% -10%, rgba(59, 130, 246, 0.17), transparent 30rem),
+    radial-gradient(circle at 92% 12%, rgba(37, 99, 235, 0.09), transparent 24rem),
+    var(--bb-navy-900);
+}
+
+.public-grid-glow {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent 88%);
+}
+
+.bb-card-lift {
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.bb-card-lift:hover {
+  border-color: rgba(96, 165, 250, 0.3);
+  box-shadow: 0 24px 55px rgba(0, 0, 0, 0.22);
+  transform: translateY(-2px);
 }
 
 img,

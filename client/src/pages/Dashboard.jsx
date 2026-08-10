@@ -10,6 +10,7 @@ import PremiumRecords from "../components/PremiumRecords";
 import VetVisits from "../components/VetVisits";
 import WeightRecords from "../components/WeightRecords";
 import { SkeletonBlock } from "../components/LoadingSpinner";
+import EmptyState from "../components/EmptyState";
 import PremiumExpiryBadge from "../components/PremiumExpiryBadge";
 import { useLocation, useNavigate, useParams } from "react-router";
 import {
@@ -1332,9 +1333,11 @@ export default function Dashboard() {
                 <SkeletonBlock key={item} className="h-14 w-32 shrink-0 rounded-xl" />
               ))
             ) : animals.length === 0 ? (
-              <div className="w-full rounded-xl border border-dashed border-gray-700 bg-gray-900 p-3 text-sm text-gray-400">
-                No animals in this herd yet.
-              </div>
+              <EmptyState
+                title="This herd is ready for its first animal"
+                description="Use Add animal above to start building the herd's records."
+                className="w-full shrink-0"
+              />
             ) : animals.map((animal) => {
               const urgency = getAnimalStatus(animal);
               return (

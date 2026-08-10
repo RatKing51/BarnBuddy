@@ -62,7 +62,7 @@ const authAppearance = {
 
 export default function SignUp() {
   return (
-    <div className="signup-page min-h-screen bg-[#0b1730] text-white">
+    <div className="signup-page public-page min-h-screen text-white">
       <main>
         <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-10 lg:items-center">

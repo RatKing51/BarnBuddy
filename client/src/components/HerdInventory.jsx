@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import * as premiumRecordsAPI from "../api/premiumRecords";
+import EmptyState from "./EmptyState";
 import { SkeletonBlock } from "./LoadingSpinner";
 
 const categories = ["Feed", "Medicine", "Supplies", "Equipment", "Bedding", "Other"];
@@ -283,9 +284,11 @@ export default function HerdInventory({ selectedHerd, isPremium = false }) {
           <p className="text-sm font-semibold text-blue-300">{selectedHerd?.name || "Herd"}</p>
           <h2 className="mt-1 text-2xl font-semibold text-white">Inventory</h2>
         </div>
-        <button onClick={addItem} disabled={adding} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-60">
-          {adding ? "Adding..." : "Add item"}
-        </button>
+        {items.length > 0 && (
+          <button onClick={addItem} disabled={adding} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-60">
+            {adding ? "Adding..." : "Add item"}
+          </button>
+        )}
       </div>
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -302,6 +305,18 @@ export default function HerdInventory({ selectedHerd, isPremium = false }) {
         ))}
       </section>
 
+      {items.length === 0 ? (
+        <EmptyState
+          variant="full"
+          title="Start a useful farm inventory"
+          description="Add feed, medicine, supplies, or equipment to track stock levels and know when it is time to reorder."
+          primaryAction={{
+            label: adding ? "Adding item..." : "Add first item",
+            onClick: addItem,
+            disabled: adding,
+          }}
+        />
+      ) : (
       <section className="grid gap-4 xl:grid-cols-[360px_1fr]">
         <div className="rounded-2xl border border-gray-700 bg-gray-800 p-3 sm:p-4">
           <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search inventory" className={fieldClass} />
@@ -333,7 +348,11 @@ export default function HerdInventory({ selectedHerd, isPremium = false }) {
                 </button>
               );
             }) : (
-              <div className="rounded-xl border border-dashed border-gray-700 p-5 text-center text-sm text-gray-400">No inventory items found.</div>
+              <EmptyState
+                title="No matching inventory items"
+                description="Try a broader search or clear the current search to see every item."
+                secondaryAction={{ label: "Clear search", onClick: () => setSearch("") }}
+              />
             )}
           </div>
         </div>
@@ -454,10 +473,15 @@ export default function HerdInventory({ selectedHerd, isPremium = false }) {
               </div>
             </>
           ) : (
-            <div className="grid min-h-72 place-items-center rounded-xl border border-dashed border-gray-700 text-sm text-gray-400">Add or select an inventory item.</div>
+            <EmptyState
+              variant="full"
+              title="Choose an inventory item"
+              description="Select an item from the list to review stock, update details, or record a restock."
+            />
           )}
         </div>
       </section>
+      )}
     </div>
   );
 }
