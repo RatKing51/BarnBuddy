@@ -7,18 +7,20 @@ import { getSiteAssetUrl, resolveSiteImageUrl } from '../config/siteImages'
 
 export default function LargeLandingCard({ slides = landingCarouselSlides, branding = {} }) {
   const [activeSlide, setActiveSlide] = useState(0)
+  const [autoRotate, setAutoRotate] = useState(true)
+  const [interactionPaused, setInteractionPaused] = useState(false)
   const { isLoaded, isSignedIn } = useAuth()
   const showSignUp = isLoaded && !isSignedIn
   const previewSlides = slides.length ? slides : landingCarouselSlides
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined
+    if (!autoRotate || interactionPaused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined
     const timer = window.setInterval(() => {
       setActiveSlide((current) => (current + 1) % previewSlides.length)
     }, 4500)
 
     return () => window.clearInterval(timer)
-  }, [previewSlides.length])
+  }, [autoRotate, interactionPaused, previewSlides.length])
 
   useEffect(() => {
     if (activeSlide > previewSlides.length - 1) setActiveSlide(0)
@@ -49,7 +51,7 @@ export default function LargeLandingCard({ slides = landingCarouselSlides, brand
             {showSignUp && (
               <a
                 href="/signup"
-                className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-blue-500 px-6 py-3 text-base font-medium text-white shadow-md transition-colors hover:bg-blue-600 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-blue-600 px-6 py-3 text-base font-medium text-white shadow-md transition-colors hover:bg-blue-700 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
                 aria-label="Sign up for BarnBuddy"
               >
                 Sign Up
@@ -63,7 +65,18 @@ export default function LargeLandingCard({ slides = landingCarouselSlides, brand
         <div className="flex justify-center md:justify-end">
           <div className="relative w-full max-w-full md:max-w-2xl">
             <div className="absolute -inset-5 rounded-[2rem] bg-blue-500/14 blur-2xl" aria-hidden="true" />
-            <div className="relative overflow-hidden rounded-2xl border border-white/12 bg-[#07102a] shadow-2xl shadow-black/35">
+            <div
+              className="relative overflow-hidden rounded-2xl border border-white/12 bg-[#07102a] shadow-2xl shadow-black/35"
+              role="region"
+              aria-roledescription="carousel"
+              aria-label="BarnBuddy feature screenshots"
+              onMouseEnter={() => setInteractionPaused(true)}
+              onMouseLeave={() => setInteractionPaused(false)}
+              onFocusCapture={() => setInteractionPaused(true)}
+              onBlurCapture={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) setInteractionPaused(false)
+              }}
+            >
               <div className="flex items-center justify-between gap-4 border-b border-white/10 bg-white px-5 py-4">
                 <img src={resolveSiteImageUrl(branding.siteLogo || getSiteAssetUrl("bblogo.png"))} alt="BarnBuddy logo" className="h-10 w-auto object-contain" />
                 <div className="flex items-center gap-2">
@@ -71,7 +84,7 @@ export default function LargeLandingCard({ slides = landingCarouselSlides, brand
                     type="button"
                     onClick={showPrevious}
                     aria-label="Show previous screenshot"
-                    className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100"
                   >
                     &lsaquo;
                   </button>
@@ -79,14 +92,22 @@ export default function LargeLandingCard({ slides = landingCarouselSlides, brand
                     type="button"
                     onClick={showNext}
                     aria-label="Show next screenshot"
-                    className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100"
                   >
                     &rsaquo;
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAutoRotate((current) => !current)}
+                    aria-label={autoRotate ? 'Pause screenshot rotation' : 'Resume screenshot rotation'}
+                    className="flex h-11 min-w-11 items-center justify-center rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                  >
+                    {autoRotate ? 'Pause' : 'Play'}
                   </button>
                 </div>
               </div>
 
-              <div className="overflow-hidden">
+              <div className="overflow-hidden" aria-live={autoRotate ? 'off' : 'polite'}>
                 <div
                   className="flex transition-transform duration-500 ease-out"
                   style={{ transform: `translateX(-${activeSlide * 100}%)` }}
@@ -105,7 +126,7 @@ export default function LargeLandingCard({ slides = landingCarouselSlides, brand
                       </div>
                       <figcaption className="flex min-h-24 flex-col justify-center px-5 py-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-200">{slide.eyebrow}</p>
-                        <h3 className="mt-1 text-xl font-semibold text-white">{slide.title}</h3>
+                        <p className="mt-1 text-xl font-semibold text-white">{slide.title}</p>
                       </figcaption>
                     </figure>
                   ))}
@@ -120,10 +141,12 @@ export default function LargeLandingCard({ slides = landingCarouselSlides, brand
                     onClick={() => goToSlide(index)}
                     aria-label={`Show ${slide.eyebrow} screenshot`}
                     aria-current={activeSlide === index ? "true" : undefined}
-                    className={`h-2.5 rounded-full transition-all ${
-                      activeSlide === index ? 'w-8 bg-blue-400' : 'w-2.5 bg-white/28 hover:bg-white/50'
-                    }`}
-                  />
+                    className="group grid h-11 w-11 place-items-center rounded-full"
+                  >
+                    <span aria-hidden="true" className={`h-2.5 rounded-full transition-all ${
+                      activeSlide === index ? 'w-8 bg-blue-400' : 'w-2.5 bg-white/28 group-hover:bg-white/50'
+                    }`} />
+                  </button>
                 ))}
               </div>
             </div>

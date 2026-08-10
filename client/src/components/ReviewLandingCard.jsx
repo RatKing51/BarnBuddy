@@ -31,7 +31,7 @@ const ReviewLandingCard = ({
       <div className="flex h-full flex-col">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-500 text-sm font-bold text-white ring-4 ring-white/8">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-700 text-sm font-bold text-white ring-4 ring-white/8">
               {initials}
             </div>
             <div className="min-w-0">

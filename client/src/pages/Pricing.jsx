@@ -189,6 +189,7 @@ export default function Pricing() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] text-left text-sm">
+                <caption className="sr-only">BarnBuddy Free and Premium feature comparison</caption>
                 <thead className="bg-white/8 text-xs uppercase tracking-[0.14em] text-white/60">
                   <tr>
                     <th className="px-5 py-3 font-semibold">Feature</th>

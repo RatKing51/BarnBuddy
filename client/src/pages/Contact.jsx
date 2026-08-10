@@ -6,13 +6,8 @@ import { API_URL } from '../config/env'
 const contactMethods = [
   {
     label: 'Email',
-    value: 'hello@barnbuddy.example',
+    value: 'barnbuddyapp@gmail.com',
     detail: 'Best for product questions, support, and partnership ideas.',
-  },
-  {
-    label: 'Response time',
-    value: '1-2 business days',
-    detail: 'Filler timing for now. Swap this when real support coverage is set.',
   },
   {
     label: 'Location',
@@ -125,7 +120,7 @@ export default function Contact() {
               <p className="text-blue-300 text-sm font-semibold uppercase tracking-[0.18em]">Contact</p>
               <h1 className="mt-3 text-4xl sm:text-5xl font-semibold leading-tight">Talk to BarnBuddy</h1>
               <p className="mt-4 text-white/78 text-lg leading-relaxed">
-                Questions, feedback, farm-program ideas, or support needs can start here. This page is ready for real contact details whenever you are.
+                Questions, feedback, farm-program ideas, or support needs can start here. Use the form below or email BarnBuddy directly.
               </p>
             </div>
 
@@ -134,7 +129,7 @@ export default function Contact() {
                 <div className="rounded-xl border border-white/10 bg-[#0f2650] p-6 sm:p-8 shadow-xl shadow-black/20">
                   <h2 className="text-2xl font-semibold">How to reach us</h2>
                   <p className="mt-3 text-sm leading-relaxed text-white/72">
-                    Use these placeholder channels for now. Later, this can connect to a real inbox, support tool, or admin notification flow.
+                    Send product questions, support requests, and partnership ideas through the contact form or email.
                   </p>
 
                   <div className="mt-7 space-y-4">
@@ -222,7 +217,7 @@ export default function Contact() {
                   </label>
 
                   {status.message && (
-                    <p className={`rounded-lg border px-4 py-3 text-sm ${
+                    <p role={status.type === 'error' ? 'alert' : 'status'} aria-live="polite" aria-atomic="true" className={`rounded-lg border px-4 py-3 text-sm ${
                       status.type === 'success'
                         ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
                         : 'border-red-400/30 bg-red-500/10 text-red-100'
@@ -234,7 +229,7 @@ export default function Contact() {
                   <button
                     type="submit"
                     disabled={submitting || cooldown.active}
-                    className="w-full rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-blue-500 disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                    className="min-h-11 w-full rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                   >
                     {submitting ? 'Sending...' : cooldown.active ? 'Message sent this week' : 'Send message'}
                   </button>

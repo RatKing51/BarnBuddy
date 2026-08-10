@@ -74,13 +74,15 @@ export default function PwaInstallButton() {
       <button
         type="button"
         onClick={handleInstallClick}
+        aria-expanded={!installPrompt ? showInstallHelp : undefined}
+        aria-controls={!installPrompt ? 'pwa-install-help' : undefined}
         className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-emerald-400 px-5 py-3 text-center text-base font-semibold text-[#07111f] shadow-md shadow-black/20 transition-colors hover:bg-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:ring-offset-2 focus:ring-offset-[#101D42] sm:w-auto"
       >
         Install BarnBuddy on your phone
       </button>
 
       {showInstallHelp && (
-        <div className="mt-3 rounded-lg border border-white/12 bg-white/8 p-4 text-sm leading-relaxed text-white/82">
+        <div id="pwa-install-help" role="status" aria-live="polite" className="mt-3 rounded-lg border border-white/12 bg-white/8 p-4 text-sm leading-relaxed text-white/82">
           {isIos ? (
             <p>
               On iPhone, tap Share in Safari, then choose Add to Home Screen.

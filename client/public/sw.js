@@ -56,8 +56,10 @@ self.addEventListener("fetch", (event) => {
 async function networkFirstNavigation(request) {
   try {
     const response = await fetch(request);
-    const cache = await caches.open(APP_SHELL_CACHE);
-    cache.put("/", response.clone());
+    if (response.ok) {
+      const cache = await caches.open(APP_SHELL_CACHE);
+      cache.put(request, response.clone());
+    }
     return response;
   } catch {
     const cachedResponse = await caches.match(request);

@@ -1,68 +1,47 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
+import { Link } from 'react-router'
 import Footer from '../components/Footer'
 
-export default function TOSandPP() {
-    const [activeTab, setActiveTab] = useState('tos')
+export default function TOSandPP({ documentType = 'terms' }) {
+    const showPrivacy = documentType === 'privacy'
 
-
-    useEffect(() => {
-        const hash = window.location.hash.replace('#', '')
-
-        if (hash === "pp") {
-            setActiveTab('pp')
-        } else {
-            setActiveTab("tos")
-        }
-    }, []);
-
-    const changeTab = (tab) => {
-        setActiveTab(tab)
-        window.location.hash = tab
-    }
     return (
         <div className="min-h-screen bg-[#0b1730] text-white flex flex-col">
 
             {/* Main Content */}
             <main className="flex-grow flex flex-col items-center px-4 py-10">
 
-                {/* Buttons */}
-                <div className="flex gap-4 mb-8" role="tablist" aria-label="Legal documents">
-                    <button
-                        onClick={() => changeTab('tos')}
-                        type="button"
-                        role="tab"
-                        aria-selected={activeTab === 'tos'}
-                        aria-controls="terms-panel"
+                <nav className="flex flex-wrap justify-center gap-4 mb-8" aria-label="Legal documents">
+                    <Link
+                        to="/terms"
+                        aria-current={!showPrivacy ? 'page' : undefined}
                         className={`px-5 py-3 rounded-md font-semibold transition-colors ${
-                            activeTab === 'tos'
-                                ? 'bg-blue-500'
-                                : 'bg-blue-600 hover:bg-blue-500'
+                            !showPrivacy
+                                ? 'bg-blue-600'
+                                : 'bg-blue-700 hover:bg-blue-800'
                         }`}
                     >
                         Terms of Service
-                    </button>
+                    </Link>
 
-                    <button
-                        onClick={() => changeTab('pp')}
-                        type="button"
-                        role="tab"
-                        aria-selected={activeTab === 'pp'}
-                        aria-controls="privacy-panel"
+                    <Link
+                        to="/privacy"
+                        aria-current={showPrivacy ? 'page' : undefined}
                         className={`px-5 py-3 rounded-md font-semibold transition-colors ${
-                            activeTab === 'pp'
-                                ? 'bg-blue-500'
-                                : 'bg-blue-600 hover:bg-blue-500'
+                            showPrivacy
+                                ? 'bg-blue-600'
+                                : 'bg-blue-700 hover:bg-blue-800'
                         }`}
                     >
                         Privacy Policy
-                    </button>
-                </div>
+                    </Link>
+                </nav>
 
                 {/* Content Box */}
                 <div className="bg-[#0f2650] border border-white/10 rounded-xl shadow-lg w-full max-w-6xl p-8">
 
-                    {activeTab === 'pp' && (
-                        <div className="space-y-6" id="privacy-panel" role="tabpanel">
+                    {showPrivacy && (
+                        <div className="space-y-6" id="privacy-policy">
 
                             <div>
                                 <h1 className="text-3xl font-bold mb-2">
@@ -193,8 +172,8 @@ export default function TOSandPP() {
                         </div>
                     )}
 
-                    {activeTab === 'tos' && (
-                        <div className="space-y-6" id="terms-panel" role="tabpanel">
+                    {!showPrivacy && (
+                        <div className="space-y-6" id="terms-of-service">
 
                             <div>
                                 <h1 className="text-3xl font-bold mb-2">

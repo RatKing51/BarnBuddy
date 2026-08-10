@@ -27,7 +27,7 @@ export default function RecentNewsCard({
 
       <div className="flex-1 bg-blue-600/95 text-white rounded-lg p-8 lg:p-8 shadow-md flex flex-col justify-between">
         <div>
-          <h4 className="text-lg lg:text-2xl font-semibold mb-2 leading-tight">{title}</h4>
+          <h3 className="text-lg lg:text-2xl font-semibold mb-2 leading-tight">{title}</h3>
           <p className="text-sm lg:text-base text-white/90 leading-relaxed">{excerpt}</p>
         </div>
 

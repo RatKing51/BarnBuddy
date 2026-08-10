@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { UserButton, useAuth as useClerkAuth, useUser } from '@clerk/clerk-react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { ADMIN_CLERK_USER_IDS, ADMIN_EMAILS } from '../config/env'
 import { useAuth as useBarnBuddyAuth } from '../context/AuthContext'
 import PremiumExpiryBadge from './PremiumExpiryBadge'
@@ -8,6 +8,8 @@ import '../index.css'
 
 const Navbar = () => {
   const [open, setOpen] = useState(false)
+  const menuButtonRef = useRef(null)
+  const location = useLocation()
   const { isLoaded, isSignedIn } = useClerkAuth()
   const { subscription } = useBarnBuddyAuth()
   const { user } = useUser()
@@ -20,13 +22,29 @@ const Navbar = () => {
   )
 
   const closeMenu = () => setOpen(false)
+  const isCurrent = (path) => location.pathname === path
+
+  useEffect(() => {
+    if (!open) return undefined
+
+    function handleEscape(event) {
+      if (event.key === 'Escape') {
+        setOpen(false)
+        menuButtonRef.current?.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [open])
 
   return (
-    <nav className="bg-[#101D42] text-white">
+    <header className="bg-[#101D42] text-white">
+      <nav aria-label="Primary navigation">
       <div className="max-w-10xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="flex items-center justify-between h-16">
           {/* Left: Logo */}
-          <Link to="/" onClick={closeMenu} className="flex items-center flex-shrink-0 z-20">
+          <Link to="/" onClick={closeMenu} aria-label="BarnBuddy home" aria-current={isCurrent('/') ? 'page' : undefined} className="flex min-h-11 items-center flex-shrink-0 z-20">
             <span className="text-3xl font-bold leading-none">
               <span className="text-blue-500">Barn</span>
               <span className="text-gray-300">Buddy.</span>
@@ -42,23 +60,23 @@ const Navbar = () => {
 
           {/* Right: Desktop links */}
           <div className="hidden md:flex md:items-center md:space-x-6 z-20">
-            <Link to="/aboutus" className="text-white text-xl font-bold hover:text-blue-300 transition-colors">
+            <Link to="/aboutus" aria-current={isCurrent('/aboutus') ? 'page' : undefined} className="inline-flex min-h-11 items-center text-white text-xl font-bold hover:text-blue-300 transition-colors">
               About Us
             </Link>
-            <Link to="/pricing" className="text-white text-xl font-bold hover:text-blue-300 transition-colors">
+            <Link to="/pricing" aria-current={isCurrent('/pricing') ? 'page' : undefined} className="inline-flex min-h-11 items-center text-white text-xl font-bold hover:text-blue-300 transition-colors">
               Pricing
             </Link>
-            <Link to="/news" className="text-white text-xl font-bold hover:text-blue-300 transition-colors">
+            <Link to="/news" aria-current={isCurrent('/news') ? 'page' : undefined} className="inline-flex min-h-11 items-center text-white text-xl font-bold hover:text-blue-300 transition-colors">
               News
             </Link>
             {showSignedIn ? (
               <>
                 {showAdmin && (
-                  <Link to="/admin" className="text-white text-xl font-bold hover:text-blue-300 transition-colors">
+                  <Link to="/admin" className="inline-flex min-h-11 items-center text-white text-xl font-bold hover:text-blue-300 transition-colors">
                     Admin
                   </Link>
                 )}
-                <Link to="/dashboard" className="bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-2 px-4 rounded-md transition-colors">
+                <Link to="/dashboard" aria-current={location.pathname.startsWith('/dashboard') ? 'page' : undefined} className="inline-flex min-h-11 items-center bg-blue-600 hover:bg-blue-700 text-white text-xl font-bold py-2 px-4 rounded-md transition-colors">
                   Dashboard
                 </Link>
                 <PremiumExpiryBadge subscription={subscription} />
@@ -66,10 +84,10 @@ const Navbar = () => {
               </>
             ) : (
               <>
-                <Link to="/signup" className="bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-2 px-4 rounded-md transition-colors">
+                <Link to="/signup" aria-current={location.pathname.startsWith('/signup') ? 'page' : undefined} className="inline-flex min-h-11 items-center bg-blue-600 hover:bg-blue-700 text-white text-xl font-bold py-2 px-4 rounded-md transition-colors">
                 Sign Up
                 </Link>
-                <Link to="/login" className="text-white text-xl font-bold hover:text-orange-400 transition-colors">
+                <Link to="/login" aria-current={location.pathname.startsWith('/login') ? 'page' : undefined} className="inline-flex min-h-11 items-center text-white text-xl font-bold hover:text-orange-400 transition-colors">
                   Login
                 </Link>
               </>
@@ -79,12 +97,14 @@ const Navbar = () => {
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center z-20">
             <button
+              ref={menuButtonRef}
               onClick={() => setOpen(!open)}
               aria-expanded={open}
-              aria-label="Toggle menu"
-              className="inline-flex items-center justify-center p-2 rounded-md text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white"
+              aria-controls="mobile-primary-menu"
+              aria-label={open ? 'Close navigation menu' : 'Open navigation menu'}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-md text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white"
             >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true" focusable="false">
                 {open ? (
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 ) : (
@@ -97,25 +117,25 @@ const Navbar = () => {
       </div>
 
       {/* Mobile menu (collapsible) */}
-      <div className={`md:hidden transition-max-h duration-300 overflow-hidden ${open ? 'max-h-72' : 'max-h-0'}`}>
+      {open && <div id="mobile-primary-menu" className="md:hidden">
         <div className="px-4 pt-2 pb-4 space-y-2">
-          <Link to="/aboutus" onClick={closeMenu} className="block text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
+          <Link to="/aboutus" onClick={closeMenu} aria-current={isCurrent('/aboutus') ? 'page' : undefined} className="flex min-h-11 items-center text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
             About Us
           </Link>
-          <Link to="/pricing" onClick={closeMenu} className="block text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
+          <Link to="/pricing" onClick={closeMenu} aria-current={isCurrent('/pricing') ? 'page' : undefined} className="flex min-h-11 items-center text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
             Pricing
           </Link>
-          <Link to="/news" onClick={closeMenu} className="block text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
+          <Link to="/news" onClick={closeMenu} aria-current={isCurrent('/news') ? 'page' : undefined} className="flex min-h-11 items-center text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
             News
           </Link>
           {showSignedIn ? (
             <>
               {showAdmin && (
-                <Link to="/admin" onClick={closeMenu} className="block text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
+                <Link to="/admin" onClick={closeMenu} className="flex min-h-11 items-center text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
                   Admin
                 </Link>
               )}
-              <Link to="/dashboard" onClick={closeMenu} className="block bg-blue-500 hover:bg-blue-600 text-white text-base font-medium py-2 px-3 rounded-md">
+              <Link to="/dashboard" onClick={closeMenu} aria-current={location.pathname.startsWith('/dashboard') ? 'page' : undefined} className="flex min-h-11 items-center bg-blue-600 hover:bg-blue-700 text-white text-base font-medium py-2 px-3 rounded-md">
                 Dashboard
               </Link>
               <div className="py-2 px-2">
@@ -125,10 +145,10 @@ const Navbar = () => {
             </>
           ) : (
             <>
-              <Link to="/signup" onClick={closeMenu} className="block bg-blue-500 hover:bg-blue-600 text-white text-base font-medium py-2 px-3 rounded-md">
+              <Link to="/signup" onClick={closeMenu} aria-current={location.pathname.startsWith('/signup') ? 'page' : undefined} className="flex min-h-11 items-center bg-blue-600 hover:bg-blue-700 text-white text-base font-medium py-2 px-3 rounded-md">
                 Sign Up
               </Link>
-              <Link to="/login" onClick={closeMenu} className="block text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
+              <Link to="/login" onClick={closeMenu} aria-current={location.pathname.startsWith('/login') ? 'page' : undefined} className="flex min-h-11 items-center text-white text-base font-medium py-2 px-2 rounded hover:bg-white/5">
                 Login
               </Link>
             </>
@@ -139,8 +159,9 @@ const Navbar = () => {
             <p className="text-sm text-white/90">Doing for the Small</p>
           </div>
         </div>
-      </div>
-    </nav>
+      </div>}
+      </nav>
+    </header>
   )
 }
 

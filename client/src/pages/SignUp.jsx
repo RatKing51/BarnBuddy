@@ -34,7 +34,7 @@ const authAppearance = {
     formFieldInput:
       "min-h-11 bg-[#102b5a] text-white border-white/10 placeholder:text-white/40 focus:border-blue-400 focus:ring-blue-400 rounded-lg",
     formButtonPrimary:
-      "min-h-11 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-sm transition",
+      "min-h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition",
     footer: "bg-transparent p-0 mt-5",
     footerAction: "bg-transparent",
     footerActionText: "text-white/70",
@@ -101,21 +101,21 @@ export default function SignUp() {
 
                 <div className="grid grid-cols-1 gap-3 text-sm text-white/80 sm:grid-cols-3 lg:grid-cols-1">
                   <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 sm:border-0 sm:bg-transparent sm:p-0">
-                    <h4 className="font-semibold text-white">Why sign up?</h4>
+                    <h3 className="font-semibold text-white">Why sign up?</h3>
                     <p className="mt-1">
                       Track animals and tasks with clean tools built for real farm workflows.
                     </p>
                   </div>
 
                   <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 sm:border-0 sm:bg-transparent sm:p-0">
-                    <h4 className="font-semibold text-white">What you'll get</h4>
+                    <h3 className="font-semibold text-white">What you'll get</h3>
                     <p className="mt-1">
                       Smart forms, exportable records, and templates that stay out of your way.
                     </p>
                   </div>
 
                   <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 sm:border-0 sm:bg-transparent sm:p-0">
-                    <h4 className="font-semibold text-white">Privacy first</h4>
+                    <h3 className="font-semibold text-white">Privacy first</h3>
                     <p className="mt-1">
                       Your data stays yours. Export anytime and delete your account whenever you want.
                     </p>

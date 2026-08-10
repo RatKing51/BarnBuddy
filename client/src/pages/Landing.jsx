@@ -42,6 +42,7 @@ export default function Landing() {
 
   return (
     <div className='bg-[#101D42]'>
+      <main>
         <LargeLandingCard slides={carouselSlides} branding={branding} />
         <section className="bg-[#101D42] px-4 sm:px-6 lg:px-8 py-12">
           <div className="max-w-7xl mx-auto">
@@ -96,9 +97,8 @@ export default function Landing() {
             </div>
           </div>
         </section>
-        <div>
-          <Footer />
-        </div>
+      </main>
+      <Footer />
     </div>
   )
 }

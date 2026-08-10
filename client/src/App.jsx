@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { BrowserRouter as Router, Link, Routes, Route, useLocation } from "react-router";
+import { BrowserRouter as Router, Link, Navigate, Routes, Route, useLocation } from "react-router";
 import Landing from "./pages/Landing";
 import Navbar from "./components/Navbar";
 import PrivateRoute from "./routes/PrivateRoute";
@@ -10,6 +10,7 @@ import { getSiteContent } from "./api/siteContent";
 import { defaultSiteContent } from "./data/siteContent";
 import { useAuth } from "./context/AuthContext";
 import { ADMIN_CLERK_USER_IDS, ADMIN_EMAILS } from "./config/env";
+import Seo from "./seo/Seo";
 
 const DOCS_URL = "https://doc.barnbuddy.pro";
 const ANNOUNCEMENT_EVENT = "barnbuddy:announcement-updated";
@@ -86,6 +87,11 @@ function NotFound() {
   );
 }
 
+function LegacyLegalRedirect() {
+  const location = useLocation();
+  return <Navigate replace to={location.hash === "#pp" ? "/privacy" : "/terms"} />;
+}
+
 function AppContent() {
   const location = useLocation();
   const { user, subscription } = useAuth();
@@ -115,6 +121,13 @@ function AppContent() {
     (announcementAudience === "admins" && isAdmin);
   const showAnnouncement = showShell && announcement?.enabled && announcementMatchesAudience && (announcement.title || announcement.message);
   const announcementStyle = announcementStyles[announcement?.tone] || announcementStyles.blue;
+
+  function skipToMainContent(event) {
+    event.preventDefault();
+    const mainContent = document.getElementById("main-content");
+    mainContent?.scrollIntoView({ block: "start" });
+    window.requestAnimationFrame(() => mainContent?.focus());
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -180,36 +193,13 @@ function AppContent() {
     return () => window.clearTimeout(timer);
   }, [location.pathname]);
 
-  useEffect(() => {
-    const titleByPath = {
-      "/": "BarnBuddy | Livestock records for small farms",
-      "/aboutus": "About BarnBuddy",
-      "/pricing": "BarnBuddy Pricing",
-      "/news": "BarnBuddy News",
-      "/contact": "Contact BarnBuddy",
-      "/help": "BarnBuddy Help Center",
-      "/status": "BarnBuddy Status",
-      "/termsofserviceandprivacypolicy": "BarnBuddy Terms and Privacy",
-      "/admin": "BarnBuddy Admin",
-      "/settings/account": "BarnBuddy Account Settings",
-      "/settings/herd": "BarnBuddy Herd Settings",
-      "/settings/import-assistant": "BarnBuddy Import Assistant",
-      "/dashboard/ffa-projects": "FFA Projects | BarnBuddy",
-    };
-    const routedTitle = location.pathname.startsWith("/dashboard")
-      ? "BarnBuddy Dashboard"
-      : location.pathname.startsWith("/login")
-        ? "Log in to BarnBuddy"
-        : location.pathname.startsWith("/signup")
-          ? "Create a BarnBuddy account"
-          : "Page not found | BarnBuddy";
-    document.title = titleByPath[location.pathname] || routedTitle;
-  }, [location.pathname]);
-
   return (
     <>
+      <Seo />
+      <a className="skip-link" href="#main-content" onClick={skipToMainContent}>Skip to main content</a>
       <PageLoadingBar active={pageLoading} />
       <ToastContainer autoClose={1000} />
+      <div id="main-content" tabIndex="-1">
       {showMaintenance ? (
         <main className="grid min-h-screen place-items-center bg-[#07111f] px-4 text-center text-white">
           <section className="w-full max-w-3xl rounded-lg border border-sky-300/20 bg-[#0f2650] p-8 shadow-2xl shadow-black/30 sm:p-10">
@@ -231,7 +221,7 @@ function AppContent() {
       <>
       {showShell && <Navbar />}
       {showAnnouncement && (
-        <section className={`border-b px-4 py-5 text-white shadow-lg shadow-black/15 ${announcementStyle.shell}`}>
+        <section aria-live="polite" aria-atomic="true" className={`border-b px-4 py-5 text-white shadow-lg shadow-black/15 ${announcementStyle.shell}`}>
           <div className="mx-auto flex max-w-7xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="max-w-4xl">
               {announcement.title && (
@@ -262,7 +252,9 @@ function AppContent() {
         <Route path="/signup/*" element={<SignUp />} />
         <Route path="/aboutus" element={<About />} />
         <Route path="/pricing" element={<Pricing />} />
-        <Route path="/termsofserviceandprivacypolicy" element={<TOSandPP />} />
+        <Route path="/terms" element={<TOSandPP documentType="terms" />} />
+        <Route path="/privacy" element={<TOSandPP documentType="privacy" />} />
+        <Route path="/termsofserviceandprivacypolicy" element={<LegacyLegalRedirect />} />
         <Route path="/news" element={<News />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/help" element={<HelpCenter />} />
@@ -286,6 +278,7 @@ function AppContent() {
       </Suspense>
       </>
       )}
+      </div>
     </>
   );
 }

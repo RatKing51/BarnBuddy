@@ -2,17 +2,119 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="%VITE_API_URL%/api/site-content/branding/favicon" />
-    <link rel="shortcut icon" type="image/png" href="%VITE_API_URL%/api/site-content/branding/favicon" />
-    <link rel="apple-touch-icon" href="%VITE_API_URL%/api/site-content/branding/apple-touch-icon" />
-    <link rel="manifest" href="%VITE_API_URL%/api/site-content/manifest.webmanifest?v=2" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#2f6f4e" />
+    <meta name="application-name" content="BarnBuddy" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/pwa-192x192.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <meta name="barnbuddy-seo-start" content="" data-barnbuddy-seo="true" />
+    <title>BarnBuddy | Livestock Records for Small Farms</title>
     <meta
       name="description"
-      content="BarnBuddy helps farmers and livestock owners track herds, health records, reminders, and farm operations."
+      content="BarnBuddy helps small farms, FFA and 4-H members, and hobby livestock owners organize animal, herd, health, vaccination, vet, and breeding records."
+      data-barnbuddy-seo="true"
     />
-    <title>BarnBuddy.</title>
+    <meta
+      name="robots"
+      content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+      data-barnbuddy-seo="true"
+    />
+    <link rel="canonical" href="https://barnbuddy.pro/" data-barnbuddy-seo="true" />
+    <meta property="og:site_name" content="BarnBuddy" data-barnbuddy-seo="true" />
+    <meta property="og:title" content="BarnBuddy | Livestock Records for Small Farms" data-barnbuddy-seo="true" />
+    <meta
+      property="og:description"
+      content="BarnBuddy helps small farms, FFA and 4-H members, and hobby livestock owners organize animal, herd, health, vaccination, vet, and breeding records."
+      data-barnbuddy-seo="true"
+    />
+    <meta property="og:url" content="https://barnbuddy.pro/" data-barnbuddy-seo="true" />
+    <meta property="og:type" content="website" data-barnbuddy-seo="true" />
+    <meta property="og:image" content="https://barnbuddy.pro/bblogo.png" data-barnbuddy-seo="true" />
+    <meta property="og:image:width" content="1200" data-barnbuddy-seo="true" />
+    <meta property="og:image:height" content="1200" data-barnbuddy-seo="true" />
+    <meta property="og:image:alt" content="BarnBuddy logo" data-barnbuddy-seo="true" />
+    <meta name="twitter:card" content="summary_large_image" data-barnbuddy-seo="true" />
+    <meta name="twitter:title" content="BarnBuddy | Livestock Records for Small Farms" data-barnbuddy-seo="true" />
+    <meta
+      name="twitter:description"
+      content="BarnBuddy helps small farms, FFA and 4-H members, and hobby livestock owners organize animal, herd, health, vaccination, vet, and breeding records."
+      data-barnbuddy-seo="true"
+    />
+    <meta name="twitter:image" content="https://barnbuddy.pro/bblogo.png" data-barnbuddy-seo="true" />
+    <meta name="twitter:image:alt" content="BarnBuddy logo" data-barnbuddy-seo="true" />
+    <script type="application/ld+json" data-barnbuddy-seo="true">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://barnbuddy.pro/#organization",
+            "name": "BarnBuddy",
+            "url": "https://barnbuddy.pro/",
+            "logo": {
+              "@type": "ImageObject",
+              "@id": "https://barnbuddy.pro/#logo",
+              "url": "https://barnbuddy.pro/bblogo.png",
+              "contentUrl": "https://barnbuddy.pro/bblogo.png",
+              "width": 1200,
+              "height": 1200,
+              "caption": "BarnBuddy"
+            },
+            "sameAs": [
+              "https://github.com/RatKing51/BarnBuddy",
+              "https://www.facebook.com/share/14i7xVZnNJS/?mibextid=wwXIfr",
+              "https://www.instagram.com/barnbuddypro/",
+              "https://www.tiktok.com/@barnbuddypro"
+            ]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://barnbuddy.pro/#website",
+            "url": "https://barnbuddy.pro/",
+            "name": "BarnBuddy",
+            "description": "BarnBuddy helps small farms, FFA and 4-H members, and hobby livestock owners organize animal, herd, health, vaccination, vet, and breeding records.",
+            "inLanguage": "en-US",
+            "publisher": { "@id": "https://barnbuddy.pro/#organization" }
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://barnbuddy.pro/#software-application",
+            "name": "BarnBuddy",
+            "url": "https://barnbuddy.pro/",
+            "description": "BarnBuddy helps small farms, FFA and 4-H members, and hobby livestock owners organize animal, herd, health, vaccination, vet, and breeding records.",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web",
+            "image": { "@id": "https://barnbuddy.pro/#logo" },
+            "provider": { "@id": "https://barnbuddy.pro/#organization" },
+            "offers": [
+              {
+                "@type": "Offer",
+                "name": "Free",
+                "price": "0",
+                "priceCurrency": "USD",
+                "url": "https://barnbuddy.pro/pricing"
+              },
+              {
+                "@type": "Offer",
+                "name": "Premium",
+                "price": "5",
+                "priceCurrency": "USD",
+                "url": "https://barnbuddy.pro/pricing",
+                "priceSpecification": {
+                  "@type": "UnitPriceSpecification",
+                  "price": "5",
+                  "priceCurrency": "USD",
+                  "billingDuration": "P1M"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+    <meta name="barnbuddy-seo-end" content="" data-barnbuddy-seo="true" />
   </head>
   <body>
     <div id="root"></div>

@@ -55,8 +55,8 @@ export default function Status() {
                   <h1 className="text-4xl sm:text-5xl font-semibold leading-tight">{status.headline}</h1>
                   <p className="mt-3 text-white/72">{status.summary}</p>
                 </div>
-                <span className={`inline-flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${badgeClasses[overallTone] || badgeClasses.green}`}>
-                  <span className={`h-2.5 w-2.5 rounded-full ${toneClasses[overallTone] || toneClasses.green}`} />
+                <span role="status" aria-live="polite" aria-atomic="true" className={`inline-flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${badgeClasses[overallTone] || badgeClasses.green}`}>
+                  <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${toneClasses[overallTone] || toneClasses.green}`} />
                   {status.overallStatus}
                 </span>
               </div>
@@ -66,7 +66,7 @@ export default function Status() {
                   <div key={service.name} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/6 px-4 py-4">
                     <span className="font-semibold text-white">{service.name}</span>
                     <span className="flex items-center gap-2 text-sm text-white/70">
-                      <span className={`h-2.5 w-2.5 rounded-full ${toneClasses[service.tone] || toneClasses.green}`} />
+                      <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${toneClasses[service.tone] || toneClasses.green}`} />
                       {service.status}
                     </span>
                   </div>

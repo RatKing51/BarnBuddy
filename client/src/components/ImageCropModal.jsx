@@ -70,6 +70,11 @@ export default function ImageCropModal({
 }) {
   const viewportRef = useRef(null);
   const imageRef = useRef(null);
+  const dialogRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const previousFocusRef = useRef(null);
+  const isSavingRef = useRef(false);
+  const onCancelRef = useRef(onCancel);
   const pointersRef = useRef(new Map());
   const gestureRef = useRef(null);
   const [sourceUrl, setSourceUrl] = useState("");
@@ -85,6 +90,14 @@ export default function ImageCropModal({
     outputHeight,
   });
   const [customRatio, setCustomRatio] = useState({ width: "9", height: "16" });
+
+  useEffect(() => {
+    isSavingRef.current = isSaving;
+  }, [isSaving]);
+
+  useEffect(() => {
+    onCancelRef.current = onCancel;
+  }, [onCancel]);
 
   useEffect(() => {
     const url = URL.createObjectURL(file);
@@ -116,12 +129,44 @@ export default function ImageCropModal({
   }, [aspectRatio, outputHeight, outputWidth, file]);
 
   useEffect(() => {
+    previousFocusRef.current = document.activeElement;
+    const focusFrame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+
     const handleKeyDown = (event) => {
-      if (event.key === "Escape" && !isSaving) onCancel();
+      if (event.key === "Escape" && !isSavingRef.current) {
+        onCancelRef.current();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusable = [...(dialogRef.current?.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+      ) || [])].filter((element) => element.getClientRects().length > 0);
+
+      if (!focusable.length) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !dialogRef.current?.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
+
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isSaving, onCancel]);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener("keydown", handleKeyDown);
+      if (previousFocusRef.current instanceof HTMLElement) previousFocusRef.current.focus();
+    };
+  }, []);
 
   function resetCrop() {
     setZoom(1);
@@ -282,14 +327,14 @@ export default function ImageCropModal({
   const displayHeight = imageSize.height * coverScale * zoom;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="crop-photo-title">
+    <div ref={dialogRef} className="fixed inset-0 z-[100] flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="crop-photo-title" aria-describedby="crop-photo-description">
       <div className="flex max-h-[100dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-gray-700 bg-gray-900 shadow-2xl sm:max-h-[calc(100dvh-2.5rem)] sm:max-w-3xl sm:rounded-3xl">
         <div className="flex items-start justify-between gap-4 border-b border-gray-700 px-4 py-4 sm:px-6">
           <div>
             <h2 id="crop-photo-title" className="text-lg font-bold text-white sm:text-xl">{title || `Adjust ${animalName || "animal"} photo`}</h2>
-            <p className="mt-1 text-sm text-gray-400">{description}</p>
+            <p id="crop-photo-description" className="mt-1 text-sm text-gray-400">{description}</p>
           </div>
-          <button type="button" onClick={onCancel} disabled={isSaving} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gray-800 text-2xl text-gray-300 transition hover:bg-gray-700 hover:text-white disabled:opacity-50" aria-label="Close photo editor">×</button>
+          <button ref={closeButtonRef} type="button" onClick={onCancel} disabled={isSaving} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gray-800 text-2xl text-gray-300 transition hover:bg-gray-700 hover:text-white disabled:opacity-50" aria-label="Close photo editor">×</button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
@@ -344,7 +389,7 @@ export default function ImageCropModal({
                     type="button"
                     onClick={() => selectAspectRatio(option)}
                     disabled={option.aspectRatio === "original" && !imageSize.width}
-                    className={`min-h-10 rounded-lg border px-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                    className={`min-h-11 rounded-lg border px-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
                       isSelected
                         ? "border-blue-300 bg-blue-500/20 text-blue-100"
                         : "border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-500 hover:text-white"
@@ -362,7 +407,7 @@ export default function ImageCropModal({
                 step="0.1"
                 value={customRatio.width}
                 onChange={(event) => setCustomRatio((current) => ({ ...current, width: event.target.value }))}
-                className="min-h-10 rounded-lg border border-gray-700 bg-gray-950 px-3 text-sm text-white outline-none focus:border-blue-300"
+                className="min-h-11 rounded-lg border border-gray-700 bg-gray-950 px-3 text-sm text-white outline-none focus:border-blue-300"
                 aria-label="Custom crop ratio width"
               />
               <span className="text-sm font-semibold text-gray-500">:</span>
@@ -372,13 +417,13 @@ export default function ImageCropModal({
                 step="0.1"
                 value={customRatio.height}
                 onChange={(event) => setCustomRatio((current) => ({ ...current, height: event.target.value }))}
-                className="min-h-10 rounded-lg border border-gray-700 bg-gray-950 px-3 text-sm text-white outline-none focus:border-blue-300"
+                className="min-h-11 rounded-lg border border-gray-700 bg-gray-950 px-3 text-sm text-white outline-none focus:border-blue-300"
                 aria-label="Custom crop ratio height"
               />
               <button
                 type="button"
                 onClick={applyCustomAspectRatio}
-                className="min-h-10 rounded-lg border border-gray-700 bg-gray-800 px-3 text-sm font-semibold text-gray-200 transition hover:border-gray-500 hover:text-white"
+                className="min-h-11 rounded-lg border border-gray-700 bg-gray-800 px-3 text-sm font-semibold text-gray-200 transition hover:border-gray-500 hover:text-white"
               >
                 Apply
               </button>
@@ -393,7 +438,7 @@ export default function ImageCropModal({
 
         <div className="grid grid-cols-2 gap-3 border-t border-gray-700 bg-gray-900 px-4 py-4 sm:flex sm:justify-end sm:px-6">
           <button type="button" onClick={onCancel} disabled={isSaving} className="min-h-12 rounded-xl border border-gray-600 px-5 font-semibold text-gray-200 transition hover:bg-gray-800 disabled:opacity-50">Cancel</button>
-          <button type="button" onClick={createCroppedFile} disabled={isSaving || !imageSize.width} className="min-h-12 rounded-xl bg-blue-600 px-5 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="button" onClick={createCroppedFile} disabled={isSaving || !imageSize.width} className="min-h-12 rounded-xl bg-blue-600 px-5 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
             {isSaving ? "Saving..." : confirmLabel}
           </button>
         </div>

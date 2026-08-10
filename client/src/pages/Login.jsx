@@ -35,7 +35,7 @@ const authAppearance = {
     formFieldInput:
       "min-h-11 bg-[#102b5a] text-white border-white/10 placeholder:text-white/40 focus:border-blue-400 focus:ring-blue-400 rounded-lg",
     formButtonPrimary:
-      "min-h-11 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-sm transition",
+      "min-h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition",
     footer: "bg-transparent p-0 mt-5",
     footerAction: "bg-transparent",
     footerActionText: "text-white/70",
@@ -109,21 +109,21 @@ export default function Login() {
 
                 <div className="grid grid-cols-1 gap-3 text-sm text-white/80 sm:grid-cols-3 lg:grid-cols-1">
                   <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 sm:border-0 sm:bg-transparent sm:p-0">
-                    <h4 className="font-semibold text-white">Quick check-ins</h4>
+                    <h3 className="font-semibold text-white">Quick check-ins</h3>
                     <p className="mt-1">
                       Jump back into animals, herds, and upcoming care from one dashboard.
                     </p>
                   </div>
 
                   <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 sm:border-0 sm:bg-transparent sm:p-0">
-                    <h4 className="font-semibold text-white">Records ready</h4>
+                    <h3 className="font-semibold text-white">Records ready</h3>
                     <p className="mt-1">
                       Keep health notes, vaccinations, vet visits, and exports close at hand.
                     </p>
                   </div>
 
                   <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 sm:border-0 sm:bg-transparent sm:p-0">
-                    <h4 className="font-semibold text-white">Secure access</h4>
+                    <h3 className="font-semibold text-white">Secure access</h3>
                     <p className="mt-1">
                       Your account stays protected while your farm data stays yours.
                     </p>

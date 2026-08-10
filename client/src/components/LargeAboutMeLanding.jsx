@@ -27,7 +27,7 @@ export default function LargeAboutMeLanding() {
 
             <aside className="w-full flex justify-center lg:justify-start">
               <div className="w-full bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-6 sm:p-8 md:p-10 shadow-lg border border-white/10">
-                <h3 className="text-white text-2xl sm:text-3xl font-semibold mb-4">About Us</h3>
+                <h2 className="text-white text-2xl sm:text-3xl font-semibold mb-4">About Us</h2>
 
                 <p className="text-white/90 text-sm sm:text-base lg:text-lg leading-relaxed mb-6">
                   Hi, I’m <strong>Gage Billinger</strong>, a 16-year-old who lives on a small rural farm in KS where we raise meat goats. I built this site because I know firsthand how hard it is to keep items neat, organized, simple, and useful. So I built this site to help.
@@ -36,7 +36,7 @@ export default function LargeAboutMeLanding() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mr-3">
-                      <svg className="w-6 h-6 text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="w-6 h-6 text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <line x1="18" y1="6" x2="6" y2="18" />
                         <line x1="6" y1="6" x2="18" y2="18" />
                       </svg>

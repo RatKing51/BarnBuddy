@@ -22,7 +22,7 @@ const helpTopics = [
 
 const quickAnswers = [
   ['Can I use BarnBuddy for one animal?', 'Yes. It works for a single project animal or a small herd.'],
-  ['Does the Help Center submit tickets yet?', 'Not yet. '],
+  ['Where can I find detailed guides?', 'Open the BarnBuddy documentation for step-by-step account, record, and Premium feature guides.'],
   ['Where do I ask for help?', 'Use the Contact page for now and include your account email plus what you were trying to do.'],
 ]
 
@@ -36,7 +36,7 @@ export default function HelpCenter() {
               <p className="text-blue-300 text-sm font-semibold uppercase tracking-[0.18em]">Help Center</p>
               <h1 className="mt-3 text-4xl sm:text-5xl font-semibold leading-tight">BarnBuddy support starts here</h1>
               <p className="mt-4 text-white/78 text-lg leading-relaxed">
-                Starter help content for common workflows. These sections can become full docs once the product details settle.
+                Find quick answers for common workflows, then open the full documentation when you need step-by-step guidance.
               </p>
             </div>
 
@@ -53,9 +53,9 @@ export default function HelpCenter() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="text-2xl font-semibold">Quick answers</h2>
-                  <p className="mt-2 text-sm text-white/65">Temporary FAQ content until there is a full knowledge base.</p>
+                  <p className="mt-2 text-sm text-white/65">Common answers for accounts, records, and support.</p>
                 </div>
-                <a href="/contact" className="inline-flex rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-500">
+                <a href="/contact" className="inline-flex min-h-11 items-center rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700">
                   Contact support
                 </a>
               </div>

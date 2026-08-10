@@ -51,22 +51,22 @@ export default function Footer() {
               Simple, practical tools for small farms. Built from the farm for the farm — record keeping that actually gets used.
             </p>
             <div className="flex space-x-3">
-              <a href="https://github.com/RatKing51/BarnBuddy" className="text-white/70 hover:text-white transition-colors" aria-label="Github">
+              <a href="https://github.com/RatKing51/BarnBuddy" className="inline-flex h-11 w-11 items-center justify-center rounded-md text-white/70 hover:text-white transition-colors" aria-label="GitHub">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M12 .5A12 12 0 0 0 0 12.7c0 5.3 3.4 9.8 8.2 11.4.6.1.8-.2.8-.5v-2c-3.3.7-4-1.6-4-1.6-.5-1.3-1.2-1.7-1.2-1.7-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 .1 1.6.7 2 .7.1-.6.4-1 .7-1.2-2.6-.3-5.3-1.3-5.3-6 0-1.3.5-2.3 1.1-3.1-.1-.3-.5-1.6.1-3.2 0 0 .9-.3 3 .9.8-.2 1.7-.3 2.6-.3s1.8.1 2.6.3c2-.1 3-.9 3-.9.6 1.6.2 2.9.1 3.2.7.8 1.1 1.8 1.1 3.1 0 4.7-2.7 5.6-5.3 6 .4.4.8 1 .8 2v3c0 .3.2.6.8.5A12 12 0 0 0 24 .5 12 12 0 0 0 12 .5z"/>
                 </svg>
               </a>
-              <a href="https://www.facebook.com/share/14i7xVZnNJS/?mibextid=wwXIfr" className="text-white/70 hover:text-white transition-colors" aria-label="Facebook">
+              <a href="https://www.facebook.com/share/14i7xVZnNJS/?mibextid=wwXIfr" className="inline-flex h-11 w-11 items-center justify-center rounded-md text-white/70 hover:text-white transition-colors" aria-label="Facebook">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M22 12.06C22 6.49 17.52 2 12 2S2 6.49 2 12.06c0 5.02 3.66 9.19 8.44 9.94v-7.03H7.9v-2.91h2.54V9.84c0-2.52 1.49-3.91 3.77-3.91 1.09 0 2.23.2 2.23.2v2.47h-1.26c-1.24 0-1.63.78-1.63 1.57v1.89h2.77l-.44 2.91h-2.33V22C18.34 21.25 22 17.08 22 12.06z" />
                 </svg>
               </a>
-              <a href="https://www.tiktok.com/@barnbuddypro?is_from_webapp=1&sender_device=pc" className="text-white/70 hover:text-white transition-colors" aria-label="TikTok">
+              <a href="https://www.tiktok.com/@barnbuddypro?is_from_webapp=1&sender_device=pc" className="inline-flex h-11 w-11 items-center justify-center rounded-md text-white/70 hover:text-white transition-colors" aria-label="TikTok">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.35 6.35 0 0 0-5.46 10.96 6.34 6.34 0 0 0 10.87-4.43v-7a8.16 8.16 0 0 0 4.77 1.52V7a4.84 4.84 0 0 1-.95-.31z" />
                 </svg>
               </a>
-              <a href="https://www.instagram.com/barnbuddypro/" className="text-white/70 hover:text-white transition-colors" aria-label="Instagram">
+              <a href="https://www.instagram.com/barnbuddypro/" className="inline-flex h-11 w-11 items-center justify-center rounded-md text-white/70 hover:text-white transition-colors" aria-label="Instagram">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M7.75 2h8.5A5.76 5.76 0 0 1 22 7.75v8.5A5.76 5.76 0 0 1 16.25 22h-8.5A5.76 5.76 0 0 1 2 16.25v-8.5A5.76 5.76 0 0 1 7.75 2zm0 2A3.75 3.75 0 0 0 4 7.75v8.5A3.75 3.75 0 0 0 7.75 20h8.5A3.75 3.75 0 0 0 20 16.25v-8.5A3.75 3.75 0 0 0 16.25 4h-8.5zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm5.25-2.75a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5z" />
                 </svg>
@@ -77,7 +77,7 @@ export default function Footer() {
           {/* Links */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
             <div>
-              <h4 className="text-sm font-semibold mb-3">Product</h4>
+              <h2 className="text-sm font-semibold mb-3">Product</h2>
               <ul className="space-y-2 text-sm text-white/80">
                 <li><a href="/pricing" className="hover:text-white">Pricing</a></li>
                 <li><a href="https://doc.barnbuddy.pro" className="hover:text-white">Docs</a></li>
@@ -85,7 +85,7 @@ export default function Footer() {
             </div>
 
             <div>
-              <h4 className="text-sm font-semibold mb-3">Company</h4>
+              <h2 className="text-sm font-semibold mb-3">Company</h2>
               <ul className="space-y-2 text-sm text-white/80">
                 <li><a href="/aboutus" className="hover:text-white">About</a></li>
                 <li><a href="/news" className="hover:text-white">News</a></li>
@@ -93,7 +93,7 @@ export default function Footer() {
             </div>
 
             <div>
-              <h4 className="text-sm font-semibold mb-3">Support</h4>
+              <h2 className="text-sm font-semibold mb-3">Support</h2>
               <ul className="space-y-2 text-sm text-white/80">
                 <li><a href="/help" className="hover:text-white">Help Center</a></li>
                 <li><a href="/contact" className="hover:text-white">Contact</a></li>
@@ -105,28 +105,29 @@ export default function Footer() {
 
           {/* Newsletter / CTA */}
           <div className="md:col-span-3 lg:col-span-1">
-            <h4 className="text-sm font-semibold mb-3">Get updates</h4>
+            <h2 className="text-sm font-semibold mb-3">Get updates</h2>
             <p className="text-sm text-white/80 mb-4">Short updates about new features, guides, and tips for small farms.</p>
             <form className="flex flex-col gap-3 sm:flex-row sm:items-center" onSubmit={handleNewsletterSubmit}>
+              <label className="sr-only" htmlFor="newsletter-email">Email address for BarnBuddy updates</label>
               <input
+                id="newsletter-email"
                 type="email"
-                aria-label="Email address for BarnBuddy updates"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@farm.com"
                 required
-                className="w-full px-3 py-2 rounded-md bg-white/6 placeholder-white/60 text-white focus:outline-none border border-white/8"
+                className="min-h-11 w-full px-3 py-2 rounded-md bg-white/6 placeholder-white/60 text-white focus:outline-none border border-white/8"
               />
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full sm:w-auto px-4 py-2 bg-blue-600 rounded-md font-semibold hover:bg-blue-500 transition-colors disabled:cursor-wait disabled:opacity-70"
+                className="min-h-11 w-full sm:w-auto px-4 py-2 bg-blue-600 rounded-md font-semibold hover:bg-blue-700 transition-colors disabled:cursor-wait disabled:opacity-70"
               >
                 {submitting ? 'Saving...' : 'Subscribe'}
               </button>
             </form>
             {status.message && (
-              <p className={`mt-3 text-sm ${
+              <p role={status.type === 'error' ? 'alert' : 'status'} aria-live="polite" aria-atomic="true" className={`mt-3 text-sm ${
                 status.type === 'success' ? 'text-emerald-200' : 'text-red-200'
               }`}>
                 {status.message}
@@ -138,8 +139,8 @@ export default function Footer() {
         <div className="border-t border-white/6 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between text-sm text-white/70">
           <p>© {new Date().getFullYear()} BarnBuddy. All rights reserved.</p>
           <div className="flex items-center space-x-4 mt-4 sm:mt-0">
-            <a href="/termsofserviceandprivacypolicy#pp" className="hover:text-white">Privacy</a>
-            <a href="/termsofserviceandprivacypolicy#tos" className="hover:text-white">Terms</a>
+            <a href="/privacy" className="inline-flex min-h-11 items-center hover:text-white">Privacy</a>
+            <a href="/terms" className="inline-flex min-h-11 items-center hover:text-white">Terms</a>
           </div>
         </div>
       </div>
