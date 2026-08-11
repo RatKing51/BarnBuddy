@@ -122,6 +122,10 @@ function AppContent() {
   const showAnnouncement = showShell && announcement?.enabled && announcementMatchesAudience && (announcement.title || announcement.message);
   const announcementStyle = announcementStyles[announcement?.tone] || announcementStyles.blue;
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [location.pathname]);
+
   function skipToMainContent(event) {
     event.preventDefault();
     const mainContent = document.getElementById("main-content");
