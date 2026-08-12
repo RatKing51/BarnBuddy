@@ -1,7 +1,7 @@
 // main.jsx or index.jsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { ClerkProvider } from '@clerk/clerk-react';
+import { ClerkProvider } from '@clerk/react';
 import App from './App';
 import './index.css';
 import { AuthProvider } from './context/AuthContext';

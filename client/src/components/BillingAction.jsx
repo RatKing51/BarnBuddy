@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router";
-import { SignedIn, SignedOut } from "@clerk/clerk-react";
-import { CheckoutButton, SubscriptionDetailsButton } from "@clerk/clerk-react/experimental";
+import { Show } from "@clerk/react";
+import { CheckoutButton, SubscriptionDetailsButton } from "@clerk/react/experimental";
 import { CLERK_PREMIUM_PLAN_ID, HAS_VALID_CLERK_PREMIUM_PLAN_ID } from "../config/env";
 
 const baseClassName =
@@ -20,18 +20,18 @@ export default function BillingAction({
   if (isPremium) {
     return (
       <>
-        <SignedIn>
+        <Show when="signed-in">
           <SubscriptionDetailsButton for="user">
             <button type="button" className={classes}>
               Manage billing
             </button>
           </SubscriptionDetailsButton>
-        </SignedIn>
-        <SignedOut>
+        </Show>
+        <Show when="signed-out">
           <Link to="/login" className={signedOutClasses}>
             Sign in
           </Link>
-        </SignedOut>
+        </Show>
       </>
     );
   }
@@ -39,23 +39,23 @@ export default function BillingAction({
   if (!HAS_VALID_CLERK_PREMIUM_PLAN_ID && checkoutFallbackToPricing) {
     return (
       <>
-        <SignedIn>
+        <Show when="signed-in">
           <Link to="/pricing#clerk-checkout" className={classes}>
             Choose Premium
           </Link>
-        </SignedIn>
-        <SignedOut>
+        </Show>
+        <Show when="signed-out">
           <Link to="/signup" className={signedOutClasses}>
             Create account
           </Link>
-        </SignedOut>
+        </Show>
       </>
     );
   }
 
   return (
     <>
-      <SignedIn>
+      <Show when="signed-in">
         <CheckoutButton
           planId={CLERK_PREMIUM_PLAN_ID}
           planPeriod="month"
@@ -69,12 +69,12 @@ export default function BillingAction({
             Upgrade to Premium
           </button>
         </CheckoutButton>
-      </SignedIn>
-      <SignedOut>
+      </Show>
+      <Show when="signed-out">
         <Link to="/signup" className={signedOutClasses}>
           Create account
         </Link>
-      </SignedOut>
+      </Show>
     </>
   );
 }

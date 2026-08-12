@@ -1,7 +1,8 @@
 import React from "react";
 import { Link, useLocation } from "react-router";
-import { PricingTable } from "@clerk/clerk-react";
+import { PricingTable } from "@clerk/react";
 import Footer from "../components/Footer";
+import { CLERK_PROMO_CODES } from "../config/env";
 import { PRICING_FEATURES } from "../config/subscription";
 
 const clerkPricingAppearance = {
@@ -161,6 +162,20 @@ export default function Pricing() {
           {requestedPremiumFeature && (
             <div className="mx-auto mb-8 max-w-3xl rounded-xl border border-blue-300/25 bg-blue-500/10 px-5 py-4 text-center text-sm text-blue-100">
               <strong>{requestedPremiumFeature}</strong> is included with BarnBuddy Premium. Choose Premium below to unlock it.
+            </div>
+          )}
+
+          {CLERK_PROMO_CODES.length > 0 && (
+            <div className="mx-auto mb-8 max-w-3xl rounded-xl border border-amber-300/30 bg-amber-400/10 px-5 py-4 text-center text-sm text-amber-50">
+              <p className="font-semibold">Available promo {CLERK_PROMO_CODES.length === 1 ? "code" : "codes"}</p>
+              <div className="mt-2 flex flex-wrap justify-center gap-2">
+                {CLERK_PROMO_CODES.map((code) => (
+                  <code key={code} className="select-all rounded-md border border-amber-200/25 bg-black/15 px-2.5 py-1 font-mono font-semibold tracking-wide">
+                    {code}
+                  </code>
+                ))}
+              </div>
+              <p className="mt-2 text-amber-50/85">Enter a code in the secure Clerk checkout to apply its discount.</p>
             </div>
           )}
 

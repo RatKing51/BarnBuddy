@@ -1,4 +1,4 @@
-import { UserButton } from "@clerk/clerk-react";
+import { UserButton } from "@clerk/react";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import PremiumExpiryBadge from "./PremiumExpiryBadge";

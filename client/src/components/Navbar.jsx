@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { UserButton, useAuth as useClerkAuth, useUser } from "@clerk/clerk-react";
+import { UserButton, useAuth as useClerkAuth, useUser } from "@clerk/react";
 import { Link, NavLink, useLocation } from "react-router";
 import { ADMIN_CLERK_USER_IDS, ADMIN_EMAILS } from "../config/env";
 import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";

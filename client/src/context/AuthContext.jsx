@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useAuth as useClerkAuth, useUser } from "@clerk/clerk-react";
+import { useAuth as useClerkAuth, useUser } from "@clerk/react";
 import { setAuthTokenGetter } from "../api/axios";
 import { API_URL, CLERK_PREMIUM_FEATURE_SLUG, CLERK_PREMIUM_PLAN_ID, CLERK_PREMIUM_PLAN_SLUG } from "../config/env";
 import { getSubscriptionFromClerk } from "../config/subscription";

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "@clerk/react";
 import { Link } from "react-router";
 import { landingCarouselSlides } from "../data/carouselSlides";
 import PwaInstallButton from "./PwaInstallButton";

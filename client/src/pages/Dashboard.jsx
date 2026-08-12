@@ -27,7 +27,7 @@ import * as reproductionsAPI from "../api/reproductions";
 import * as vaccinationsAPI from "../api/vaccinations";
 import * as vetVisitsAPI from "../api/vetVisits";
 import { toast } from "react-toastify";
-import { UserButton, useUser } from "@clerk/clerk-react";
+import { UserButton, useUser } from "@clerk/react";
 import { usePreferences } from "../context/PreferencesContext";
 import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";
 import { API_URL } from "../config/env";

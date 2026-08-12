@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { useUser } from "@clerk/clerk-react";
+import { useUser } from "@clerk/react";
 import { toast } from "react-toastify";
 import BillingAction from "../components/BillingAction";
 import { useAuth } from "../context/AuthContext";

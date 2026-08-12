@@ -1,5 +1,5 @@
 import React from "react";
-import { SignUp as ClerkSignUp } from "@clerk/clerk-react";
+import { SignUp as ClerkSignUp } from "@clerk/react";
 
 const authAppearance = {
   variables: {

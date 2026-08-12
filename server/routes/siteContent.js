@@ -24,6 +24,12 @@ const {
 const { getUserActivity, getUserActivityUsers } = require("../services/userActivity");
 const { deletePremiumDataForUser } = require("../services/premiumDowngradeCleanup");
 const { detectImageMimeType, supportedImageTypes } = require("../utils/imageFiles");
+const {
+  getAdminSubscriptionState,
+  getClerkBillingSubscriptionState,
+  hasPremiumMetadata,
+  isClerkManagedLocalPremium,
+} = require("../services/adminSubscription");
 
 const router = express.Router();
 const validTones = new Set(["green", "blue", "yellow", "red"]);
@@ -154,13 +160,6 @@ function normalizeClerkUser(clerkUser) {
   };
 }
 
-function hasPremiumMetadata(publicMetadata = {}) {
-  const premiumExpiresAt = asTrimmedString(publicMetadata.premiumExpiresAt);
-  const premiumExpiresTime = premiumExpiresAt ? Date.parse(premiumExpiresAt) : 0;
-  const premiumExpired = Boolean(premiumExpiresTime && premiumExpiresTime <= Date.now());
-  return publicMetadata.plan === "premium" && publicMetadata.subscriptionStatus === "active" && !premiumExpired;
-}
-
 function addDays(date, days) {
   const next = new Date(date);
   next.setUTCDate(next.getUTCDate() + days);
@@ -227,12 +226,67 @@ async function getLocalUserByClerkId(clerkUserId) {
   return result.rows[0] || null;
 }
 
+function getPremiumPlanCandidates() {
+  return [
+    ...readEnvList("CLERK_PREMIUM_PLAN_ID"),
+    ...readEnvList("CLERK_PREMIUM_PLAN_SLUG"),
+    ...readEnvList("CLERK_PREMIUM_FEATURE_SLUG"),
+    "premium",
+    "pro",
+    "premium_access",
+  ];
+}
+
+async function refreshLocalSubscriptionFromClerkBilling(clerkUserId, publicMetadata = {}) {
+  try {
+    const billingSubscription = await clerkClient.billing.getUserBillingSubscription(clerkUserId);
+    const billingState = getClerkBillingSubscriptionState(billingSubscription, getPremiumPlanCandidates());
+    const metadataPremium = hasPremiumMetadata(publicMetadata);
+    const state = billingState.isPremium
+      ? billingState
+      : (metadataPremium
+        ? {
+            isPremium: true,
+            plan: "premium",
+            status: publicMetadata.subscriptionStatus || "active",
+            source: publicMetadata.premiumSource || "manual_admin",
+            expiresAt: publicMetadata.premiumExpiresAt || "",
+          }
+        : billingState);
+
+    await pool.query(
+      `UPDATE users
+       SET subscription_plan = $2,
+           subscription_status = $3,
+           subscription_is_premium = $4,
+           subscription_source = $5,
+           subscription_expires_at = $6
+       WHERE clerk_user_id = $1`,
+      [
+        clerkUserId,
+        state.plan,
+        state.status,
+        state.isPremium,
+        state.source,
+        state.expiresAt || null,
+      ]
+    );
+
+    return billingState;
+  } catch (err) {
+    console.warn("Could not refresh Clerk Billing state for admin user details:", {
+      clerkUserId,
+      error: err.message,
+    });
+    return null;
+  }
+}
+
 async function upsertLocalSubscriptionFromClerkUser(clerkUser) {
   const normalized = normalizeClerkUser(clerkUser);
-  const isPremium = hasPremiumMetadata(normalized.publicMetadata);
   const email = normalized.email || `clerk-${normalized.clerkUserId}@users.barnbuddy.local`;
   const existingByClerkId = await pool.query(
-    `SELECT id
+    `SELECT id, subscription_plan, subscription_status, subscription_is_premium, subscription_source, subscription_expires_at
      FROM users
      WHERE clerk_user_id = $1
      LIMIT 1`,
@@ -248,6 +302,19 @@ async function upsertLocalSubscriptionFromClerkUser(clerkUser) {
   const clerkLinkedUser = existingByClerkId.rows[0];
   const emailMatchedUser = existingByEmail.rows[0];
   const targetUserId = emailMatchedUser?.id || clerkLinkedUser?.id || null;
+  const metadataPremium = hasPremiumMetadata(normalized.publicMetadata);
+  const preserveClerkBilling = isClerkManagedLocalPremium(clerkLinkedUser);
+  const isPremium = metadataPremium || preserveClerkBilling;
+  const subscriptionPlan = isPremium ? "premium" : "free";
+  const subscriptionStatus = preserveClerkBilling
+    ? clerkLinkedUser.subscription_status
+    : (metadataPremium ? normalized.subscriptionStatus : "free");
+  const subscriptionSource = preserveClerkBilling
+    ? clerkLinkedUser.subscription_source
+    : (metadataPremium ? normalized.publicMetadata.premiumSource || "manual_admin" : "");
+  const subscriptionExpiresAt = preserveClerkBilling
+    ? clerkLinkedUser.subscription_expires_at
+    : (metadataPremium ? normalized.premiumExpiresAt || null : null);
 
   if (clerkLinkedUser && emailMatchedUser && clerkLinkedUser.id !== emailMatchedUser.id) {
     await pool.query("UPDATE users SET clerk_user_id = NULL WHERE id = $1", [clerkLinkedUser.id]);
@@ -269,11 +336,11 @@ async function upsertLocalSubscriptionFromClerkUser(clerkUser) {
         normalized.clerkUserId,
         normalized.name,
         email,
-        isPremium ? "premium" : "free",
-        isPremium ? "active" : "free",
+        subscriptionPlan,
+        subscriptionStatus,
         isPremium,
-        normalized.publicMetadata.premiumSource || "",
-        normalized.premiumExpiresAt || null,
+        subscriptionSource,
+        subscriptionExpiresAt,
         targetUserId,
       ]
     );
@@ -285,11 +352,11 @@ async function upsertLocalSubscriptionFromClerkUser(clerkUser) {
         normalized.clerkUserId,
         normalized.name,
         email,
-        isPremium ? "premium" : "free",
-        isPremium ? "active" : "free",
+        subscriptionPlan,
+        subscriptionStatus,
         isPremium,
-        normalized.publicMetadata.premiumSource || "",
-        normalized.premiumExpiresAt || null,
+        subscriptionSource,
+        subscriptionExpiresAt,
       ]
     );
   }
@@ -886,7 +953,9 @@ router.get("/admin/users", authMiddleware, requireAdmin, async (req, res) => {
                 clerk_user_id,
                 subscription_plan,
                 subscription_status,
-                subscription_is_premium
+                subscription_is_premium,
+                subscription_source,
+                subscription_expires_at
          FROM users
          WHERE clerk_user_id = ANY($1::text[])`,
         [clerkUserIds]
@@ -897,10 +966,12 @@ router.get("/admin/users", authMiddleware, requireAdmin, async (req, res) => {
     res.json({
       users: clerkUsers.map((clerkUser) => {
         const user = normalizeClerkUser(clerkUser);
+        const localUser = localUsersByClerkId.get(user.clerkUserId) || null;
+        const subscription = getAdminSubscriptionState(user.publicMetadata, localUser);
         return {
           ...user,
-          isPremium: hasPremiumMetadata(user.publicMetadata),
-          localUser: localUsersByClerkId.get(user.clerkUserId) || null,
+          ...subscription,
+          localUser,
         };
       }),
     });
@@ -914,12 +985,15 @@ router.get("/admin/users/:clerkUserId/details", authMiddleware, requireAdmin, as
   try {
     const clerkUser = await clerkClient.users.getUser(req.params.clerkUserId);
     const user = await upsertLocalSubscriptionFromClerkUser(clerkUser);
+    await refreshLocalSubscriptionFromClerkBilling(req.params.clerkUserId, user.publicMetadata);
+    user.localUser = await getLocalUserByClerkId(req.params.clerkUserId);
     const details = await getUserDetailsForAdmin(req.params.clerkUserId);
+    const subscription = getAdminSubscriptionState(user.publicMetadata, user.localUser);
 
     res.json({
       user: {
         ...user,
-        isPremium: hasPremiumMetadata(user.publicMetadata),
+        ...subscription,
       },
       details,
     });
@@ -958,6 +1032,7 @@ router.patch("/admin/users/:clerkUserId/subscription", authMiddleware, requireAd
       publicMetadata,
     });
     const user = await upsertLocalSubscriptionFromClerkUser(updatedClerkUser);
+    const subscription = getAdminSubscriptionState(user.publicMetadata, user.localUser);
 
     await logAdminActivity({
       userId: req.user.id,
@@ -974,7 +1049,7 @@ router.patch("/admin/users/:clerkUserId/subscription", authMiddleware, requireAd
     res.json({
       user: {
         ...user,
-        isPremium: hasPremiumMetadata(user.publicMetadata),
+        ...subscription,
       },
     });
   } catch (err) {

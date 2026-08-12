@@ -2635,6 +2635,12 @@ export default function AdminContent() {
                           </p>
                         )}
 
+                        {selectedAdminUser.isPremium && selectedAdminUser.premiumSource && (
+                          <p className="mt-3 text-sm text-slate-400">
+                            Access source: {selectedAdminUser.premiumSource.replaceAll('_', ' ')}
+                          </p>
+                        )}
+
                         <div className="mt-5 flex flex-wrap gap-3">
                           <button
                             type="button"
@@ -2647,12 +2653,17 @@ export default function AdminContent() {
                           <button
                             type="button"
                             onClick={() => updateUserPremium(selectedAdminUser.clerkUserId, false)}
-                            disabled={updatingUserId === selectedAdminUser.clerkUserId || !selectedAdminUser.isPremium}
+                            disabled={updatingUserId === selectedAdminUser.clerkUserId || !selectedAdminUser.isPremium || selectedAdminUser.premiumSource?.startsWith('clerk_')}
                             className="rounded-md border border-red-300/20 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             Remove premium
                           </button>
                         </div>
+                        {selectedAdminUser.isPremium && selectedAdminUser.premiumSource?.startsWith('clerk_') && (
+                          <p className="mt-3 text-xs font-medium text-sky-200">
+                            Paid and trial subscriptions are managed through Clerk Billing and cannot be revoked as an admin grant.
+                          </p>
+                        )}
                       </div>
 
                       <div className="rounded-lg border border-slate-800 bg-slate-950/45 p-5">
