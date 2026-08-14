@@ -1557,7 +1557,13 @@ export default function Dashboard() {
                     onAnimalSaved={handleAnimalSaved}
                   />
                 )}
-                {activeTab === "vet" && <VetVisits animal={selectedAnimal} onVetVisitUpdate={() => setVaccinationRefresh(prev => prev + 1)} />}
+                {activeTab === "vet" && (
+                  <VetVisits
+                    key={selectedAnimal.id}
+                    animal={selectedAnimal}
+                    onVetVisitUpdate={() => setVaccinationRefresh(prev => prev + 1)}
+                  />
+                )}
                 {activeTab === "reproduction" && (
                   <PremiumRecords
                     animal={selectedAnimal}

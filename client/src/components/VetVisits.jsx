@@ -116,7 +116,11 @@ function getVisitStatus(visit) {
 
 function VetVisitsSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(280px,360px)_1fr]" aria-busy="true">
+    <div
+      className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(280px,360px)_1fr]"
+      aria-busy="true"
+      aria-label="Loading vet visits"
+    >
       <aside className="space-y-4">
         <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
           <div className="flex items-start justify-between gap-4">
@@ -142,29 +146,48 @@ function VetVisitsSkeleton() {
               <SkeletonBlock key={item} className="h-10 w-full" />
             ))}
           </div>
+          <div className="mt-4 space-y-2">
+            {[0, 1, 2].map((item) => (
+              <SkeletonBlock key={item} className="h-24 w-full rounded-xl" />
+            ))}
+          </div>
         </div>
       </aside>
 
-      <section className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
-        <div className="mb-5 flex items-center justify-between gap-4">
+      <section className="rounded-2xl border border-gray-700 bg-gray-800 p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
-            <SkeletonBlock className="h-5 w-40" />
-            <SkeletonBlock className="h-4 w-64" />
+            <SkeletonBlock className="h-4 w-24" />
+            <SkeletonBlock className="h-8 w-52" />
+            <SkeletonBlock className="h-4 w-64 max-w-full" />
           </div>
-          <SkeletonBlock className="h-8 w-24" />
+          <div className="flex gap-2">
+            <SkeletonBlock className="h-10 w-20" />
+            <SkeletonBlock className="h-10 w-28" />
+          </div>
         </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
           {[0, 1, 2, 3].map((item) => (
-            <div key={item} className="rounded-xl border border-gray-700 bg-gray-900/70 p-4">
-              <div className="mb-4 flex justify-between gap-4">
-                <SkeletonBlock className="h-5 w-32" />
-                <SkeletonBlock className="h-6 w-20 rounded-full" />
-              </div>
-              <SkeletonBlock className="h-4 w-full" />
-              <SkeletonBlock className="mt-3 h-4 w-3/4" />
-              <SkeletonBlock className="mt-5 h-9 w-full" />
+            <div key={item}>
+              <SkeletonBlock className="mb-2 h-4 w-24" />
+              <SkeletonBlock className="h-12 w-full" />
             </div>
           ))}
+          <div className="lg:col-span-2">
+            <SkeletonBlock className="mb-2 h-4 w-20" />
+            <SkeletonBlock className="h-12 w-full" />
+          </div>
+          {[0, 1].map((item) => (
+            <div key={item}>
+              <SkeletonBlock className="mb-2 h-4 w-24" />
+              <SkeletonBlock className="h-32 w-full" />
+            </div>
+          ))}
+          <div className="lg:col-span-2">
+            <SkeletonBlock className="mb-2 h-4 w-16" />
+            <SkeletonBlock className="h-32 w-full" />
+          </div>
         </div>
       </section>
     </div>
@@ -337,20 +360,6 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
     return <VetVisitsSkeleton />;
   }
 
-  if (visits.length === 0 && !selectedVisit) {
-    return (
-      <>
-        <EmptyState
-          variant="full"
-          title="Start this animal's care timeline"
-          description="Add the first vet visit to keep care details, costs, follow-ups, and notes together."
-          primaryAction={{ label: "Create first visit", onClick: handleAddVisit }}
-        />
-        <ToastContainer autoClose="1000" />
-      </>
-    );
-  }
-
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(280px,360px)_1fr] gap-6">
       <aside className="space-y-4">
@@ -384,7 +393,6 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
           </div>
         </div>
 
-        {visits.length > 0 && (
         <div className="rounded-2xl border border-gray-700 bg-gray-800 p-4">
           <div className="grid grid-cols-3 gap-2">
             {[
@@ -407,11 +415,19 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
           <div className="mt-4 max-h-[32rem] space-y-2 overflow-y-auto pr-1">
             {filteredVisits.length === 0 ? (
               <EmptyState
-                title={filter === "upcoming" ? "No visits due soon" : "No past visits yet"}
+                title={filter === "upcoming"
+                  ? "No visits due soon"
+                  : filter === "past"
+                    ? "No past visits yet"
+                    : "No vet visits yet"}
                 description={filter === "upcoming"
                   ? "There are no scheduled visits or follow-ups in the next 10 days."
-                  : "Completed and earlier visits will appear here."}
-                secondaryAction={{ label: "Show all visits", onClick: () => setFilter("all") }}
+                  : filter === "past"
+                    ? "Completed and earlier visits will appear here."
+                    : "The first visit will appear here after you create it."}
+                secondaryAction={filter === "all"
+                  ? undefined
+                  : { label: "Show all visits", onClick: () => setFilter("all") }}
               />
             ) : (
               filteredVisits.map((visit) => {
@@ -454,7 +470,6 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
             )}
           </div>
         </div>
-        )}
       </aside>
 
       <section className="rounded-2xl border border-gray-700 bg-gray-800 p-5 sm:p-6">
@@ -610,9 +625,11 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
         ) : (
           <EmptyState
             variant="full"
-            title="Choose a vet visit"
-            description="Select a visit from the timeline to review it, or start a new care record."
-            primaryAction={{ label: "New visit", onClick: handleAddVisit }}
+            title={visits.length === 0 ? "Start this animal's care timeline" : "Choose a vet visit"}
+            description={visits.length === 0
+              ? "Add the first vet visit to keep care details, costs, follow-ups, and notes together."
+              : "Select a visit from the timeline to review it, or start a new care record."}
+            primaryAction={{ label: visits.length === 0 ? "Create first visit" : "New visit", onClick: handleAddVisit }}
             className="min-h-96"
           />
         )}
