@@ -97,6 +97,47 @@ export function getSubscriptionFromClerk({ user, sessionClaims, backendUser, has
   const unsafeMetadata = user?.unsafeMetadata || {};
   const backendSubscription = backendUser?.subscription || {};
 
+  // Once /auth/me has loaded, the server is authoritative. This matters for
+  // chapter Premium because it is derived from Clerk membership without
+  // requiring the user to switch into an active Organization.
+  if (typeof backendSubscription.isPremium === "boolean") {
+    const isPremium = backendSubscription.isPremium === true;
+    const hasPersonalProvenance =
+      typeof backendSubscription.personalIsPremium === "boolean" ||
+      typeof backendSubscription.personalPremiumActive === "boolean";
+    const hasChapterProvenance =
+      backendSubscription.chapterPremiumActive === true ||
+      normalizeValue(backendSubscription.premiumSource) === "ffa_chapter";
+    const personalIsPremium = hasPersonalProvenance
+      ? backendSubscription.personalIsPremium === true || backendSubscription.personalPremiumActive === true
+      : isPremium && !hasChapterProvenance;
+    const premiumExpiresAt = readFirstDate(backendSubscription, [
+      "premiumExpiresAt",
+      "premium_expires_at",
+      "subscriptionExpiresAt",
+    ]);
+    const premiumExpired = Boolean(premiumExpiresAt && premiumExpiresAt <= Date.now());
+    const planId = isPremium ? PLAN_IDS.premium : PLAN_IDS.free;
+    const status = normalizeValue(
+      readFirstString(backendSubscription, ["status", "subscriptionStatus", "billingStatus"])
+    );
+
+    return {
+      isPremium,
+      personalIsPremium,
+      personalPremiumActive: personalIsPremium,
+      chapterPremiumActive: backendSubscription.chapterPremiumActive === true,
+      providedByChapter: backendSubscription.providedByChapter === true,
+      premiumSource: readFirstString(backendSubscription, ["premiumSource", "subscriptionSource"]),
+      planId,
+      planName: PLANS[planId].name,
+      status: status || (isPremium ? "active" : "free"),
+      statusLabel: isPremium ? "Active" : "Free",
+      premiumExpiresAt: premiumExpiresAt ? new Date(premiumExpiresAt).toISOString() : "",
+      premiumExpired,
+    };
+  }
+
   const plan = normalizeValue(
     readFirstString(sessionClaims, ["plan", "subscriptionPlan", "subscription_plan", "billingPlan"]) ||
       readFirstString(publicMetadata, ["plan", "subscriptionPlan", "subscription_plan", "billingPlan"]) ||
@@ -123,18 +164,24 @@ export function getSubscriptionFromClerk({ user, sessionClaims, backendUser, has
     readFirstDate(backendSubscription, ["premiumExpiresAt", "premium_expires_at", "subscriptionExpiresAt"]);
   const premiumExpired = Boolean(premiumExpiresAt && premiumExpiresAt <= Date.now());
 
-  const isPremium = Boolean(
-    !premiumExpired &&
-      (Boolean(hasPremiumAccess) ||
-        hasPremiumFlag ||
-        premiumPlanValues.has(plan) ||
-        Boolean(plan && plan !== PLAN_IDS.free && activeStatusValues.has(status)))
+  const metadataIndicatesPremium = Boolean(
+    hasPremiumFlag ||
+      premiumPlanValues.has(plan) ||
+      Boolean(plan && plan !== PLAN_IDS.free && activeStatusValues.has(status))
   );
+  // A current Clerk entitlement is independent of stale metadata expiration.
+  // Only the metadata-derived fallback is gated by its expiration timestamp.
+  const isPremium = Boolean(hasPremiumAccess || (!premiumExpired && metadataIndicatesPremium));
 
   const planId = isPremium ? PLAN_IDS.premium : PLAN_IDS.free;
 
   return {
     isPremium,
+    personalIsPremium: isPremium,
+    personalPremiumActive: isPremium,
+    chapterPremiumActive: false,
+    providedByChapter: false,
+    premiumSource: isPremium ? "clerk_entitlement" : "",
     planId,
     planName: PLANS[planId].name,
     status: status || (isPremium ? "active" : "free"),

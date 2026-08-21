@@ -13,6 +13,7 @@ export default function BillingAction({
   signedOutClassName = "",
   checkoutFallbackToPricing = true,
   fullWidth = false,
+  purchaseLabel = "",
 }) {
   const classes = `${baseClassName} ${fullWidth ? "w-full" : ""} ${className}`.trim();
   const signedOutClasses = `${baseClassName} ${fullWidth ? "w-full" : ""} ${signedOutClassName || className}`.trim();
@@ -41,7 +42,7 @@ export default function BillingAction({
       <>
         <Show when="signed-in">
           <Link to="/pricing#clerk-checkout" className={classes}>
-            Choose Premium
+            {purchaseLabel || "Choose Premium"}
           </Link>
         </Show>
         <Show when="signed-out">
@@ -66,7 +67,7 @@ export default function BillingAction({
           }}
         >
           <button type="button" className={classes}>
-            Upgrade to Premium
+            {purchaseLabel || "Upgrade to Premium"}
           </button>
         </CheckoutButton>
       </Show>

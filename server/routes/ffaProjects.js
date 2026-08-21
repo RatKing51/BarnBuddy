@@ -2,6 +2,14 @@ const express = require("express");
 const pool = require("../data-source");
 const authMiddleware = require("../middleware/authMiddleware");
 const { ensureFfaProjectSchema } = require("../services/ensureFfaProjectSchema");
+const { ensureFfaProjectSharingSchema } = require("../services/ensureFfaProjectSharingSchema");
+const { getUserFfaAccess } = require("../services/ffaChapterService");
+const {
+  getExactCurrentStudentEntry,
+  serializeOwnedAdvisorShareRow,
+  serializeStudentSharingStatus,
+  upsertProjectAdvisorShare,
+} = require("../services/ffaProjectSharingService");
 
 const router = express.Router();
 const saeTypes = new Set(["entrepreneurship", "placement", "combined", "agriscience"]);
@@ -324,7 +332,217 @@ async function fetchProjectDetails(projectId, userId) {
   };
 }
 
+async function loadOwnedProjectShare(projectId, userId, queryable = pool) {
+  const result = await queryable.query(
+    `SELECT consent.project_id,
+            consent.chapter_id,
+            consent.shared_at,
+            chapter.chapter_name,
+            chapter.status,
+            chapter.project_sharing_enabled
+     FROM ffa_project_advisor_shares consent
+     JOIN ffa_projects project
+       ON project.id = consent.project_id
+      AND project.user_id = $2
+     JOIN ffa_chapters chapter ON chapter.id = consent.chapter_id
+     WHERE consent.project_id = $1`,
+    [projectId, userId]
+  );
+  return result.rows[0] || null;
+}
+
+async function getStudentSharingContext(req, { forceRefresh = false } = {}) {
+  try {
+    return await getExactCurrentStudentEntry(req.user.clerkUserId, forceRefresh
+      ? {}
+      : {
+        loadAccess: (clerkUserId) => getUserFfaAccess(
+          clerkUserId,
+          { allowFailure: true }
+        ),
+      });
+  } catch (error) {
+    if (forceRefresh) throw error;
+    return { status: "none", entry: null, lookupFailed: true };
+  }
+}
+
+async function getOwnedProjectSharingStatus(req, projectId, options = {}) {
+  const [share, studentContext] = await Promise.all([
+    loadOwnedProjectShare(projectId, req.user.id),
+    options.studentContext
+      ? Promise.resolve(options.studentContext)
+      : getStudentSharingContext(req),
+  ]);
+  const currentChapter = studentContext?.entry?.chapter || null;
+  const shareChapter = share ? {
+    id: share.chapter_id,
+    chapter_name: share.chapter_name,
+    status: share.status,
+    project_sharing_enabled: share.project_sharing_enabled,
+  } : null;
+  const selectedChapter = shareChapter || currentChapter;
+  const currentChapterMatchesShare = !share || (
+    Number(currentChapter?.id) === Number(share.chapter_id)
+  );
+  return serializeStudentSharingStatus({
+    chapter: selectedChapter,
+    share,
+    eligible: req.user?.subscription?.isPremium === true &&
+      studentContext?.status === "ok" && currentChapterMatchesShare,
+  });
+}
+
 router.use(authMiddleware);
+router.use(async (req, res, next) => {
+  try {
+    await ensureFfaProjectSharingSchema();
+    next();
+  } catch (error) {
+    console.error("Failed to prepare FFA project schema:", error);
+    res.status(500).json({ error: "FFA Project Mode is temporarily unavailable." });
+  }
+});
+
+// This owner-only inventory remains available after a Premium downgrade so a
+// student can find and revoke every durable project consent, including one for
+// a chapter that is currently suspended, disabled, or no longer joined.
+router.get("/advisor-sharing", async (req, res) => {
+  res.set("Cache-Control", "private, no-store");
+  try {
+    const result = await pool.query(
+      `SELECT consent.project_id,
+              project.name,
+              chapter.chapter_name,
+              consent.shared_at
+       FROM ffa_project_advisor_shares consent
+       JOIN ffa_projects project
+         ON project.id = consent.project_id
+        AND project.user_id = $1
+       JOIN ffa_chapters chapter ON chapter.id = consent.chapter_id
+       ORDER BY consent.shared_at DESC, consent.project_id DESC`,
+      [req.user.id]
+    );
+    return res.json({
+      shares: result.rows.map(serializeOwnedAdvisorShareRow).filter((share) => share.projectId),
+    });
+  } catch (error) {
+    console.error("Failed to load owned FFA project sharing consents:", error);
+    return res.status(500).json({ error: "Failed to load advisor sharing." });
+  }
+});
+
+// Consent revocation deliberately sits before the Premium gate. A student can
+// always stop sharing an owned project, including after a downgrade.
+router.patch("/:id/advisor-sharing", async (req, res) => {
+  const shared = req.body?.shared;
+  if (typeof shared !== "boolean") {
+    return res.status(400).json({ error: "Sharing must be enabled or disabled." });
+  }
+
+  const project = await getOwnedProject(req.params.id, req.user.id);
+  if (!project) return res.status(404).json({ error: "FFA project not found." });
+
+  try {
+    if (!shared) {
+      await pool.query(
+        `DELETE FROM ffa_project_advisor_shares consent
+         USING ffa_projects project
+         WHERE consent.project_id = project.id
+           AND consent.project_id = $1
+           AND project.user_id = $2`,
+        [project.id, req.user.id]
+      );
+      const studentContext = await getStudentSharingContext(req);
+      return res.json({
+        advisorSharing: await getOwnedProjectSharingStatus(req, project.id, { studentContext }),
+      });
+    }
+
+    if (!req.user?.subscription?.isPremium) {
+      return res.status(403).json({
+        error: "FFA Project Mode requires BarnBuddy Premium.",
+        subscription: req.user?.subscription || null,
+      });
+    }
+
+    const studentContext = await getStudentSharingContext(req, { forceRefresh: true });
+    if (studentContext.status === "ambiguous") {
+      return res.status(409).json({
+        error: "BarnBuddy could not determine one current FFA student chapter.",
+      });
+    }
+    const chapter = studentContext.entry?.chapter;
+    if (!chapter || studentContext.entry.role !== "org:member") {
+      return res.status(403).json({ error: "Join an FFA chapter as a student before sharing a project." });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const chapterResult = await client.query(
+        `SELECT id, chapter_name, status, project_sharing_enabled
+         FROM ffa_chapters
+         WHERE id = $1
+         FOR UPDATE`,
+        [chapter.id]
+      );
+      const currentChapter = chapterResult.rows[0];
+      if (
+        !currentChapter ||
+        String(currentChapter.status || "").toUpperCase() !== "ACTIVE" ||
+        currentChapter.project_sharing_enabled !== true
+      ) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({
+          error: "Your FFA advisor has not enabled project sharing for this chapter.",
+        });
+      }
+
+      // Re-check Clerk after taking the durable chapter lock. This closes the
+      // race where an advisor removes a student while the student is opting in.
+      const lockedStudentContext = await getStudentSharingContext(req, { forceRefresh: true });
+      if (
+        lockedStudentContext.status !== "ok" ||
+        lockedStudentContext.entry?.role !== "org:member" ||
+        Number(lockedStudentContext.entry?.chapter?.id) !== Number(currentChapter.id)
+      ) {
+        await client.query("ROLLBACK");
+        return res.status(403).json({
+          error: "Join an FFA chapter as a student before sharing a project.",
+        });
+      }
+
+      const ownedProject = await getOwnedProject(project.id, req.user.id, client);
+      if (!ownedProject) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "FFA project not found." });
+      }
+      const share = await upsertProjectAdvisorShare({
+        projectId: ownedProject.id,
+        chapterId: currentChapter.id,
+        queryable: client,
+      });
+      await client.query("COMMIT");
+      return res.json({
+        advisorSharing: serializeStudentSharingStatus({
+          chapter: currentChapter,
+          share,
+          eligible: true,
+        }),
+      });
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error("Failed to update FFA project advisor sharing:", error);
+    return res.status(500).json({ error: "Failed to update advisor sharing." });
+  }
+});
+
 router.use(requirePremium);
 router.use(async (req, res, next) => {
   try {
@@ -349,7 +567,12 @@ router.get("/", async (req, res) => {
        ORDER BY CASE p.status WHEN 'active' THEN 0 WHEN 'completed' THEN 1 ELSE 2 END, p.updated_at DESC`,
       [req.user.id]
     );
-    res.json(result.rows);
+    const studentContext = await getStudentSharingContext(req);
+    const rows = await Promise.all(result.rows.map(async (project) => ({
+      ...project,
+      advisorSharing: await getOwnedProjectSharingStatus(req, project.id, { studentContext }),
+    })));
+    res.json(rows);
   } catch (error) {
     console.error("Failed to list FFA projects:", error);
     res.status(500).json({ error: "Failed to load FFA projects." });
@@ -404,7 +627,10 @@ router.get("/:id", async (req, res) => {
   try {
     const details = await fetchProjectDetails(req.params.id, req.user.id);
     if (!details) return res.status(404).json({ error: "FFA project not found." });
-    res.json(details);
+    res.json({
+      ...details,
+      advisorSharing: await getOwnedProjectSharingStatus(req, details.project.id),
+    });
   } catch (error) {
     console.error("Failed to load FFA project:", error);
     res.status(500).json({ error: "Failed to load FFA project." });
@@ -721,3 +947,5 @@ module.exports.normalizeActivityPayload = normalizeActivityPayload;
 module.exports.normalizeFinancePayload = normalizeFinancePayload;
 module.exports.requirePremium = requirePremium;
 module.exports.linkedRecordSummaryQuery = linkedRecordSummaryQuery;
+module.exports.getOwnedProjectSharingStatus = getOwnedProjectSharingStatus;
+module.exports.loadOwnedProjectShare = loadOwnedProjectShare;

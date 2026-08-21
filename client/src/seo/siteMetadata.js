@@ -112,6 +112,7 @@ export const STATIC_SEO_ROUTES = [
   "/termsofserviceandprivacypolicy",
   "/dashboard",
   "/admin",
+  "/advisor",
   "/settings/account",
   "/settings/herd",
   "/settings/import-assistant",
@@ -124,7 +125,7 @@ function normalizePathname(pathname = "/") {
 }
 
 function isPrivatePath(pathname) {
-  return ["/dashboard", "/admin", "/settings"].some(
+  return ["/dashboard", "/admin", "/advisor", "/settings"].some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
 }

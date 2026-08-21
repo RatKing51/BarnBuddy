@@ -1,6 +1,27 @@
 import React from "react";
-import { SignIn } from "@clerk/react";
-import { useLocation } from "react-router";
+import { SignIn, useAuth } from "@clerk/react";
+import { Navigate, useLocation } from "react-router";
+
+function safeInternalReturnTo(value, fallback = "/dashboard") {
+  const candidate = typeof value === "string" ? value.trim() : "";
+  if (!candidate.startsWith("/") || candidate.startsWith("//") || candidate.includes("\\")) {
+    return fallback;
+  }
+
+  try {
+    const parsed = new URL(candidate, window.location.origin);
+    if (parsed.origin !== window.location.origin) return fallback;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return fallback;
+  }
+}
+
+function buildAuthHandoffUrl(path, search, returnTo) {
+  const params = new URLSearchParams(search);
+  params.set("returnTo", returnTo);
+  return `${path}?${params.toString()}`;
+}
 
 const authAppearance = {
   variables: {
@@ -63,10 +84,21 @@ const authAppearance = {
 
 export default function Login() {
   const location = useLocation();
-  const requestedReturnTo = location.state?.returnTo;
-  const returnTo = typeof requestedReturnTo === "string" && requestedReturnTo.startsWith("/")
-    ? requestedReturnTo
-    : "/dashboard";
+  const { isLoaded, isSignedIn } = useAuth();
+  const searchParams = new URLSearchParams(location.search);
+  const requestedReturnTo = searchParams.get("returnTo") || location.state?.returnTo;
+  const returnTo = safeInternalReturnTo(requestedReturnTo);
+  const signUpUrl = buildAuthHandoffUrl("/signup", location.search, returnTo);
+  const invitationTicket = searchParams.get("__clerk_ticket");
+  const invitationStatus = searchParams.get("__clerk_status");
+
+  if (invitationTicket && invitationStatus === "sign_up") {
+    return <Navigate to={signUpUrl} replace />;
+  }
+
+  if (isLoaded && isSignedIn && invitationTicket && invitationStatus === "complete") {
+    return <Navigate to={returnTo} replace />;
+  }
 
   return (
     <div className="signup-page public-page min-h-screen text-white">
@@ -89,7 +121,7 @@ export default function Login() {
 
                 <SignIn
                   routing="hash"
-                  signUpUrl="/signup"
+                  signUpUrl={signUpUrl}
                   fallbackRedirectUrl={returnTo}
                   forceRedirectUrl={returnTo}
                   appearance={authAppearance}
@@ -133,7 +165,7 @@ export default function Login() {
                 <div className="hidden sm:mt-8 sm:block">
                   <p className="mb-3 text-sm text-white/70">Need an account?</p>
                   <a
-                    href="/signup"
+                    href={signUpUrl}
                     className="inline-flex min-h-11 items-center justify-center rounded-md bg-white px-4 py-2 font-semibold text-blue-700 hover:bg-blue-100"
                   >
                     Create account

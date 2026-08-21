@@ -33,7 +33,7 @@ export default function Navbar() {
   const menuButtonRef = useRef(null);
   const location = useLocation();
   const { isLoaded, isSignedIn } = useClerkAuth();
-  const { subscription } = useBarnBuddyAuth();
+  const { backendUser, subscription } = useBarnBuddyAuth();
   const { user } = useUser();
   const showSignedIn = isLoaded && isSignedIn;
   const primaryEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || "";
@@ -41,6 +41,13 @@ export default function Navbar() {
     showSignedIn &&
       ((primaryEmail && ADMIN_EMAILS.includes(primaryEmail)) ||
         (user?.id && ADMIN_CLERK_USER_IDS.includes(user.id)))
+  );
+  const showAdvisor = Boolean(
+    showSignedIn &&
+      (backendUser?.ffa?.isAdvisor === true ||
+        backendUser?.isFfaAdvisor === true ||
+        backendUser?.ffaAdvisorChapter?.isAdvisor === true ||
+        backendUser?.ffaChapter?.isAdvisor === true)
   );
 
   useEffect(() => {
@@ -98,6 +105,11 @@ export default function Navbar() {
                   {showAdmin && (
                     <NavLink to="/admin" className={desktopLinkClass}>
                       Admin
+                    </NavLink>
+                  )}
+                  {showAdvisor && (
+                    <NavLink to="/advisor" className={desktopLinkClass}>
+                      Advisor
                     </NavLink>
                   )}
                   <PremiumExpiryBadge subscription={subscription} className="hidden xl:inline-flex" />
@@ -163,6 +175,12 @@ export default function Navbar() {
                   {showAdmin && (
                     <NavLink to="/admin" className={mobileLinkClass}>
                       <span>Admin</span>
+                      <span aria-hidden="true" className="text-blue-300">→</span>
+                    </NavLink>
+                  )}
+                  {showAdvisor && (
+                    <NavLink to="/advisor" className={mobileLinkClass}>
+                      <span>Advisor dashboard</span>
                       <span aria-hidden="true" className="text-blue-300">→</span>
                     </NavLink>
                   )}

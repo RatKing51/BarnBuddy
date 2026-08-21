@@ -4,6 +4,7 @@ import Landing from "./pages/Landing";
 import Navbar from "./components/Navbar";
 import PrivateRoute from "./routes/PrivateRoute";
 import PremiumRoute from "./routes/PremiumRoute";
+import AdvisorRoute from "./routes/AdvisorRoute";
 import { ToastContainer } from "react-toastify";
 import { LoadingSpinner, PageLoadingBar } from "./components/LoadingSpinner";
 import { getSiteContent } from "./api/siteContent";
@@ -31,6 +32,7 @@ const Contact = lazy(() => import("./pages/Contact"));
 const HelpCenter = lazy(() => import("./pages/HelpCenter"));
 const Status = lazy(() => import("./pages/Status"));
 const AdminContent = lazy(() => import("./pages/AdminContent"));
+const AdvisorDashboard = lazy(() => import("./pages/AdvisorDashboard"));
 const announcementStyles = {
   blue: {
     shell: "border-sky-300/20 bg-[#0f2650]",
@@ -98,7 +100,7 @@ function AppContent() {
   const [pageLoading, setPageLoading] = useState(false);
   const [announcement, setAnnouncement] = useState(defaultSiteContent.announcement);
   const [maintenance, setMaintenance] = useState(defaultSiteContent.maintenance);
-  const hiddenPaths = ["/dashboard", "/admin", "/settings/herd", "/settings/account", "/settings/import-assistant"];
+  const hiddenPaths = ["/dashboard", "/admin", "/advisor", "/settings/herd", "/settings/account", "/settings/import-assistant"];
   const showShell = !hiddenPaths.some(
     (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
   );
@@ -273,6 +275,9 @@ function AppContent() {
             <Route path="/dashboard/ffa-projects" element={<FfaProjects />} />
           </Route>
           <Route path="/admin" element={<AdminContent />} />
+          <Route element={<AdvisorRoute />}>
+            <Route path="/advisor" element={<AdvisorDashboard />} />
+          </Route>
           <Route path="/settings/account" element={<AccountSettings />} />
           <Route path="/settings/import-assistant" element={<SettingsImportAssistant />} />
           <Route path="/settings/herd" element={<HerdSettings />} />

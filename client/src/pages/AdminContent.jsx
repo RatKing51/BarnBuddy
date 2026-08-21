@@ -4,6 +4,7 @@ import { API_BASE_URL, API_URL } from '../config/env'
 import { useAuth } from '../context/AuthContext'
 import ImageCropModal from '../components/ImageCropModal'
 import AdminSupportDesk from '../components/AdminSupportDesk'
+import AdminFfaChapters from '../components/AdminFfaChapters'
 import ReviewLandingCard from '../components/ReviewLandingCard'
 import { defaultSiteContent } from '../data/siteContent'
 import { getSiteAssetUrl, resolveSiteImageUrl } from '../config/siteImages'
@@ -261,6 +262,7 @@ const adminNavigationGroups = [
   {
     label: 'Customers',
     items: [
+      { id: 'ffaChapters', label: 'FFA Chapters' },
       { id: 'support', label: 'Support desk' },
       { id: 'users', label: 'Account controls' },
       { id: 'userActivity', label: 'User activity' },
@@ -345,6 +347,11 @@ const adminTabHeaders = {
     eyebrow: 'Customers',
     title: 'Support desk',
     description: 'Customer context, account health, and support history in one workspace.',
+  },
+  ffaChapters: {
+    eyebrow: 'Customers',
+    title: 'FFA Chapters',
+    description: 'Create chapters, manage membership access, and control manual chapter Premium.',
   },
   users: {
     eyebrow: 'Customers',
@@ -2463,6 +2470,8 @@ export default function AdminContent() {
               </div>
             </div>
           )}
+
+          {activeTab === 'ffaChapters' && <AdminFfaChapters />}
 
           {activeTab === 'support' && (
             <AdminSupportDesk

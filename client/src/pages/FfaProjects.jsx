@@ -16,7 +16,9 @@ import {
   updateFfaProject,
   updateFfaProjectAnimal,
 } from "../api/ffaProjects";
+import FfaProjectSharingPanel from "../components/FfaProjectSharingPanel";
 import { getAnimalDisplayName } from "../utils/animalLabel";
+import { normalizeProjectSharing } from "../utils/ffaProjectSharing";
 
 const activityCategories = [
   "Feeding and nutrition",
@@ -575,6 +577,8 @@ function Setup({ details, allAnimals, onChanged, onDeleted }) {
         <button disabled={saving} className="mt-5 rounded-xl bg-blue-600 px-5 py-2.5 font-black text-white hover:bg-blue-500 disabled:opacity-60">{saving ? "Saving…" : "Save project details"}</button>
       </form>
 
+      <FfaProjectSharingPanel details={details} onChanged={onChanged} />
+
       <section className={`${panelClass} p-5 sm:p-6`}>
         <div><h3 className="text-lg font-black text-white">Animals and starting snapshots</h3><p className="mt-1 text-sm leading-6 text-slate-400">A snapshot captures where the project began. Removing a link never deletes the animal.</p></div>
         <div className="mt-5 grid gap-3 lg:grid-cols-2">{details.animals.map((animal) => <AnimalSetupCard key={animal.id} projectId={project.id} animal={animal} onChanged={onChanged} />)}</div>
@@ -806,7 +810,11 @@ export default function FfaProjects() {
   }, [selectedId]);
 
   async function changed(nextDetails) {
-    setDetails(nextDetails);
+    setDetails((current) => ({
+      ...nextDetails,
+      advisorSharing: nextDetails.advisorSharing ?? current?.advisorSharing,
+      sharing: nextDetails.sharing ?? current?.sharing,
+    }));
     await loadProjects(nextDetails.project.id);
   }
 
@@ -871,7 +879,12 @@ export default function FfaProjects() {
                     <h2 className="mt-3 text-2xl font-black text-white sm:text-3xl print:text-black">{details.project.name}</h2>
                     <p className="mt-2 text-sm text-slate-400 print:text-black">{formatDate(details.project.start_date)} → {formatDate(details.project.end_date)}{details.project.chapter_name ? ` · ${details.project.chapter_name}` : ""}{details.project.advisor_name ? ` · Advisor: ${details.project.advisor_name}` : ""}</p>
                   </div>
-                  <span className={`rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-wider ${details.project.status === "active" ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-300" : "border-slate-700 bg-slate-800 text-slate-300"}`}>{details.project.status}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-wider ${normalizeProjectSharing(details).effective ? "border-blue-400/25 bg-blue-500/10 text-blue-200" : "border-slate-700 bg-slate-950 text-slate-400"}`}>
+                      {normalizeProjectSharing(details).effective ? "Advisor shared" : "Private"}
+                    </span>
+                    <span className={`rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-wider ${details.project.status === "active" ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-300" : "border-slate-700 bg-slate-800 text-slate-300"}`}>{details.project.status}</span>
+                  </div>
                 </div>
               </section>
 

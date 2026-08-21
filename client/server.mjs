@@ -52,7 +52,7 @@ function normalizeRoute(pathname) {
 }
 
 function isPrivateRoute(route) {
-  return ["/dashboard", "/admin", "/settings"].some(
+  return ["/dashboard", "/admin", "/advisor", "/settings"].some(
     (prefix) => route === prefix || route.startsWith(`${prefix}/`)
   );
 }
