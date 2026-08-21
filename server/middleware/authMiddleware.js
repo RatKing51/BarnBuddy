@@ -1,6 +1,8 @@
-const { getAuth } = require("@clerk/express");
+const { clerkClient, getAuth } = require("@clerk/express");
 const pool = require("../data-source");
 const { findOrCreateLocalUserFromAuth } = require("../services/clerkUserSync");
+const { getClerkBillingSubscriptionState } = require("../services/adminSubscription");
+const { getUserFfaAccess, resolvePremiumAccess } = require("../services/ffaChapterService");
 const { attachActivityLogger } = require("../services/userActivity");
 const { enforceUsageLimits } = require("./usageLimits");
 
@@ -39,37 +41,149 @@ function hasAnyClerkAccess(auth, planCandidates, featureCandidates) {
     return false;
 }
 
+function hasPersonalClerkAccess(auth, planCandidates, featureCandidates) {
+    if (auth?.orgId) return false;
+    return hasAnyClerkAccess(auth || {}, planCandidates, featureCandidates);
+}
+
 function getSubscriptionFromTrustedState(hasPremiumAccess = false, localState = {}) {
     const premiumSource = normalizeValue(localState.subscription_source);
-    const trustedLocalSources = new Set(["manual_admin", "clerk_trial", "clerk_billing_canceled"]);
-    const trustedPremiumSource = trustedLocalSources.has(premiumSource) ? premiumSource : "";
+    const persistentPersonalSources = new Set(["manual_admin", "clerk_billing"]);
+    const expiringPersonalSources = new Set(["clerk_trial", "clerk_billing_canceled"]);
+    const hasExpiration = Boolean(localState.subscription_expires_at);
     const expiresTime = localState.subscription_expires_at
         ? new Date(localState.subscription_expires_at).getTime()
         : 0;
-    const hasFutureExpiration = Boolean(expiresTime && expiresTime > Date.now());
-    const hasManualGrant = Boolean(
+    const hasFutureExpiration = Boolean(Number.isFinite(expiresTime) && expiresTime > Date.now());
+    const hasPersistentPersonalGrant = Boolean(
         localState.subscription_is_premium === true &&
-        premiumSource === "manual_admin" &&
-        (!expiresTime || hasFutureExpiration)
+        persistentPersonalSources.has(premiumSource) &&
+        (!hasExpiration || hasFutureExpiration)
     );
-    const hasServerManagedGracePeriod = Boolean(
+    const hasExpiringPersonalGrant = Boolean(
         localState.subscription_is_premium === true &&
-        ["clerk_trial", "clerk_billing_canceled"].includes(premiumSource) &&
+        expiringPersonalSources.has(premiumSource) &&
         hasFutureExpiration
     );
-    const isPremium = Boolean(hasPremiumAccess || hasManualGrant || hasServerManagedGracePeriod);
-    const keepExpiration = isPremium && hasFutureExpiration;
+    const hasTrustedLocalGrant = hasPersistentPersonalGrant || hasExpiringPersonalGrant;
+    const isPremium = Boolean(hasPremiumAccess || hasTrustedLocalGrant);
+    const normalizedStatus = normalizeValue(localState.subscription_status);
+    const status = isPremium && hasTrustedLocalGrant && ["active", "trialing", "canceled"].includes(normalizedStatus)
+        ? normalizedStatus
+        : (isPremium ? "active" : "free");
 
     return {
         plan: isPremium ? "premium" : "free",
-        status: isPremium && ["active", "trialing", "canceled"].includes(normalizeValue(localState.subscription_status))
-            ? normalizeValue(localState.subscription_status)
-            : (isPremium ? "active" : "free"),
+        status,
         isPremium,
-        premiumExpiresAt: keepExpiration ? new Date(expiresTime).toISOString() : "",
-        premiumSource: isPremium
-            ? (trustedPremiumSource || (hasPremiumAccess ? "clerk_entitlement" : ""))
+        premiumExpiresAt: hasTrustedLocalGrant && hasFutureExpiration
+            ? new Date(expiresTime).toISOString()
             : "",
+        premiumSource: isPremium
+            ? (hasTrustedLocalGrant ? premiumSource : (hasPremiumAccess ? "clerk_entitlement" : ""))
+            : "",
+    };
+}
+
+function shouldVerifyPersonalBilling(hasPremiumAccess, localState = {}, subscription = {}) {
+    return Boolean(
+        !hasPremiumAccess &&
+        !subscription.isPremium &&
+        localState.subscription_is_premium === true &&
+        normalizeValue(localState.subscription_source) === "clerk_entitlement"
+    );
+}
+
+function subscriptionFromBillingState(state = {}) {
+    return {
+        plan: state.isPremium ? "premium" : "free",
+        status: state.status || (state.isPremium ? "active" : "free"),
+        isPremium: state.isPremium === true,
+        premiumExpiresAt: state.expiresAt || "",
+        premiumSource: state.isPremium ? (state.source || "clerk_billing") : "",
+    };
+}
+
+async function resolvePersonalSubscription({
+    hasPremiumAccess = false,
+    localState = {},
+    clerkUserId = "",
+    planCandidates = [],
+    billingClient = clerkClient.billing,
+} = {}) {
+    let subscription = getSubscriptionFromTrustedState(hasPremiumAccess, localState);
+    if (!shouldVerifyPersonalBilling(hasPremiumAccess, localState, subscription)) {
+        return { subscription, shouldPersist: true, verificationFailed: false };
+    }
+
+    const candidates = [...new Set([
+        ...planCandidates,
+        ...readEnvList("CLERK_PREMIUM_PLAN_ID"),
+        ...readEnvList("CLERK_PREMIUM_PLAN_SLUG", ["premium", "pro"]),
+        ...readEnvList("CLERK_PREMIUM_FEATURE_SLUG", ["premium_access"]),
+    ].filter(Boolean))];
+
+    try {
+        const billingSubscription = await billingClient.getUserBillingSubscription(clerkUserId);
+        subscription = subscriptionFromBillingState(
+            getClerkBillingSubscriptionState(billingSubscription, candidates)
+        );
+        return { subscription, shouldPersist: true, verificationFailed: false };
+    } catch (error) {
+        console.warn("Could not verify personal Clerk Billing while Organization claims were active:", {
+            clerkUserId,
+            error: error.message,
+        });
+        return {
+            // Fail closed for this request, but do not overwrite the last known
+            // personal state. A later request will retry Clerk Billing.
+            subscription,
+            shouldPersist: false,
+            verificationFailed: true,
+        };
+    }
+}
+
+function sanitizeFfaChapter(chapter) {
+    if (!chapter || typeof chapter !== "object") return null;
+
+    return {
+        id: chapter.id ?? null,
+        chapterName: typeof chapter.chapterName === "string" ? chapter.chapterName : "",
+        schoolName: typeof chapter.schoolName === "string" ? chapter.schoolName : "",
+        chapterNumber: typeof chapter.chapterNumber === "string" ? chapter.chapterNumber : "",
+        state: typeof chapter.state === "string" ? chapter.state : "",
+        advisorName: typeof chapter.advisorName === "string" ? chapter.advisorName : "",
+        advisorEmail: typeof chapter.advisorEmail === "string" ? chapter.advisorEmail : "",
+        maxMembers: Number(chapter.maxMembers) || 0,
+        status: typeof chapter.status === "string" ? chapter.status : "",
+        joinEnabled: chapter.joinEnabled === true,
+        membershipRole: typeof chapter.membershipRole === "string" ? chapter.membershipRole : "",
+        isAdvisor: chapter.isAdvisor === true,
+        premiumActive: chapter.premiumActive === true,
+        premiumCurrent: chapter.premiumCurrent === true,
+        premiumExpiresAt: chapter.premiumExpiresAt || null,
+        createdAt: chapter.createdAt || null,
+        updatedAt: chapter.updatedAt || null,
+    };
+}
+
+function sanitizeFfaAccessForUser(ffaAccess = {}) {
+    const chapters = Array.isArray(ffaAccess.chapters)
+        ? ffaAccess.chapters.map(sanitizeFfaChapter).filter(Boolean)
+        : [];
+
+    return {
+        hasChapter: ffaAccess.hasChapter === true,
+        chapter: sanitizeFfaChapter(ffaAccess.chapter),
+        chapters,
+        membershipCount: Number(ffaAccess.membershipCount) || chapters.length,
+        isAdvisor: ffaAccess.isAdvisor === true,
+        advisorChapter: sanitizeFfaChapter(ffaAccess.advisorChapter),
+        chapterPremiumActive: ffaAccess.chapterPremiumActive === true,
+        premiumChapter: sanitizeFfaChapter(ffaAccess.premiumChapter),
+        premiumExpiresAt: typeof ffaAccess.premiumExpiresAt === "string" ? ffaAccess.premiumExpiresAt : "",
+        lookupFailed: ffaAccess.lookupFailed === true,
     };
 }
 
@@ -107,7 +221,9 @@ async function authMiddleware(req, res, next) {
         const premiumPlanCandidates = readEnvList("CLERK_PREMIUM_PLAN_SLUG", ["premium", "pro"]);
         const premiumPlanIdCandidates = readEnvList("CLERK_PREMIUM_PLAN_ID");
         const premiumFeatureCandidates = readEnvList("CLERK_PREMIUM_FEATURE_SLUG", ["premium_access"]);
-        const hasPremiumAccess = hasAnyClerkAccess(
+        // Clerk's `has()` reflects the active context. An active Organization
+        // entitlement must not be mistaken for the user's personal plan.
+        const hasPremiumAccess = hasPersonalClerkAccess(
             auth,
             [...premiumPlanCandidates, ...premiumPlanIdCandidates],
             premiumFeatureCandidates
@@ -135,40 +251,56 @@ async function authMiddleware(req, res, next) {
             [user.id]
         );
         const userState = userStateResult.rows[0] || {};
-        const subscription = getSubscriptionFromTrustedState(hasPremiumAccess, userState);
+        const personalResolution = await resolvePersonalSubscription({
+            hasPremiumAccess,
+            localState: userState,
+            clerkUserId: authenticatedUserId,
+            planCandidates: [
+                ...premiumPlanCandidates,
+                ...premiumPlanIdCandidates,
+                ...premiumFeatureCandidates,
+            ],
+        });
+        const personalSubscription = personalResolution.subscription;
+        const shouldPersistPersonalSubscription = personalResolution.shouldPersist;
         const localPremiumSource = normalizeValue(userState.subscription_source);
         const localPremiumExpiresTime = userState.subscription_expires_at
             ? new Date(userState.subscription_expires_at).getTime()
             : 0;
         const shouldRetainExpiredManualGrant = Boolean(
-            !subscription.isPremium &&
+            !personalSubscription.isPremium &&
             localPremiumSource === "manual_admin" &&
             localPremiumExpiresTime &&
             localPremiumExpiresTime <= Date.now()
         );
-        await pool.query(
-            `UPDATE users
-             SET subscription_plan = $1,
-                 subscription_status = $2,
-                 subscription_is_premium = $3,
-                 subscription_source = $4,
-                 subscription_expires_at = $5
-             WHERE id = $6`,
-            [
-                subscription.plan || "free",
-                subscription.status || (subscription.isPremium ? "active" : "free"),
-                subscription.isPremium === true,
-                shouldRetainExpiredManualGrant ? "manual_admin" : (subscription.premiumSource || ""),
-                shouldRetainExpiredManualGrant ? userState.subscription_expires_at : (subscription.premiumExpiresAt || null),
-                user.id,
-            ]
-        );
+        if (shouldPersistPersonalSubscription) {
+            await pool.query(
+                `UPDATE users
+                 SET subscription_plan = $1,
+                     subscription_status = $2,
+                     subscription_is_premium = $3,
+                     subscription_source = $4,
+                     subscription_expires_at = $5
+                 WHERE id = $6`,
+                [
+                    personalSubscription.plan || "free",
+                    personalSubscription.status || (personalSubscription.isPremium ? "active" : "free"),
+                    personalSubscription.isPremium === true,
+                    shouldRetainExpiredManualGrant ? "manual_admin" : (personalSubscription.premiumSource || ""),
+                    shouldRetainExpiredManualGrant ? userState.subscription_expires_at : (personalSubscription.premiumExpiresAt || null),
+                    user.id,
+                ]
+            );
+        }
+        const ffaAccess = await getUserFfaAccess(authenticatedUserId, { allowFailure: true });
+        const subscription = resolvePremiumAccess(personalSubscription, ffaAccess);
         req.user = {
             id: user.id,
             email: user.email,
             name: user.name,
             clerkUserId: authenticatedUserId,
             subscription,
+            ffa: sanitizeFfaAccessForUser(ffaAccess),
             onboarding: {
                 required: userState.onboarding_required === true,
                 completed: userState.onboarding_completed === true,
@@ -197,3 +329,8 @@ async function authMiddleware(req, res, next) {
 
 module.exports = authMiddleware;
 module.exports.getSubscriptionFromTrustedState = getSubscriptionFromTrustedState;
+module.exports.hasPersonalClerkAccess = hasPersonalClerkAccess;
+module.exports.resolvePersonalSubscription = resolvePersonalSubscription;
+module.exports.sanitizeFfaAccessForUser = sanitizeFfaAccessForUser;
+module.exports.shouldVerifyPersonalBilling = shouldVerifyPersonalBilling;
+module.exports.subscriptionFromBillingState = subscriptionFromBillingState;

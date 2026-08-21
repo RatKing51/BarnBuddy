@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { toast } from "react-toastify";
 import { API_URL } from "../config/env";
 import { useAuth } from "../context/AuthContext";
@@ -107,8 +107,10 @@ function destinationForSetupMode(setupMode) {
 }
 
 export default function Onboarding() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { authFetch, backendUser, refreshBackendUser } = useAuth();
+  const advisorReturnTo = location.state?.returnTo === "/advisor" ? "/advisor" : "";
   const saved = backendUser?.onboarding || {};
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState({
@@ -174,7 +176,7 @@ export default function Onboarding() {
 
       if (completed) {
         await refreshBackendUser();
-        navigate(destinationForSetupMode(answers.setupMode), { replace: true });
+        navigate(advisorReturnTo || destinationForSetupMode(answers.setupMode), { replace: true });
         return;
       }
 
@@ -197,7 +199,7 @@ export default function Onboarding() {
       };
       await saveOnboarding(skippedAnswers, true);
       await refreshBackendUser();
-      navigate("/dashboard", { replace: true });
+      navigate(advisorReturnTo || "/dashboard", { replace: true });
     } catch (err) {
       toast.error(err.message || "Onboarding could not be skipped.");
     } finally {

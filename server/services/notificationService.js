@@ -4,10 +4,18 @@ const env = require("../config/env");
 const { ensureAppSchema } = require("./ensureAppSchema");
 const { sendEmail, escapeHtml } = require("./emailService");
 const { ensureSchema: ensureUserSchema } = require("./clerkUserSync");
+const { getUserFfaAccess, resolvePremiumAccess } = require("./ffaChapterService");
 const { ensurePreferenceSchema } = require("./userPreferences");
+const {
+  getSubscriptionFromTrustedState,
+  resolvePersonalSubscription,
+} = require("../middleware/authMiddleware");
 
 let schemaReadyPromise;
 let sourceSchemaReadyPromise;
+const REMINDER_CANDIDATE_SCAN_MULTIPLIER = 4;
+const REMINDER_CANDIDATE_SCAN_CAP = 2_000;
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1_000;
 
 function ensureNotificationSchema() {
   if (!schemaReadyPromise) {
@@ -563,6 +571,68 @@ async function sendUserReminderEmail(userId, { force = false } = {}) {
   return { sent: true, result, notificationKey, ...preview };
 }
 
+function getEffectiveReminderSubscription(userState = {}, ffaAccess = {}, resolvedPersonalSubscription) {
+  const personalSubscription = resolvedPersonalSubscription || getSubscriptionFromTrustedState(false, userState);
+  return resolvePremiumAccess(personalSubscription, ffaAccess);
+}
+
+function getReminderResultLimit(value) {
+  return Math.max(1, Math.min(Number(value) || 100, 500));
+}
+
+function getReminderCandidateScanLimit(resultLimit) {
+  const normalizedResultLimit = getReminderResultLimit(resultLimit);
+  return Math.min(
+    REMINDER_CANDIDATE_SCAN_CAP,
+    Math.max(normalizedResultLimit, normalizedResultLimit * REMINDER_CANDIDATE_SCAN_MULTIPLIER)
+  );
+}
+
+function getDailyReminderCandidateOffset(candidateCount, scanLimit, now = Date.now()) {
+  const total = Math.max(0, Number(candidateCount) || 0);
+  const boundedScanLimit = Math.max(1, Number(scanLimit) || 1);
+  if (total <= boundedScanLimit) return 0;
+
+  const windowCount = Math.ceil(total / boundedScanLimit);
+  const milliseconds = now instanceof Date ? now.getTime() : Number(now);
+  const dayNumber = Math.floor(
+    (Number.isFinite(milliseconds) ? milliseconds : Date.now()) / MILLISECONDS_PER_DAY
+  );
+  return (dayNumber % windowCount) * boundedScanLimit;
+}
+
+async function getReminderCandidates({ queryable = pool, resultLimit = 100, now = Date.now() } = {}) {
+  const scanLimit = getReminderCandidateScanLimit(resultLimit);
+  const countResult = await queryable.query(
+    `SELECT COUNT(*)::int AS count
+     FROM users
+     WHERE automatic_reminders = true
+       AND email IS NOT NULL`
+  );
+  const candidateCount = Number(countResult.rows[0]?.count) || 0;
+  const offset = getDailyReminderCandidateOffset(candidateCount, scanLimit, now);
+  const selectSql = `SELECT id,
+                            clerk_user_id,
+                            subscription_status,
+                            subscription_is_premium,
+                            subscription_source,
+                            subscription_expires_at
+                     FROM users
+                     WHERE automatic_reminders = true
+                       AND email IS NOT NULL
+                     ORDER BY id ASC
+                     LIMIT $1 OFFSET $2`;
+  const firstPage = await queryable.query(selectSql, [scanLimit, offset]);
+  const candidates = Array.isArray(firstPage.rows) ? firstPage.rows.slice() : [];
+
+  if (candidates.length < scanLimit && offset > 0) {
+    const wrapPage = await queryable.query(selectSql, [scanLimit - candidates.length, 0]);
+    if (Array.isArray(wrapPage.rows)) candidates.push(...wrapPage.rows);
+  }
+
+  return candidates.slice(0, scanLimit);
+}
+
 async function sendDueReminderEmails({ limit = 100 } = {}) {
   await ensureAppSchema();
   await ensureNotificationSchema();
@@ -570,20 +640,23 @@ async function sendDueReminderEmails({ limit = 100 } = {}) {
   await ensurePreferenceSchema();
   await ensureReminderSourceSchema();
 
-  const users = await pool.query(
-    `SELECT id
-     FROM users
-     WHERE automatic_reminders = true
-       AND subscription_is_premium = true
-       AND (subscription_expires_at IS NULL OR subscription_expires_at > CURRENT_TIMESTAMP)
-       AND email IS NOT NULL
-     ORDER BY id ASC
-     LIMIT $1`,
-    [Math.max(1, Math.min(Number(limit) || 100, 500))]
-  );
-
+  const resultLimit = getReminderResultLimit(limit);
+  const users = await getReminderCandidates({ resultLimit });
   const results = [];
-  for (const user of users.rows) {
+  for (const user of users) {
+    if (results.length >= resultLimit) break;
+    const personalResolution = await resolvePersonalSubscription({
+      localState: user,
+      clerkUserId: user.clerk_user_id || "",
+    });
+    const personalSubscription = personalResolution.subscription;
+    let ffaAccess = {};
+    if (!personalSubscription.isPremium && user.clerk_user_id) {
+      ffaAccess = await getUserFfaAccess(user.clerk_user_id, { allowFailure: true });
+    }
+    const effectiveSubscription = getEffectiveReminderSubscription(user, ffaAccess, personalSubscription);
+    if (!effectiveSubscription.isPremium) continue;
+
     try {
       results.push({ userId: user.id, ...(await sendUserReminderEmail(user.id)) });
     } catch (err) {
@@ -595,7 +668,14 @@ async function sendDueReminderEmails({ limit = 100 } = {}) {
 }
 
 module.exports = {
+  REMINDER_CANDIDATE_SCAN_CAP,
+  REMINDER_CANDIDATE_SCAN_MULTIPLIER,
   ensureNotificationSchema,
+  getDailyReminderCandidateOffset,
+  getEffectiveReminderSubscription,
+  getReminderCandidateScanLimit,
+  getReminderCandidates,
+  getReminderResultLimit,
   previewUserReminders,
   sendUserReminderEmail,
   sendDueReminderEmails,

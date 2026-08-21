@@ -3,6 +3,15 @@ import { useAuth as useClerkAuth } from "@clerk/react";
 import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 
+function getInvitationAuthDestination(location) {
+    const params = new URLSearchParams(location.search);
+    if (!params.get("__clerk_ticket")) return null;
+
+    const authPath = params.get("__clerk_status") === "sign_up" ? "/signup" : "/login";
+    params.set("returnTo", location.pathname || "/dashboard");
+    return `${authPath}?${params.toString()}`;
+}
+
 export default function PrivateRoute() {
     const location = useLocation();
     const { isLoaded, isSignedIn } = useClerkAuth();
@@ -17,11 +26,14 @@ export default function PrivateRoute() {
     }
 
     if (!isSignedIn) {
+        const invitationDestination = getInvitationAuthDestination(location);
         return (
             <Navigate
-                to="/login"
+                to={invitationDestination || "/login"}
                 replace
-                state={{ returnTo: `${location.pathname}${location.search}${location.hash}` }}
+                state={invitationDestination ? undefined : {
+                    returnTo: `${location.pathname}${location.search}${location.hash}`,
+                }}
             />
         );
     }
@@ -53,13 +65,22 @@ export default function PrivateRoute() {
     const onboardingRequired = backendUser?.onboarding?.required === true;
     const onboardingCompleted = backendUser?.onboarding?.completed === true;
     const isOnboardingRoute = location.pathname === "/dashboard/onboarding";
+    const advisorOnboardingReturnTo = location.state?.returnTo === "/advisor"
+        ? "/advisor"
+        : null;
 
     if (onboardingRequired && !onboardingCompleted && !isOnboardingRoute) {
-        return <Navigate to="/dashboard/onboarding" replace />;
+        return (
+            <Navigate
+                to="/dashboard/onboarding"
+                replace
+                state={location.pathname === "/advisor" ? { returnTo: "/advisor" } : undefined}
+            />
+        );
     }
 
     if ((!onboardingRequired || onboardingCompleted) && isOnboardingRoute) {
-        return <Navigate to="/dashboard" replace />;
+        return <Navigate to={advisorOnboardingReturnTo || "/dashboard"} replace />;
     }
 
     return <Outlet />;

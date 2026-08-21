@@ -28,6 +28,8 @@ const notificationRoutes = require("./routes/notifications");
 const siteContentRoutes = require("./routes/siteContent");
 const importAssistantRoutes = require("./routes/importAssistant");
 const ffaProjectRoutes = require("./routes/ffaProjects");
+const ffaChapterRoutes = require("./routes/ffaChapters");
+const adminFfaChapterRoutes = require("./routes/adminFfaChapters");
 const { ensureAppSchema } = require("./services/ensureAppSchema");
 
 const app = express();
@@ -69,6 +71,8 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/site-content", siteContentRoutes);
 app.use("/api/import-assistant", importAssistantRoutes);
 app.use("/api/ffa-projects", ffaProjectRoutes);
+app.use("/api/ffa-chapters", ffaChapterRoutes);
+app.use("/api/admin/ffa-chapters", adminFfaChapterRoutes);
 app.use("/auth", authRoutes);
 app.use("/contact", contactRoutes);
 app.use("/api/reproductions", reproductionRoutes);

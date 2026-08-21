@@ -1,5 +1,27 @@
 import React from "react";
-import { SignUp as ClerkSignUp } from "@clerk/react";
+import { SignUp as ClerkSignUp, useAuth } from "@clerk/react";
+import { Navigate, useLocation } from "react-router";
+
+function safeInternalReturnTo(value, fallback = "/dashboard") {
+  const candidate = typeof value === "string" ? value.trim() : "";
+  if (!candidate.startsWith("/") || candidate.startsWith("//") || candidate.includes("\\")) {
+    return fallback;
+  }
+
+  try {
+    const parsed = new URL(candidate, window.location.origin);
+    if (parsed.origin !== window.location.origin) return fallback;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return fallback;
+  }
+}
+
+function buildAuthHandoffUrl(path, search, returnTo) {
+  const params = new URLSearchParams(search);
+  params.set("returnTo", returnTo);
+  return `${path}?${params.toString()}`;
+}
 
 const authAppearance = {
   variables: {
@@ -61,6 +83,18 @@ const authAppearance = {
 };
 
 export default function SignUp() {
+  const location = useLocation();
+  const { isLoaded, isSignedIn } = useAuth();
+  const searchParams = new URLSearchParams(location.search);
+  const requestedReturnTo = searchParams.get("returnTo");
+  const returnTo = safeInternalReturnTo(requestedReturnTo);
+  const signInUrl = buildAuthHandoffUrl("/login", location.search, returnTo);
+  const completedInvitation = searchParams.get("__clerk_status") === "complete";
+
+  if (isLoaded && isSignedIn && completedInvitation) {
+    return <Navigate to={returnTo} replace />;
+  }
+
   return (
     <div className="signup-page public-page min-h-screen text-white">
       <main>
@@ -82,8 +116,9 @@ export default function SignUp() {
 
                 <ClerkSignUp
                   routing="hash"
-                  signInUrl="/login"
-                  fallbackRedirectUrl="/dashboard"
+                  signInUrl={signInUrl}
+                  fallbackRedirectUrl={returnTo}
+                  forceRedirectUrl={returnTo}
                   appearance={authAppearance}
                 />
               </div>

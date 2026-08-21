@@ -3,6 +3,8 @@ import { useNavigate } from "react-router";
 import { useUser } from "@clerk/react";
 import { toast } from "react-toastify";
 import BillingAction from "../components/BillingAction";
+import FfaChapterSettingsCard from "../components/FfaChapterSettingsCard";
+import FfaProjectSharingPrivacyCard from "../components/FfaProjectSharingPrivacyCard";
 import { useAuth } from "../context/AuthContext";
 import { usePreferences } from "../context/PreferencesContext";
 import { API_BASE_URL, API_URL } from "../config/env";
@@ -29,6 +31,9 @@ export default function AccountSettings() {
   const navigate = useNavigate();
   const { user } = useUser();
   const { logout, deleteAccount, authFetch, refreshBackendUser, subscription } = useAuth();
+  const chapterOnlyPremium = Boolean(
+    subscription.isPremium && !subscription.personalIsPremium && subscription.chapterPremiumActive
+  );
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -329,7 +334,11 @@ export default function AccountSettings() {
             >
               <p className="font-semibold text-white">Subscription</p>
               <p className={`mt-2 text-sm ${subscription.isPremium ? "text-gray-400" : "text-blue-100/80"}`}>
-                {subscription.isPremium ? "Manage billing and plan details." : "Review Premium tools and pricing."}
+                {chapterOnlyPremium
+                  ? "Premium is currently provided by your FFA chapter."
+                  : subscription.isPremium
+                    ? "Manage billing and plan details."
+                    : "Review Premium tools and pricing."}
               </p>
             </button>
 
@@ -354,7 +363,9 @@ export default function AccountSettings() {
                   <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${subscription.isPremium ? "text-gray-500" : "text-blue-300"}`}>Billing</p>
                   <h2 className="mt-2 text-xl font-semibold text-white">Subscription</h2>
                   <p className={`mt-2 text-sm ${subscription.isPremium ? "text-gray-400" : "text-blue-100/80"}`}>
-                    Review your current plan, available features, and billing options in one place.
+                    {chapterOnlyPremium
+                      ? "Your chapter benefit and personal billing are kept separate."
+                      : "Review your current plan, available features, and billing options in one place."}
                   </p>
                 </div>
                 {!subscription.isPremium && (
@@ -368,13 +379,16 @@ export default function AccountSettings() {
                 <div className="rounded-xl border border-gray-700 bg-gray-900 p-4">
                   <p className="font-semibold text-white">{PLANS[subscription.planId].name} plan</p>
                   <p className="mt-1 text-sm text-gray-400">
-                    {subscription.isPremium
-                      ? "Your account has access to dashboard, export, reminder, and planning tools."
+                    {chapterOnlyPremium
+                      ? "Your FFA chapter currently provides dashboard, export, reminder, and planning tools."
+                      : subscription.isPremium
+                      ? "Your personal plan has access to dashboard, export, reminder, and planning tools."
                       : `${PLANS[PLAN_IDS.premium].price}/${PLANS[PLAN_IDS.premium].interval.replace("per ", "")} unlocks the Premium toolset.`}
                   </p>
                 </div>
                 <BillingAction
-                  isPremium={subscription.isPremium}
+                  isPremium={subscription.personalIsPremium}
+                  purchaseLabel={chapterOnlyPremium ? "Add personal Premium" : ""}
                   className="bg-blue-600 text-white hover:bg-blue-500"
                   signedOutClassName="bg-blue-600 text-white hover:bg-blue-500"
                 />
@@ -391,6 +405,10 @@ export default function AccountSettings() {
                 </div>
               )}
             </section>
+
+            <FfaChapterSettingsCard />
+
+            <FfaProjectSharingPrivacyCard />
 
             <section className="rounded-2xl border border-gray-700 bg-gray-800 p-6">
               <h2 className="text-xl font-semibold text-white">Profile</h2>

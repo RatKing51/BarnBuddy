@@ -3,6 +3,7 @@ const multer = require("multer");
 const { clerkClient } = require("@clerk/express");
 const env = require("../config/env");
 const authMiddleware = require("../middleware/authMiddleware");
+const { requireAdmin } = require("../middleware/adminAuthorization");
 const pool = require("../data-source");
 const {
   createSiteAssetKey,
@@ -23,6 +24,7 @@ const {
 } = require("../services/siteContent");
 const { getUserActivity, getUserActivityUsers } = require("../services/userActivity");
 const { deletePremiumDataForUser } = require("../services/premiumDowngradeCleanup");
+const { getUserFfaAccess, resolvePremiumAccess } = require("../services/ffaChapterService");
 const { detectImageMimeType, supportedImageTypes } = require("../utils/imageFiles");
 const {
   getAdminSubscriptionState,
@@ -51,24 +53,6 @@ function readEnvList(name) {
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
-}
-
-function isAdminUser(user) {
-  const allowedEmails = readEnvList("ADMIN_EMAILS").map((email) => email.toLowerCase());
-  const allowedClerkIds = readEnvList("ADMIN_CLERK_USER_IDS");
-
-  return Boolean(
-    (user.email && allowedEmails.includes(user.email.toLowerCase())) ||
-      (user.clerkUserId && allowedClerkIds.includes(user.clerkUserId))
-  );
-}
-
-function requireAdmin(req, res, next) {
-  if (!isAdminUser(req.user)) {
-    return res.status(403).json({ error: "Admin access required" });
-  }
-
-  next();
 }
 
 function asTrimmedString(value, fallback = "") {
@@ -1072,8 +1056,13 @@ router.delete("/admin/users/:clerkUserId/premium-data", authMiddleware, requireA
     const expiresTime = localUser.subscription_expires_at
       ? new Date(localUser.subscription_expires_at).getTime()
       : 0;
-    const premiumIsActive = localUser.subscription_is_premium === true && (!expiresTime || expiresTime > Date.now());
-    if (premiumIsActive) {
+    const personalPremiumIsActive = localUser.subscription_is_premium === true && (!expiresTime || expiresTime > Date.now());
+    const ffaAccess = await getUserFfaAccess(req.params.clerkUserId, { forceRefresh: true });
+    const effectiveSubscription = resolvePremiumAccess(
+      { isPremium: personalPremiumIsActive },
+      ffaAccess
+    );
+    if (effectiveSubscription.isPremium) {
       return res.status(409).json({ error: "Remove or expire Premium access before deleting the user's Premium data." });
     }
 

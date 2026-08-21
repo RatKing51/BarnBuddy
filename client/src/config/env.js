@@ -14,12 +14,6 @@ export const CLERK_PREMIUM_PLAN_ID = (import.meta.env.VITE_CLERK_PREMIUM_PLAN_ID
 export const HAS_VALID_CLERK_PREMIUM_PLAN_ID = /^plan_[A-Za-z0-9]+$/.test(CLERK_PREMIUM_PLAN_ID);
 export const CLERK_PREMIUM_PLAN_SLUG = (import.meta.env.VITE_CLERK_PREMIUM_PLAN_SLUG || "premium").trim();
 export const CLERK_PREMIUM_FEATURE_SLUG = (import.meta.env.VITE_CLERK_PREMIUM_FEATURE_SLUG || "premium_access").trim();
-const configuredPromoCodes = import.meta.env.VITE_CLERK_PROMO_CODES;
-export const CLERK_PROMO_CODES = (configuredPromoCodes === undefined ? "BACKTOSCHOOL" : configuredPromoCodes)
-  .split(",")
-  .map((code) => code.trim().toUpperCase())
-  .filter(Boolean)
-  .filter((code, index, codes) => codes.indexOf(code) === index);
 export const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || "")
   .split(",")
   .map((email) => email.trim().toLowerCase())

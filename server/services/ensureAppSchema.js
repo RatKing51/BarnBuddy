@@ -5,6 +5,8 @@ const { ensurePreferenceSchema } = require("./userPreferences");
 const { ensureSiteContentSchema } = require("./siteContent");
 const { ensureUserActivitySchema } = require("./userActivity");
 const { ensureFfaProjectSchema } = require("./ensureFfaProjectSchema");
+const { ensureFfaChapterSchema } = require("./ensureFfaChapterSchema");
+const { ensureFfaProjectSharingSchema } = require("./ensureFfaProjectSharingSchema");
 const { ensureRateLimitSchema } = require("./durableRateLimit");
 
 let appSchemaReadyPromise;
@@ -257,6 +259,8 @@ async function ensureAppSchema() {
       await ensureBirthSchema();
       await ensureImportAssistantSchema();
       await ensureFfaProjectSchema();
+      await ensureFfaChapterSchema();
+      await ensureFfaProjectSharingSchema();
       await ensureRateLimitSchema();
     })();
   }
@@ -272,5 +276,7 @@ module.exports = {
   ensureBirthSchema,
   ensureImportAssistantSchema,
   ensureFfaProjectSchema,
+  ensureFfaChapterSchema,
+  ensureFfaProjectSharingSchema,
   ensureRateLimitSchema,
 };

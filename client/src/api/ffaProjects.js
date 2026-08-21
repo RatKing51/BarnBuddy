@@ -5,6 +5,11 @@ export const getFfaProject = (projectId) => api.get(`/ffa-projects/${projectId}`
 export const createFfaProject = (data) => api.post("/ffa-projects", data);
 export const updateFfaProject = (projectId, data) => api.patch(`/ffa-projects/${projectId}`, data);
 export const deleteFfaProject = (projectId) => api.delete(`/ffa-projects/${projectId}`);
+export const getFfaProjectAdvisorShares = () => api.get("/ffa-projects/advisor-sharing");
+export const updateFfaProjectSharing = (projectId, shared) =>
+  api.patch(`/ffa-projects/${encodeURIComponent(String(projectId))}/advisor-sharing`, {
+    shared: shared === true,
+  });
 
 export const addFfaProjectAnimals = (projectId, animals) =>
   api.post(`/ffa-projects/${projectId}/animals`, { animals });
