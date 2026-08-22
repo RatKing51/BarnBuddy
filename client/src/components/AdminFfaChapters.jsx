@@ -13,6 +13,7 @@ import {
 } from "../api/ffaChapters";
 import EmptyState from "./EmptyState";
 import { LoadingSpinner, SkeletonBlock } from "./LoadingSpinner";
+import { LIVE_REFRESH_INTERVAL_MS, useLiveRefresh } from "../hooks/useLiveRefresh";
 
 const emptyChapterForm = {
   chapterName: "",
@@ -63,6 +64,15 @@ function formatDate(value, fallback = "Not set") {
     day: "numeric",
     year: "numeric",
   }).format(parsed);
+}
+
+function formatUpdatedTime(value) {
+  if (!value) return "Waiting for first update";
+  return `Updated ${new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(value)}`;
 }
 
 function expirationPayload(value) {
@@ -351,34 +361,41 @@ export default function AdminFfaChapters() {
   const [detailError, setDetailError] = useState("");
   const [membersError, setMembersError] = useState("");
   const [customExpiration, setCustomExpiration] = useState("");
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  const loadChapters = useCallback(async function loadChapters({ showLoading = false } = {}) {
+  const loadChapters = useCallback(async function loadChapters({ showLoading = false, silent = false } = {}) {
     try {
       if (showLoading) setLoadingList(true);
-      setListError("");
+      if (!silent) setListError("");
       const response = await getAdminFfaChapters();
       setChapters(normalizeChapterList(response.data));
+      setLastUpdated(new Date());
       return true;
     } catch (error) {
-      setListError(getFfaApiError(error, "BarnBuddy could not load FFA chapters."));
+      if (!silent) setListError(getFfaApiError(error, "BarnBuddy could not load FFA chapters."));
       return false;
     } finally {
       if (showLoading) setLoadingList(false);
     }
   }, []);
 
-  const loadChapter = useCallback(async function loadChapter(chapterId, { showLoading = false } = {}) {
+  const loadChapter = useCallback(async function loadChapter(chapterId, {
+    showLoading = false,
+    silent = false,
+    syncForm = true,
+  } = {}) {
     if (!chapterId) return false;
     try {
       if (showLoading) setLoadingDetail(true);
-      setDetailError("");
+      if (!silent) setDetailError("");
       const response = await getAdminFfaChapter(chapterId);
       const chapter = normalizeChapterResponse(response.data);
       setSelectedChapter(chapter);
-      setCustomExpiration(toDateInput(chapter.premiumExpiresAt));
+      if (syncForm) setCustomExpiration(toDateInput(chapter.premiumExpiresAt));
+      setLastUpdated(new Date());
       return true;
     } catch (error) {
-      setDetailError(getFfaApiError(error, "BarnBuddy could not load that FFA chapter."));
+      if (!silent) setDetailError(getFfaApiError(error, "BarnBuddy could not load that FFA chapter."));
       return false;
     } finally {
       if (showLoading) setLoadingDetail(false);
@@ -555,12 +572,14 @@ export default function AdminFfaChapters() {
     );
   }
 
-  async function loadMembers() {
+  const loadMembers = useCallback(async function loadMembers({ silent = false } = {}) {
     if (!selectedChapter?.id) return;
     try {
       setMembersOpen(true);
-      setLoadingMembers(true);
-      setMembersError("");
+      if (!silent) {
+        setLoadingMembers(true);
+        setMembersError("");
+      }
       const response = await getAdminFfaChapterMembers(selectedChapter.id);
       const nextMembers = normalizeMemberList(response.data);
       setMembers(nextMembers);
@@ -568,14 +587,17 @@ export default function AdminFfaChapters() {
         ...current,
         memberCount: asNumber(firstDefined(response.data?.memberCount, response.data?.member_count), nextMembers.length),
       } : current);
+      setLastUpdated(new Date());
     } catch (error) {
       const message = getFfaApiError(error, "BarnBuddy could not load chapter members.");
-      setMembersError(message);
-      toast.error(message);
+      if (!silent) {
+        setMembersError(message);
+        toast.error(message);
+      }
     } finally {
-      setLoadingMembers(false);
+      if (!silent) setLoadingMembers(false);
     }
-  }
+  }, [selectedChapter?.id]);
 
   async function removeMember(member) {
     if (!selectedChapter?.id || !member.userId || member.isAdvisor) return;
@@ -591,6 +613,22 @@ export default function AdminFfaChapters() {
       setAction("");
     }
   }
+
+  const refreshLiveChapterData = useCallback(async () => {
+    if (view === "list") {
+      await loadChapters({ silent: true });
+      return;
+    }
+    if (view !== "detail" || !selectedChapter?.id) return;
+
+    await Promise.all([
+      loadChapters({ silent: true }),
+      loadChapter(selectedChapter.id, { silent: true, syncForm: false }),
+      membersOpen ? loadMembers({ silent: true }) : Promise.resolve(),
+    ]);
+  }, [loadChapter, loadChapters, loadMembers, membersOpen, selectedChapter?.id, view]);
+
+  useLiveRefresh(refreshLiveChapterData, { enabled: view === "list" || view === "detail" });
 
   const selectedPremiumState = useMemo(
     () => selectedChapter ? chapterPremiumState(selectedChapter) : "inactive",
@@ -675,9 +713,18 @@ export default function AdminFfaChapters() {
           <button type="button" onClick={() => { setView("list"); setSelectedChapter(null); setMembersOpen(false); }} className="min-h-11 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-sky-400/40 hover:bg-slate-800">
             Back to Chapters
           </button>
-          <button type="button" onClick={() => setView("edit")} className="min-h-11 rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-400">
-            Edit Chapter
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <span className="flex items-center gap-2 px-2 text-xs text-slate-400" aria-live="polite">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              Live every {LIVE_REFRESH_INTERVAL_MS / 1000}s · {formatUpdatedTime(lastUpdated)}
+            </span>
+            <button type="button" onClick={() => refreshLiveChapterData()} className="min-h-11 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-slate-800">
+              Refresh now
+            </button>
+            <button type="button" onClick={() => setView("edit")} className="min-h-11 rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-400">
+              Edit Chapter
+            </button>
+          </div>
         </div>
 
         {detailError && (
@@ -848,10 +895,17 @@ export default function AdminFfaChapters() {
         <div>
           <h3 className="text-xl font-semibold text-white">FFA Chapters</h3>
           <p className="mt-1 text-sm text-slate-400">Create chapters, manage memberships, and control manual Premium access.</p>
+          <p className="mt-2 flex items-center gap-2 text-xs text-slate-500" aria-live="polite">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            Member counts update every {LIVE_REFRESH_INTERVAL_MS / 1000}s · {formatUpdatedTime(lastUpdated)}
+          </p>
         </div>
-        <button type="button" onClick={() => setView("create")} className="min-h-11 rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-400">
-          + Create Chapter
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => loadChapters()} className="min-h-11 rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-slate-800">Refresh now</button>
+          <button type="button" onClick={() => setView("create")} className="min-h-11 rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-400">
+            + Create Chapter
+          </button>
+        </div>
       </div>
 
       {listError && (

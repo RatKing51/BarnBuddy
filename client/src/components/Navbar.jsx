@@ -45,6 +45,7 @@ export default function Navbar() {
   const showAdvisor = Boolean(
     showSignedIn &&
       (backendUser?.ffa?.isAdvisor === true ||
+        backendUser?.ffa?.hasAdvisorMembership === true ||
         backendUser?.isFfaAdvisor === true ||
         backendUser?.ffaAdvisorChapter?.isAdvisor === true ||
         backendUser?.ffaChapter?.isAdvisor === true)

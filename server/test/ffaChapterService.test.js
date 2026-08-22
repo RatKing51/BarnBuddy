@@ -391,6 +391,7 @@ test("FFA access finds an advisor chapter without depending on active Organizati
   assert.equal(access.accesses.length, 2);
   assert.equal(access.accesses[1].chapter.clerk_org_id, "org_advisor");
   assert.equal(access.accesses[1].role, "org:admin");
+  assert.equal(access.hasAdvisorMembership, true);
   assert.equal(access.isAdvisor, true);
   assert.equal(access.advisorChapter.id, 2);
   assert.equal(access.advisorChapter.chapterName, "Advisor Chapter");
@@ -454,6 +455,7 @@ test("central FFA access demotes a non-canonical Clerk admin in user-facing stat
     forceRefresh: true,
   });
   assert.equal(access.isAdvisor, false);
+  assert.equal(access.hasAdvisorMembership, true);
   assert.equal(access.advisorChapter, null);
   assert.equal(access.chapter.membershipRole, "org:member");
   assert.equal(access.chapter.isAdvisor, false);

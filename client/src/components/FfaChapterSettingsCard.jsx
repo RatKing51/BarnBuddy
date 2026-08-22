@@ -25,6 +25,13 @@ function normalizeChapterResponse(data) {
     state: String(firstDefined(source.state, "")),
     role,
     isAdvisor: firstDefined(data?.isAdvisor, membership?.isAdvisor, source.isAdvisor, role === "org:admin") === true,
+    advisorDashboardAvailable: firstDefined(
+      data?.advisorDashboardAvailable,
+      data?.hasAdvisorMembership,
+      source.advisorDashboardAvailable,
+      source.hasAdvisorMembership,
+      role === "org:admin"
+    ) === true,
     premiumActive: firstDefined(
       source.premiumActive,
       source.premium_active,
@@ -183,8 +190,17 @@ export default function FfaChapterSettingsCard() {
             )}
           </div>
           <span className="w-fit rounded-full border border-blue-300/25 bg-blue-400/10 px-3 py-1 text-xs font-semibold text-blue-100">
-            {chapter.isAdvisor ? "Chapter Advisor" : "Chapter Member"}
+            {chapter.advisorDashboardAvailable ? "Advisor access" : "Student member"}
           </span>
+        </div>
+
+        <div className="mt-5 rounded-xl border border-blue-300/15 bg-gray-950/35 p-4">
+          <p className="font-semibold text-white">Your account is connected to this chapter</p>
+          <p className="mt-2 text-sm leading-6 text-blue-100/70">
+            {chapter.advisorDashboardAvailable
+              ? "Use the Advisor Dashboard to manage student joining, watch the chapter roster, and review only the FFA projects students choose to share."
+              : "Your chapter membership may provide Premium tools. Your advisor cannot see your regular BarnBuddy records, and an FFA project stays private unless you choose to share that project."}
+          </p>
         </div>
 
         {premiumCurrent && (
@@ -196,13 +212,26 @@ export default function FfaChapterSettingsCard() {
           </div>
         )}
 
-        {chapter.isAdvisor && (
+        {chapter.advisorDashboardAvailable ? (
           <Link
             to="/advisor"
             className="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500"
           >
             Open Advisor Dashboard
           </Link>
+        ) : (
+          <div className="mt-5 flex flex-col gap-3 rounded-xl border border-gray-700/80 bg-gray-950/35 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold text-white">Ready to use your chapter connection?</p>
+              <p className="mt-1 text-sm text-gray-400">Create or open an FFA project, then choose whether that individual project is shared.</p>
+            </div>
+            <Link
+              to="/dashboard/ffa-projects"
+              className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500"
+            >
+              Open FFA Projects
+            </Link>
+          </div>
         )}
       </section>
     );
@@ -212,7 +241,7 @@ export default function FfaChapterSettingsCard() {
     <section className="rounded-2xl border border-gray-700 bg-gray-800 p-6">
       <h2 className="text-xl font-semibold text-white">FFA Chapter</h2>
       <p className="mt-2 text-sm leading-relaxed text-gray-400">
-        Are you a member of an FFA chapter using BarnBuddy? Enter the private code shared by your advisor.
+        Students can enter the private code shared by their advisor to connect their BarnBuddy account. Advisors join through the secure email invitation sent for their chapter.
       </p>
 
       <form onSubmit={handleJoin} className="mt-5" autoComplete="off">
@@ -238,7 +267,7 @@ export default function FfaChapterSettingsCard() {
           disabled={joining || !code.trim()}
           className="mt-4 min-h-11 rounded-lg bg-blue-600 px-5 py-2.5 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60"
         >
-          {joining ? "Joining chapter..." : "Join Chapter"}
+          {joining ? "Joining chapter..." : "Join as a Student"}
         </button>
       </form>
     </section>
