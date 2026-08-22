@@ -489,13 +489,14 @@ function sendProjectSharingUnavailable(res, chapter = {}) {
 router.get("/me", authMiddleware, async (req, res) => {
   setPrivateNoStore(res);
   try {
-    const access = normalizeAccess(
-      await getUserFfaAccess(req.user.clerkUserId, { forceRefresh: true })
-    );
+    const ffaAccess = await getUserFfaAccess(req.user.clerkUserId, { forceRefresh: true });
+    const access = normalizeAccess(ffaAccess);
     if (!access) return res.json({ chapter: null });
 
     return res.json({
       chapter: serializeChapter(access.chapter, access.role),
+      advisorDashboardAvailable:
+        ffaAccess.isAdvisor === true || ffaAccess.hasAdvisorMembership === true,
     });
   } catch (error) {
     console.warn("Could not load the current user's FFA chapter:", safeErrorSummary(error));

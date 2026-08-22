@@ -34,6 +34,7 @@ import { API_URL } from "../config/env";
 import { formatAnimalAge } from "../utils/age";
 import { getAnimalDisplayName } from "../utils/animalLabel";
 import { getOnboardingDefaultSpecies } from "../config/onboardingSpecies";
+import { getMyFfaChapter } from "../api/ffaChapters";
 
 const getAnimalCareSignature = (items) =>
   items
@@ -259,6 +260,13 @@ export default function Dashboard() {
   const { user } = useUser();
   const { preferences } = usePreferences();
   const { subscription, authFetch, refreshBackendUser, backendUser } = useBarnBuddyAuth();
+  const backendAdvisorDashboardAvailable = Boolean(
+    backendUser?.ffa?.isAdvisor === true ||
+    backendUser?.ffa?.hasAdvisorMembership === true
+  );
+  const [advisorDashboardAvailable, setAdvisorDashboardAvailable] = useState(
+    backendAdvisorDashboardAvailable
+  );
   const loadedHerdIdRef = React.useRef(null);
   const loadedCareSummaryKeyRef = React.useRef("");
   const loadedLinkedAnimalRef = React.useRef(null);
@@ -268,12 +276,39 @@ export default function Dashboard() {
     setMobileMoreOpen(false);
     navigate("/dashboard/ffa-projects");
   };
+  const handleAdvisorDashboardClick = () => {
+    setMobileMoreOpen(false);
+    navigate("/advisor");
+  };
   const isCompact = preferences.dashboardDensity === "compact";
   const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
   const onboardingDefaultSpecies = React.useMemo(
     () => getOnboardingDefaultSpecies(backendUser?.onboarding),
     [backendUser?.onboarding]
   );
+
+  useEffect(() => {
+    if (backendAdvisorDashboardAvailable) {
+      setAdvisorDashboardAvailable(true);
+    }
+  }, [backendAdvisorDashboardAvailable]);
+
+  useEffect(() => {
+    if (backendAdvisorDashboardAvailable) return undefined;
+
+    let cancelled = false;
+    getMyFfaChapter()
+      .then((response) => {
+        if (cancelled || response.data?.advisorDashboardAvailable !== true) return;
+        setAdvisorDashboardAvailable(true);
+        refreshBackendUser().catch(() => {});
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [backendAdvisorDashboardAvailable, refreshBackendUser]);
   const getAnimalPrimaryLabel = (animal) => {
     return getAnimalDisplayName(animal, { preferTag: primaryAnimalIdentifier === "tag" });
   };
@@ -1148,6 +1183,16 @@ export default function Dashboard() {
             FFA Projects
           </button>
 
+          {advisorDashboardAvailable && (
+            <button
+              type="button"
+              onClick={handleAdvisorDashboardClick}
+              className="w-full cursor-pointer rounded-xl border border-blue-400/35 bg-blue-500/10 px-4 py-3 text-left font-semibold text-blue-100 transition hover:bg-blue-500/20"
+            >
+              Advisor Dashboard
+            </button>
+          )}
+
           <div className="mt-4 px-4 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
             Animals
           </div>
@@ -1640,6 +1685,16 @@ export default function Dashboard() {
                     >
                       FFA Projects
                     </button>
+                    {advisorDashboardAvailable && (
+                      <button
+                        type="button"
+                        onClick={handleAdvisorDashboardClick}
+                        className="dashboard-mobile-more-item"
+                        role="menuitem"
+                      >
+                        Advisor Dashboard
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -1709,6 +1764,16 @@ export default function Dashboard() {
                     >
                       FFA Projects
                     </button>
+                    {advisorDashboardAvailable && (
+                      <button
+                        type="button"
+                        onClick={handleAdvisorDashboardClick}
+                        className="dashboard-mobile-more-item"
+                        role="menuitem"
+                      >
+                        Advisor Dashboard
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

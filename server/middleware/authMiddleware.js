@@ -178,6 +178,7 @@ function sanitizeFfaAccessForUser(ffaAccess = {}) {
         chapter: sanitizeFfaChapter(ffaAccess.chapter),
         chapters,
         membershipCount: Number(ffaAccess.membershipCount) || chapters.length,
+        hasAdvisorMembership: ffaAccess.hasAdvisorMembership === true,
         isAdvisor: ffaAccess.isAdvisor === true,
         advisorChapter: sanitizeFfaChapter(ffaAccess.advisorChapter),
         chapterPremiumActive: ffaAccess.chapterPremiumActive === true,

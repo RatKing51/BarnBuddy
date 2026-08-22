@@ -8,6 +8,7 @@ import {
 } from "../api/ffaChapters";
 import EmptyState from "./EmptyState";
 import { SkeletonBlock, SkeletonCard } from "./LoadingSpinner";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
 
 function firstDefined(...values) {
   return values.find((value) => value !== undefined && value !== null);
@@ -277,10 +278,12 @@ export default function AdvisorSharedProjects({ enabled, chapterStatus = "ACTIVE
 
   useEffect(() => setSharingEnabled(enabled === true), [enabled]);
 
-  const loadProjects = useCallback(async () => {
+  const loadProjects = useCallback(async ({ silent = false } = {}) => {
     try {
-      setLoadingProjects(true);
-      setListError("");
+      if (!silent) {
+        setLoadingProjects(true);
+        setListError("");
+      }
       const response = await getAdvisorSharedProjects();
       const nextProjects = normalizeProjectList(response.data);
       setProjects(nextProjects);
@@ -288,9 +291,11 @@ export default function AdvisorSharedProjects({ enabled, chapterStatus = "ACTIVE
         ? current
         : nextProjects[0]?.shareId ?? null);
     } catch (error) {
-      setListError(getFfaApiError(error, "BarnBuddy could not load shared FFA projects."));
+      if (!silent) {
+        setListError(getFfaApiError(error, "BarnBuddy could not load shared FFA projects."));
+      }
     } finally {
-      setLoadingProjects(false);
+      if (!silent) setLoadingProjects(false);
     }
   }, []);
 
@@ -304,6 +309,12 @@ export default function AdvisorSharedProjects({ enabled, chapterStatus = "ACTIVE
     }
     loadProjects();
   }, [loadProjects, sharingEnabled]);
+
+  const liveRefreshProjects = useCallback(
+    () => loadProjects({ silent: true }),
+    [loadProjects]
+  );
+  useLiveRefresh(liveRefreshProjects, { enabled: sharingEnabled });
 
   useEffect(() => {
     if (!sharingEnabled || !selectedShareId) {

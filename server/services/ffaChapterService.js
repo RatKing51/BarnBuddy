@@ -367,6 +367,7 @@ function createEmptyFfaAccess(lookupFailed = false) {
     chapters: [],
     accesses: [],
     membershipCount: 0,
+    hasAdvisorMembership: false,
     isAdvisor: false,
     advisorChapter: null,
     chapterPremiumActive: false,
@@ -430,6 +431,9 @@ async function getUserFfaAccess(clerkUserId, options = {}) {
       }),
     }));
     const advisorEntry = chooseAdvisorChapter(chapterEntries);
+    const hasAdvisorMembership = chapterEntries.some(
+      (entry) => getMembershipRole(entry.membership) === "org:admin"
+    );
     const premiumEntry = chapterEntries.find((entry) => isChapterPremiumCurrent(entry.chapter, options.now)) || null;
     const safeAdvisor = advisorEntry
       ? serializeChapterForMember(advisorEntry.chapter, {
@@ -454,6 +458,9 @@ async function getUserFfaAccess(clerkUserId, options = {}) {
         role: getMembershipRole(membership),
       })),
       membershipCount: safeEntries.length,
+      // This is a navigation hint only. Advisor API routes still require the
+      // canonical advisor identity check before returning protected data.
+      hasAdvisorMembership,
       isAdvisor: Boolean(advisorEntry),
       advisorChapter: safeAdvisor,
       chapterPremiumActive: Boolean(premiumEntry),

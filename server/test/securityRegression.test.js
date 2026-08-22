@@ -177,6 +177,7 @@ test("a failed personal Billing recheck neither grants stale Premium nor rewrite
 test("request user FFA state omits internal membership, code, and Clerk Organization identifiers", () => {
   const safe = sanitizeFfaAccessForUser({
     hasChapter: true,
+    hasAdvisorMembership: true,
     chapters: [{
       id: 3,
       chapterName: "Herington FFA",
@@ -195,6 +196,7 @@ test("request user FFA state omits internal membership, code, and Clerk Organiza
   const serialized = JSON.stringify(safe);
 
   assert.equal(safe.chapter.chapterName, "Herington FFA");
+  assert.equal(safe.hasAdvisorMembership, true);
   assert.doesNotMatch(serialized, /ABCD-EFGH-JKLM/);
   assert.doesNotMatch(serialized, /org_secret/);
   assert.equal(Object.hasOwn(safe, "accesses"), false);
