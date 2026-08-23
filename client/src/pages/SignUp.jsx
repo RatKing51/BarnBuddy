@@ -1,6 +1,7 @@
 import React from "react";
 import { SignUp as ClerkSignUp, useAuth } from "@clerk/react";
-import { Navigate, useLocation } from "react-router";
+import { useLocation } from "react-router";
+import InvitationCompletionRedirect from "../components/InvitationCompletionRedirect";
 
 function safeInternalReturnTo(value, fallback = "/dashboard") {
   const candidate = typeof value === "string" ? value.trim() : "";
@@ -92,7 +93,7 @@ export default function SignUp() {
   const completedInvitation = searchParams.get("__clerk_status") === "complete";
 
   if (isLoaded && isSignedIn && completedInvitation) {
-    return <Navigate to={returnTo} replace />;
+    return <InvitationCompletionRedirect to={returnTo} />;
   }
 
   return (

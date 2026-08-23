@@ -122,7 +122,7 @@ export default function FfaChapterSettingsCard() {
       setCode("");
 
       try {
-        await refreshBackendUser();
+        await refreshBackendUser({ refreshFfaAccess: true });
       } catch {
         // The membership is already complete; the next authenticated refresh will reconcile access state.
       }

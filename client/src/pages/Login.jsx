@@ -1,6 +1,7 @@
 import React from "react";
 import { SignIn, useAuth } from "@clerk/react";
 import { Navigate, useLocation } from "react-router";
+import InvitationCompletionRedirect from "../components/InvitationCompletionRedirect";
 
 function safeInternalReturnTo(value, fallback = "/dashboard") {
   const candidate = typeof value === "string" ? value.trim() : "";
@@ -97,7 +98,7 @@ export default function Login() {
   }
 
   if (isLoaded && isSignedIn && invitationTicket && invitationStatus === "complete") {
-    return <Navigate to={returnTo} replace />;
+    return <InvitationCompletionRedirect to={returnTo} />;
   }
 
   return (
