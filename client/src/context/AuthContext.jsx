@@ -43,8 +43,15 @@ export function AuthProvider({ children }) {
         });
     }, [getToken, isSignedIn]);
 
-    const refreshBackendUser = useCallback(async function refreshBackendUser() {
+    const refreshBackendUser = useCallback(async function refreshBackendUser({ refreshFfaAccess = false } = {}) {
         if (!isSignedIn) return null;
+
+        if (refreshFfaAccess) {
+            // Invitation acceptance can change Clerk Organization membership
+            // without changing the signed-in session. Refresh that membership
+            // cache before rebuilding the shared BarnBuddy user state.
+            await authFetch(`${API_URL}/ffa-chapters/me`).catch(() => null);
+        }
 
         const res = await authFetch(`${API_URL}/auth/me`);
         const data = await res.json().catch(() => ({}));
