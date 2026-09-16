@@ -12,6 +12,7 @@ import {
 import EmptyState from "../components/EmptyState";
 import AdvisorSharedProjects from "../components/AdvisorSharedProjects";
 import { SkeletonBlock, SkeletonCard } from "../components/LoadingSpinner";
+import { useAuth } from "../context/AuthContext";
 import { LIVE_REFRESH_INTERVAL_MS, useLiveRefresh } from "../hooks/useLiveRefresh";
 
 function firstDefined(...values) {
@@ -210,6 +211,7 @@ function AdvisorSkeleton() {
 
 export default function AdvisorDashboard() {
   const routeContext = useOutletContext();
+  const { refreshBackendUser } = useAuth();
   const initialData = routeContext?.advisorBootstrap || null;
   const [advisorData, setAdvisorData] = useState(() => initialData ? normalizeAdvisorData(initialData) : null);
   const [loading, setLoading] = useState(!initialData);
@@ -244,7 +246,17 @@ export default function AdvisorDashboard() {
       }
       return true;
     } catch (requestError) {
-      if (!silent) {
+      const requestStatus = requestError?.response?.status || null;
+      const accessLost = requestStatus === 401 || requestStatus === 403 || requestStatus === 404;
+
+      if (accessLost) {
+        memberCountRef.current = null;
+        setAdvisorData(null);
+        setError(requestStatus === 401
+          ? "Your session could not be verified. Sign in again to continue."
+          : "Advisor access is no longer available for this account.");
+        refreshBackendUser({ refreshFfaAccess: true }).catch(() => {});
+      } else if (!silent) {
         setError(getFfaApiError(requestError, "BarnBuddy could not load the advisor dashboard."));
       }
       return false;
@@ -252,7 +264,7 @@ export default function AdvisorDashboard() {
       if (showLoading) setLoading(false);
       else if (!silent) setRefreshing(false);
     }
-  }, []);
+  }, [refreshBackendUser]);
 
   useEffect(() => {
     if (!initialData) loadAdvisor({ showLoading: true });
