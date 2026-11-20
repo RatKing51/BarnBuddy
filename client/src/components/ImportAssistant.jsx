@@ -503,7 +503,7 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
 
   return (
     <div className="space-y-6 text-gray-100">
-      <section className="rounded-2xl border border-gray-800 bg-gray-900 p-5 shadow-md sm:p-6">
+      <section className="rounded-2xl border border-gray-800 bg-gray-900 p-4 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-300">Import Assistant</p>
@@ -572,7 +572,7 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
         </div>
       </section>
 
-      <section id="ai-extraction" className="scroll-mt-6 rounded-2xl border border-blue-400/40 bg-gray-900 p-5 shadow-lg shadow-blue-950/20 sm:p-6">
+      <section id="ai-extraction" className="scroll-mt-6 rounded-2xl border border-blue-400/40 bg-gray-900 border-l-4 border-l-blue-400 p-4 sm:p-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-300">Guided AI extraction</p>

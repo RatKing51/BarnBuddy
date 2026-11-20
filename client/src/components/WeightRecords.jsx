@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import * as weightRecordsAPI from "../api/weightRecords";
 import { SkeletonBlock } from "./LoadingSpinner";
 
@@ -130,8 +130,8 @@ function WeightChart({ records }) {
 }
 
 function WeightRecordsSkeleton() {
-  const panelClass = "rounded-2xl border border-gray-700 bg-gray-900 p-4 shadow-md";
-  const surfaceClass = "space-y-4 rounded-2xl border border-gray-700 bg-gray-800 p-5 shadow-md";
+  const panelClass = "rounded-2xl border border-gray-700 bg-gray-900 p-4";
+  const surfaceClass = "space-y-4 rounded-2xl border border-gray-700 bg-gray-800 p-4 sm:p-5";
 
   return (
     <div className="space-y-6" aria-busy="true">
@@ -145,7 +145,7 @@ function WeightRecordsSkeleton() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
-        <div className="rounded-2xl border border-gray-700 bg-gray-900 p-3 shadow-md sm:p-5">
+        <div className="rounded-2xl border border-gray-700 bg-gray-900 p-3 sm:p-5">
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div className="space-y-2">
               <SkeletonBlock className="h-5 w-32" />
@@ -543,7 +543,6 @@ export default function WeightRecords({ animal, onAnimalSaved }) {
         )}
       </div>
 
-      <ToastContainer autoClose="1000" />
     </div>
   );
 }

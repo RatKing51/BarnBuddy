@@ -126,7 +126,7 @@ export default function Footer() {
           <div className="md:col-span-2 lg:col-span-1">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300">From the barn</p>
-              <h2 className="mt-2 text-xl font-bold">Useful updates, not inbox clutter.</h2>
+              <h2 className="mt-2 text-xl font-bold">Get BarnBuddy updates.</h2>
               <p className="mt-2 text-sm leading-6 text-slate-300">
                 Get occasional product news, record-keeping tips, and practical guides for smaller operations.
               </p>

@@ -1,200 +1,58 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router";
-import LargeLandingCard from "../components/LargeLandingCard";
-import ReviewLandingCard from "../components/ReviewLandingCard";
-import LargeAboutMeLanding from "../components/LargeAboutMeLanding";
-import RecentNewsCard from "../components/RecentNewsCard";
-import Footer from "../components/Footer";
-import { newsPosts } from "../data/newsPosts";
-import { landingReviews } from "../data/reviews";
-import { getSiteContent } from "../api/siteContent";
-import { defaultSiteContent } from "../data/siteContent";
-
-const featureCards = [
-  {
-    eyebrow: "Animal records",
-    title: "The full story, attached to the animal.",
-    copy: "Keep identification, notes, weights, health history, vaccinations, and vet visits organized in one profile.",
-  },
-  {
-    eyebrow: "Herd organization",
-    title: "A clear view across every herd.",
-    copy: "Group animals the way your operation works and move between herd-level details without losing context.",
-  },
-  {
-    eyebrow: "Care visibility",
-    title: "Know what needs attention next.",
-    copy: "See due and overdue care in the dashboard so important follow-ups are easier to catch before they slip by.",
-  },
-  {
-    eyebrow: "Useful reporting",
-    title: "Records ready when decisions matter.",
-    copy: "Turn day-to-day entries into practical histories and exports for the farm, the vet, or an FFA project.",
-  },
-];
-
-const workflowSteps = [
-  ["1", "Record", "Add the details while they are fresh—from the barn, show ring, or kitchen table."],
-  ["2", "Review", "Open a herd or animal and quickly understand its history and current care status."],
-  ["3", "Act", "Use clear dates and organized records to plan the next task with more confidence."],
-];
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
+import LargeLandingCard from '../components/LargeLandingCard';
+import Footer from '../components/Footer';
+import MarketingMotion from '../components/MarketingMotion';
+import FeatureExplorer from '../components/FeatureExplorer';
+import { getSiteContent } from '../api/siteContent';
+import { defaultSiteContent } from '../data/siteContent';
+import { getSiteAssetUrl, resolveSiteImageUrl } from '../config/siteImages';
+import '../styles/marketing.css';
 
 export default function Landing() {
-  const [reviews, setReviews] = useState(landingReviews);
-  const [posts, setPosts] = useState(newsPosts);
-  const [carouselSlides, setCarouselSlides] = useState(defaultSiteContent.carouselSlides);
-  const recentPosts = posts.filter((post) => post.published !== false).slice(0, 2);
-
+  const [content, setContent] = useState(defaultSiteContent);
   useEffect(() => {
     let cancelled = false;
-
-    async function loadContent() {
-      try {
-        const content = await getSiteContent();
-        if (!cancelled) {
-          setReviews(Array.isArray(content.reviews) ? content.reviews : defaultSiteContent.reviews);
-          setPosts(Array.isArray(content.newsPosts) ? content.newsPosts : defaultSiteContent.newsPosts);
-          setCarouselSlides(Array.isArray(content.carouselSlides) ? content.carouselSlides : defaultSiteContent.carouselSlides);
-        }
-      } catch (error) {
-        console.warn("Using bundled landing content:", error.message);
-      }
-    }
-
-    loadContent();
-    return () => {
-      cancelled = true;
-    };
+    getSiteContent().then(data => {
+      if (!cancelled) setContent({
+        reviews: Array.isArray(data.reviews) ? data.reviews : defaultSiteContent.reviews,
+        newsPosts: Array.isArray(data.newsPosts) ? data.newsPosts : defaultSiteContent.newsPosts,
+        carouselSlides: Array.isArray(data.carouselSlides) ? data.carouselSlides : defaultSiteContent.carouselSlides,
+      });
+    }).catch(error => console.warn('Using bundled landing content:', error.message));
+    return () => { cancelled = true; };
   }, []);
-
+  const posts = content.newsPosts.filter(post => post.published !== false).slice(0, 2);
+  const reviews = content.reviews.filter(review => review.published !== false);
   return (
-    <div className="public-page flex min-h-screen flex-col">
-      <main className="flex-grow">
-        <LargeLandingCard slides={carouselSlides} />
-
-        <section id="features" className="scroll-mt-24 border-y border-white/10 bg-[#07102a]/45 px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[0.72fr_1.28fr] lg:items-end lg:gap-16">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">One place for the work that matters</p>
-                <h2 className="mt-3 text-3xl font-black tracking-[-0.035em] text-white sm:text-4xl lg:text-5xl">Built around livestock, not spreadsheets.</h2>
-              </div>
-              <p className="max-w-2xl text-lg leading-8 text-slate-300 lg:justify-self-end">
-                BarnBuddy turns everyday entries into an organized record of each animal and herd, while keeping the workflow simple enough to use consistently.
-              </p>
-            </div>
-
-            <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2">
-              {featureCards.map((feature, index) => (
-                <article key={feature.eyebrow} className="bb-card-lift group rounded-2xl border border-white/10 bg-white/5 p-6 shadow-xl shadow-black/10 sm:p-7">
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300">{feature.eyebrow}</p>
-                    <span className="text-sm font-black text-white/20 transition group-hover:text-blue-300">0{index + 1}</span>
-                  </div>
-                  <h3 className="mt-5 text-xl font-bold text-white sm:text-2xl">{feature.title}</h3>
-                  <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300 sm:text-base sm:leading-7">{feature.copy}</p>
-                </article>
-              ))}
+    <div className="bb-marketing">
+      <MarketingMotion />
+      <main>
+        <LargeLandingCard slides={content.carouselSlides} />
+        <section id="features" className="bb-section bb-container">
+          <FeatureExplorer />
+        </section>
+        <section id="chapter-mode" className="bb-chapter">
+          <div className="bb-container bb-chapter-layout">
+            <div className="bb-chapter-copy" data-reveal><h2>Chapter Mode</h2><p>Members keep their own project records. A student can log a project animal’s weight, write a journal entry, and bring those records to their next advisor meeting.</p><div className="bb-actions"><Link to="/contact?topic=School%20or%20chapter%20pricing" className="bb-button bb-button-light">Ask about chapter pricing</Link><Link to="/pricing" className="bb-text-link">See plans</Link></div><p className="bb-privacy-note">Members choose what to share. Private projects stay private.</p></div>
+            <div className="bb-chapter-flow" data-reveal>
+              <ol>
+                <li><span>1</span><div><h3>Join your chapter</h3><p>Enter the chapter code in your account settings.</p></div></li>
+                <li><span>2</span><div><h3>Choose what to share</h3><p>Each member selects the projects they want their advisor to see.</p></div></li>
+                <li><span>3</span><div><h3>Review together</h3><p>Open a shared project in the advisor dashboard.</p></div></li>
+              </ol>
+              <Link to="/settings/account" className="bb-flow-link">Already have a chapter code? Join in account settings</Link>
             </div>
           </div>
         </section>
-
-        <section className="px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-          <div className="mx-auto max-w-7xl rounded-3xl border border-white/10 bg-[#0f2650] p-6 shadow-2xl shadow-black/20 sm:p-9 lg:p-10">
-            <div className="max-w-3xl">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">From note to next step</p>
-              <h2 className="mt-3 text-3xl font-black tracking-[-0.035em] text-white sm:text-4xl">A workflow you can remember without a manual.</h2>
-            </div>
-            <div className="mt-9 grid grid-cols-1 gap-4 md:grid-cols-3">
-              {workflowSteps.map(([number, title, copy]) => (
-                <article key={number} className="rounded-2xl border border-white/10 bg-[#0b1730]/75 p-5 sm:p-6">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-600 text-sm font-black text-white">{number}</span>
-                  <h3 className="mt-5 text-xl font-bold text-white">{title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">{copy}</p>
-                </article>
-              ))}
-            </div>
-          </div>
+        <section className="bb-section bb-container bb-story">
+          <div data-reveal><h2>It started with our goats</h2><p>My family raises meat goats in Kansas. We had health notes in notebooks and project records in spreadsheets. I built BarnBuddy so we could look up an animal and find both.</p><p>That’s the idea behind the animal profile. When it’s time for another weigh-in or vet visit, the last entry is right there with the new one.</p><Link className="bb-text-link" to="/aboutus">Read the BarnBuddy story</Link></div>
+          <div className="bb-founder-photo" data-reveal><img src={getSiteAssetUrl('IMG_5761.JPEG')} alt="BarnBuddy founder Gage Billinger at a Kansas FFA event" loading="lazy" width="1620" height="1080" /><span>Gage Billinger · Founder, BarnBuddy</span></div>
         </section>
-
-        {reviews.length > 0 && (
-          <section className="px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-            <div className="mx-auto max-w-7xl">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">From BarnBuddy users</p>
-                  <h2 className="mt-3 text-3xl font-black tracking-[-0.035em] text-white sm:text-4xl">Made useful by real feedback.</h2>
-                </div>
-                <Link to="/contact?topic=Review%20or%20feedback" className="inline-flex min-h-11 items-center font-bold text-blue-200 hover:text-blue-100">
-                  Share your experience →
-                </Link>
-              </div>
-
-              <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
-                {reviews.map((review) => (
-                  <ReviewLandingCard key={review.id || `${review.name}-${review.date}`} {...review} />
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        <LargeAboutMeLanding />
-
-        <section className="px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-          <div className="mx-auto max-w-6xl">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">From the barn</p>
-                <h2 className="mt-3 text-3xl font-black tracking-[-0.035em] text-white sm:text-4xl">Product news and practical updates.</h2>
-              </div>
-              <Link to="/news" className="inline-flex min-h-11 items-center font-bold text-blue-200 hover:text-blue-100">
-                View all news →
-              </Link>
-            </div>
-
-            {recentPosts.length > 0 ? (
-              <div className="mt-8 space-y-5">
-                {recentPosts.map((post) => (
-                  <RecentNewsCard
-                    key={post.id}
-                    title={post.title}
-                    excerpt={post.excerpt}
-                    date={post.date}
-                    image={post.image}
-                    imageAlt={post.imageAlt}
-                    imageFit={post.imageFit}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="mt-8 rounded-2xl border border-dashed border-white/15 bg-white/5 p-8 text-center sm:p-10">
-                <p className="text-xl font-bold text-white">The next update is in the works.</p>
-                <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-300">Check back for product notes and practical record-keeping ideas from BarnBuddy.</p>
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section className="px-4 pb-16 sm:px-6 sm:pb-24 lg:px-8">
-          <div className="mx-auto flex max-w-7xl flex-col gap-7 rounded-3xl border border-blue-300/20 bg-gradient-to-br from-blue-600 to-blue-800 p-7 shadow-2xl shadow-blue-950/30 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-100">Doing for the Small</p>
-              <h2 className="mt-3 text-3xl font-black tracking-[-0.035em] text-white sm:text-4xl">Give every animal a record you can rely on.</h2>
-              <p className="mt-3 leading-7 text-blue-50/85">Start with the core tools for free and build better record-keeping habits one entry at a time.</p>
-            </div>
-            <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
-              <Link to="/signup" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 font-bold text-blue-800 transition hover:bg-blue-50">
-                Create a free account
-              </Link>
-              <Link to="/pricing" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/25 bg-white/10 px-6 font-bold text-white transition hover:bg-white/15">
-                Compare plans
-              </Link>
-            </div>
-          </div>
-        </section>
+        {reviews.length > 0 && <section className="bb-section bb-container bb-reviews" data-reveal><div className="bb-section-heading"><h2>What farmers are saying</h2><Link className="bb-text-link" to="/contact?topic=Review%20or%20feedback">Share your experience</Link></div>{reviews.map(review => <blockquote key={review.id || `${review.name}-${review.date}`}><p>{review.text}</p><footer>{review.name}{review.role ? ` · ${review.role}` : ''}</footer></blockquote>)}</section>}
+        <section className="bb-section bb-container bb-news"><div className="bb-section-heading"><h2>What’s new</h2><Link to="/news" className="bb-text-link">All updates</Link></div><div className="bb-news-grid" data-reveal>{posts.length ? posts.map(post => <Link to={`/news/${encodeURIComponent(post.id)}`} className="bb-news-item" key={post.id}><div className="bb-news-image"><img src={resolveSiteImageUrl(post.image)} alt={post.imageAlt || ''} loading="lazy" style={{ objectFit: post.imageFit === 'contain' ? 'contain' : 'cover' }} /></div><div><span className="bb-category">{post.category || 'Product update'}</span><h3>{post.title}</h3><p>{post.excerpt}</p><time dateTime={post.date}>{new Date(`${post.date.slice(0,10)}T12:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</time></div></Link>) : <p>No updates yet.</p>}</div></section>
+        <section className="bb-closing"><div className="bb-container" data-reveal><div><h2>Add your first animal</h2><p>Start with a name or ear tag. You can fill in weights and care records as you go.</p></div><div className="bb-actions"><Link to="/signup" className="bb-button bb-button-primary">Create a free account</Link><Link to="/pricing" className="bb-button bb-button-secondary">Compare plans</Link></div></div></section>
       </main>
-
       <Footer />
     </div>
   );

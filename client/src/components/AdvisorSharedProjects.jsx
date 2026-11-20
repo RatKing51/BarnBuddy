@@ -164,7 +164,7 @@ function SharedProjectDetail({ details }) {
           ["Expenses", money(summary.expenses)],
           ["Net", money(summary.profit)],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-xl border border-gray-700 bg-gray-950 p-3">
+          <div key={label} className="border-l-2 border-gray-700 px-3 py-1 tabular-nums">
             <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</dt>
             <dd className="mt-1 text-lg font-semibold text-white">{value}</dd>
           </div>

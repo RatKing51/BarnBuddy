@@ -261,13 +261,14 @@ export default function DashboardOverview({
           <div>
             <p className="text-sm font-semibold text-blue-300">{selectedHerd?.name || "Herd"}</p>
             <h2 className="mt-1 text-2xl font-semibold text-white">Farm overview</h2>
+            <p className="mt-2 text-sm text-gray-400">Check upcoming care for this herd, then select an animal to open its records.</p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-5 border-y border-gray-700 py-4 sm:grid-cols-3 lg:grid-cols-6">
           {kpis.map((item) => (
-            <div key={item.label} className="rounded-xl border border-gray-800 bg-gray-950 px-4 py-3">
+            <div key={item.label} className="min-w-0 pl-3 border-l-2 border-gray-700">
               <p className="text-xs uppercase tracking-[0.12em] text-gray-500">{item.label}</p>
-              <p className="mt-2 text-2xl font-bold text-white">{item.value}</p>
+              <p className="mt-1 text-3xl font-semibold tabular-nums text-white">{item.value}</p>
               <p className="mt-1 truncate text-xs text-gray-400">{item.helper}</p>
             </div>
           ))}

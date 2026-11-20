@@ -62,6 +62,7 @@ function routeHtmlPath(route) {
     return route === "/" ? path.join(outputDirectory, "index.html") : path.join(outputDirectory, route.slice(1), "index.html");
   }
 
+  if (/^\/news\/[^/]+$/.test(route)) return path.join(outputDirectory, "news", "index.html");
   if (route.startsWith("/login/")) return path.join(outputDirectory, "login", "index.html");
   if (route.startsWith("/signup/")) return path.join(outputDirectory, "signup", "index.html");
   if (isPrivateRoute(route)) {
@@ -119,7 +120,7 @@ const server = createServer((request, response) => {
 
   const route = normalizeRoute(pathname);
   const privateRoute = isPrivateRoute(route);
-  const knownRoute = publicRoutes.has(route) || route.startsWith("/login/") || route.startsWith("/signup/") || privateRoute;
+  const knownRoute = /^\/news\/[^/]+$/.test(route) || publicRoutes.has(route) || route.startsWith("/login/") || route.startsWith("/signup/") || privateRoute;
   const hasFileExtension = Boolean(path.extname(route));
 
   if (hasFileExtension) {

@@ -46,7 +46,7 @@ const saeTypes = [
 const tabs = ["Overview", "Journal", "Finances", "Setup"];
 const fieldClass = "mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/15";
 const labelClass = "text-sm font-semibold text-slate-200";
-const panelClass = "rounded-2xl border border-slate-800 bg-slate-900/80 shadow-xl shadow-black/10";
+const panelClass = "rounded-lg border border-slate-800 bg-slate-900/80";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -872,7 +872,7 @@ export default function FfaProjects() {
             <div className="space-y-4"><div className="h-32 animate-pulse rounded-2xl bg-slate-900" /><div className="h-72 animate-pulse rounded-2xl bg-slate-900" /></div>
           ) : (
             <>
-              <section className="rounded-2xl border border-blue-400/20 bg-gradient-to-br from-blue-500/10 via-slate-900 to-slate-900 p-5 sm:p-7 print:hidden">
+              <section className="border-l-4 border-blue-400 bg-slate-900 p-5 sm:p-7 print:hidden">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="max-w-3xl">
                     <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-blue-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white">{saeTypes.find((type) => type.value === details.project.sae_type)?.label || details.project.sae_type}</span><span className="text-xs font-bold uppercase tracking-wider text-slate-500">{details.project.school_year}</span></div>

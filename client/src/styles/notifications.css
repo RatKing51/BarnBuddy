@@ -1,0 +1,58 @@
+.bb-notifications.Toastify__toast-container {
+  --toastify-font-family: var(--bb-heading-font);
+  --toastify-color-dark: #15263d;
+  --toastify-text-color-dark: #f2f6fc;
+  --toastify-color-info: #85b7ff;
+  --toastify-color-success: #81c9a4;
+  --toastify-color-warning: #f0c673;
+  --toastify-color-error: #ffa7a7;
+  --toastify-color-progress-dark: var(--toastify-color-info);
+  --toastify-toast-min-height: 3rem;
+  --toastify-toast-width: 21rem;
+  --toastify-toast-bd-radius: .5rem;
+  --toastify-toast-padding: .8rem 2.65rem .8rem .9rem;
+  --toastify-toast-shadow: 0 3px 12px rgb(0 0 0 / 15%);
+  --notice-border: #455a74;
+}
+.bb-light .bb-notifications.Toastify__toast-container {
+  --toastify-color-dark: #f8faff;
+  --toastify-text-color-dark: #182d48;
+  --toastify-color-info: #245ea2;
+  --toastify-color-success: #28714f;
+  --toastify-color-warning: #8e600f;
+  --toastify-color-error: #ac3d43;
+  --notice-border: #bdcbdc;
+}
+.bb-notifications .Toastify__toast {
+  font-size: .9rem;
+  font-weight: 550;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--notice-border);
+}
+.bb-notifications .Toastify__toast-icon { width: 1.05rem; margin-inline-end: .65rem }
+.bb-notifications .Toastify__progress-bar { height: 2px }
+.bb-notifications .Toastify__close-button {
+  color: var(--toastify-text-color-dark);
+  opacity: .8;
+  top: .25rem; right: .25rem;
+  display: grid; place-items: center;
+  width: 2rem; height: 2rem;
+}
+.bb-notifications .Toastify__close-button:focus-visible { outline: 2px solid var(--toastify-color-info) }
+@media (max-width: 480px) {
+  .bb-notifications.Toastify__toast-container {
+    top: max(.75rem, env(safe-area-inset-top));
+    left: max(.75rem, env(safe-area-inset-left));
+    right: max(.75rem, env(safe-area-inset-right));
+    width: auto;
+    --toastify-toast-width: 100%;
+  }
+  .bb-notifications .Toastify__toast { border-radius: .5rem; margin-bottom: .5rem }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bb-notifications .Toastify__toast, .bb-notifications .Toastify__toast-icon {
+    animation-duration: 1ms;
+    transition-duration: 1ms;
+  }
+}

@@ -99,10 +99,10 @@ export default function SignUp() {
   return (
     <div className="signup-page public-page min-h-screen text-white">
       <main>
-        <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-10 lg:items-center">
-            <div className="flex min-w-0 items-center lg:col-span-5">
-              <div className="mx-auto w-full max-w-[25rem] rounded-xl border border-white/10 bg-[#0f2650] p-4 shadow-lg sm:p-8">
+        <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-12 lg:items-start">
+            <div className="flex min-w-0 items-center lg:col-span-6">
+              <div className="mx-auto w-full max-w-[28rem] rounded-lg border border-white/15 bg-[#0f2650] p-5 sm:p-8">
                 <div className="mb-5 sm:mb-6">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-blue-200 sm:hidden">
                     BarnBuddy.
@@ -125,7 +125,7 @@ export default function SignUp() {
               </div>
             </div>
 
-            <div className="flex min-w-0 items-center lg:col-span-7">
+            <div className="flex min-w-0 items-center lg:col-span-6">
               <div className="mx-auto w-full max-w-xl bg-transparent py-2 sm:py-4 lg:p-6">
                 <h2 className="hidden text-3xl font-semibold sm:mb-4 sm:block lg:text-4xl">
                   BarnBuddy.
@@ -136,21 +136,21 @@ export default function SignUp() {
                 </p>
 
                 <div className="grid grid-cols-1 gap-3 text-sm text-white/80 sm:grid-cols-3 lg:grid-cols-1">
-                  <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 sm:border-0 sm:bg-transparent sm:p-0">
+                  <div className="border-t border-white/15 pt-3">
                     <h3 className="font-semibold text-white">Why sign up?</h3>
                     <p className="mt-1">
-                      Track animals and tasks with clean tools built for real farm workflows.
+                      Add animals to a herd and record their care as you go.
                     </p>
                   </div>
 
-                  <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 sm:border-0 sm:bg-transparent sm:p-0">
+                  <div className="border-t border-white/15 pt-3">
                     <h3 className="font-semibold text-white">What you'll get</h3>
                     <p className="mt-1">
                       Smart forms, exportable records, and templates that stay out of your way.
                     </p>
                   </div>
 
-                  <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 sm:border-0 sm:bg-transparent sm:p-0">
+                  <div className="border-t border-white/15 pt-3">
                     <h3 className="font-semibold text-white">Privacy first</h3>
                     <p className="mt-1">
                       Your data stays yours. Export anytime and delete your account whenever you want.

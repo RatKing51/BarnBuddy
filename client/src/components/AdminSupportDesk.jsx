@@ -82,7 +82,7 @@ function StatusBadge({ children, tone = 'slate' }) {
 function Detail({ label, value, mono = false }) {
   return (
     <div>
-      <dt className="text-xs font-semibold uppercase tracking-[0.13em] text-slate-500">{label}</dt>
+      <dt className="text-xs font-semibold tracking-wide text-slate-400">{label}</dt>
       <dd className={`mt-1 break-words text-sm text-slate-200 ${mono ? 'font-mono text-xs' : ''}`}>{value || 'Not set'}</dd>
     </div>
   )
@@ -225,7 +225,7 @@ export default function AdminSupportDesk({
             ['Priority accounts', priorityUsers],
           ].map(([label, value]) => (
             <div key={label} className="bg-slate-900/95 px-5 py-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.13em] text-slate-500">{label}</p>
+              <p className="text-xs font-semibold tracking-wide text-slate-400">{label}</p>
               <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
             </div>
           ))}
@@ -395,7 +395,7 @@ export default function AdminSupportDesk({
                       ['Recorded actions', counts.activityEvents || 0],
                     ].map(([label, value]) => (
                       <div key={label} className="rounded-lg border border-slate-800 bg-slate-900 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.13em] text-slate-500">{label}</p>
+                        <p className="text-xs font-semibold tracking-wide text-slate-400">{label}</p>
                         <p className="mt-2 text-sm font-semibold text-slate-100">{value}</p>
                       </div>
                     ))}
@@ -576,7 +576,7 @@ export default function AdminSupportDesk({
                         ))}
                       </div>
                       <label className="mt-4 block">
-                        <span className="text-xs font-semibold uppercase tracking-[0.13em] text-slate-500">Private support note</span>
+                        <span className="text-xs font-semibold tracking-wide text-slate-400">Private support note</span>
                         <textarea className={inputClass('mt-2 min-h-32 resize-y')} value={noteDraft} onChange={(event) => onNoteChange(event.target.value)} placeholder="Troubleshooting context, promises made, or follow-up notes." />
                       </label>
                     </Section>

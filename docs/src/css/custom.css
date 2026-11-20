@@ -6,6 +6,8 @@
   --ifm-color-primary-light: #3b82f6;
   --ifm-color-primary-lighter: #60a5fa;
   --ifm-color-primary-lightest: #93c5fd;
+  --ifm-heading-font-family: "Avenir Next", "Segoe UI Variable Display", "Segoe UI", sans-serif;
+  --ifm-heading-font-weight: 600;
   --ifm-code-font-size: 95%;
   --ifm-border-radius: 8px;
 }
@@ -26,13 +28,13 @@
 }
 
 .hero__title {
-  letter-spacing: 0;
+  letter-spacing: -0.025em;
 }
 
 .theme-doc-markdown h1,
 .theme-doc-markdown h2,
 .theme-doc-markdown h3 {
-  letter-spacing: 0;
+  letter-spacing: -0.025em;
 }
 
 .theme-doc-markdown img {
@@ -41,7 +43,6 @@
   margin: 1.5rem 0 2rem;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 12px;
-  box-shadow: 0 18px 45px rgba(2, 6, 23, 0.3);
 }
 
 .navbar__title {
@@ -54,16 +55,14 @@
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 1rem;
   margin: 1.5rem 0;
 }
 
 .doc-card {
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 8px;
-  padding: 1rem;
-  background: rgba(15, 23, 42, 0.72);
+  border-top: 2px solid var(--ifm-color-primary);
+  padding: 1rem 0;
 }
 
 .doc-card h3 {
@@ -73,3 +72,9 @@
 .doc-card p {
   margin-bottom: 0;
 }
+
+.theme-doc-markdown > p, .theme-doc-markdown > ul, .theme-doc-markdown > ol {
+  max-inline-size: 72ch;
+  line-height: 1.7;
+}
+.menu__link--active { box-shadow: inset 2px 0 var(--ifm-color-primary); }

@@ -3,7 +3,7 @@ import * as vaccinationsAPI from "../api/vaccinations";
 import * as vetVisitsAPI from "../api/vetVisits";
 import { createWeightRecord } from "../api/weightRecords";
 import React, { useState, useEffect, useRef } from "react";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 import { usePreferences } from "../context/PreferencesContext";
 import { API_URL } from "../config/env";
@@ -48,7 +48,7 @@ function AnimalGeneralDataSkeleton() {
         ))}
       </div>
 
-      <div className="min-h-80 overflow-hidden rounded-2xl border border-gray-700 bg-gray-800 shadow-lg">
+      <div className="min-h-80 overflow-hidden rounded-2xl border border-gray-700 bg-gray-800">
         <div className="relative grid min-h-80 place-items-center bg-gray-900">
           <SkeletonBlock className="absolute left-4 top-4 h-7 w-36 rounded-full" />
           <SkeletonBlock className="h-40 w-40 rounded-full" />
@@ -913,7 +913,7 @@ export default function AnimalGeneralData({
       </div>
 
       {/* Top Right - Picture */}
-      <div className="min-h-80 bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden shadow-lg">
+      <div className="min-h-80 bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden">
         <label className="w-full h-full min-h-80 relative group block cursor-pointer">
           <img
             src={imageSrc}
@@ -1163,7 +1163,6 @@ export default function AnimalGeneralData({
           </button>
         </div>
       </div>
-      <ToastContainer autoClose="1000" />
       </div>
     </>
   );

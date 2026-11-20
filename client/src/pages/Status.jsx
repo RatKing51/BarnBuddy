@@ -88,7 +88,7 @@ export default function Status() {
       <main className="flex-grow">
         <section className="px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
           <div className="max-w-5xl mx-auto">
-            <div className="rounded-2xl border border-white/10 bg-[#0f2650] p-6 sm:p-8 shadow-2xl shadow-black/20">
+            <div className="rounded-2xl border border-white/10 bg-[#0f2650] border-t-2 border-t-blue-400 p-5 sm:p-8">
               <p className="text-blue-300 text-sm font-semibold uppercase tracking-[0.18em]">Status</p>
 
               {loading ? (
@@ -104,7 +104,7 @@ export default function Status() {
               ) : error ? (
                 <div className="mt-6 rounded-xl border border-amber-300/25 bg-amber-400/8 p-5 sm:p-7" role="alert">
                   <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-300/15 text-xl font-bold text-amber-100" aria-hidden="true">!</div>
-                  <h1 className="mt-5 text-3xl font-semibold leading-tight sm:text-4xl">Live status is temporarily unavailable</h1>
+                  <h1 className="mt-5 text-3xl font-semibold leading-tight sm:text-4xl">We couldn’t load the latest status</h1>
                   <p className="mt-3 max-w-2xl leading-relaxed text-white/76">{error}</p>
                   <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/60">
                     This does not necessarily mean BarnBuddy is down.

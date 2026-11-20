@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import * as premiumRecordsAPI from "../api/premiumRecords";
 import { getAnimalDisplayName } from "../utils/animalLabel";
 import EmptyState from "./EmptyState";
@@ -163,8 +163,8 @@ function CashflowChart({ months }) {
 }
 
 function HerdFinanceSkeleton() {
-  const panelClass = "rounded-2xl border border-gray-700 bg-gray-900 p-5 shadow-md";
-  const surfaceClass = "rounded-2xl border border-gray-700 bg-gray-800 p-5 shadow-md";
+  const panelClass = "rounded-2xl border border-gray-700 bg-gray-900 p-4 sm:p-5";
+  const surfaceClass = "rounded-2xl border border-gray-700 bg-gray-800 p-4 sm:p-5";
 
   return (
     <div className="space-y-6" aria-busy="true">
@@ -189,7 +189,7 @@ function HerdFinanceSkeleton() {
                 <SkeletonBlock className="h-7 w-24" />
               </div>
             </div>
-            <div className="grid grid-cols-[112px_1fr] items-center gap-4">
+            <div className="grid grid-cols-[112px_minmax(0,1fr)] items-center gap-4">
               <SkeletonBlock className="h-28 w-28 rounded-full" />
               <div className="space-y-3">
                 {[0, 1, 2, 3].map((item) => (
@@ -201,7 +201,7 @@ function HerdFinanceSkeleton() {
         ))}
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[380px_1fr]">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
         <div className={surfaceClass}>
           <div className="mb-4 flex items-center justify-between gap-3">
             <SkeletonBlock className="h-5 w-28" />
@@ -700,7 +700,6 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
         </div>
         )}
       </section>
-      <ToastContainer autoClose="1000" />
     </div>
   );
 }

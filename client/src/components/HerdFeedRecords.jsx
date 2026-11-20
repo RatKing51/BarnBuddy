@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import * as premiumRecordsAPI from "../api/premiumRecords";
 import EmptyState from "./EmptyState";
 import { SkeletonBlock } from "./LoadingSpinner";
@@ -37,8 +37,8 @@ function getFeedPayload(record, herd) {
 }
 
 function HerdFeedRecordsSkeleton() {
-  const panelClass = "rounded-2xl border border-gray-700 bg-gray-900 p-5 shadow-md";
-  const surfaceClass = "rounded-2xl border border-gray-700 bg-gray-800 p-5 shadow-md";
+  const panelClass = "rounded-2xl border border-gray-700 bg-gray-900 p-4 sm:p-5";
+  const surfaceClass = "rounded-2xl border border-gray-700 bg-gray-800 p-4 sm:p-5";
 
   return (
     <div className="space-y-6" aria-busy="true">
@@ -53,7 +53,7 @@ function HerdFeedRecordsSkeleton() {
         ))}
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_1fr]">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
         <div className={surfaceClass}>
           <div className="mb-4 flex items-center justify-between gap-3">
             <SkeletonBlock className="h-5 w-32" />
@@ -273,7 +273,7 @@ export default function HerdFeedRecords({ selectedHerd, isPremium = false, autom
         </section>
       )}
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_1fr]">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
         <div className={`rounded-2xl border border-gray-700 bg-gray-800 p-5 ${feedRecords.length === 0 ? "xl:col-span-2" : ""}`}>
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-lg font-semibold text-white">Feed records</h3>
@@ -373,7 +373,6 @@ export default function HerdFeedRecords({ selectedHerd, isPremium = false, autom
         </div>
         )}
       </section>
-      <ToastContainer autoClose="1000" />
     </div>
   );
 }

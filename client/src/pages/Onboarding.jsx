@@ -226,7 +226,7 @@ export default function Onboarding() {
           </button>
         </div>
 
-        <div className="rounded-lg border border-white/10 bg-[#101D42] p-5 shadow-2xl shadow-black/30 sm:p-8">
+        <div className="rounded-lg border-t-2 border-blue-400 bg-[#101D42] p-5 sm:p-8">
           <div className="mb-8">
             <div className="flex items-center justify-between text-sm font-semibold text-slate-300">
               <span>Guided tour step {stepIndex + 1} of {steps.length}</span>

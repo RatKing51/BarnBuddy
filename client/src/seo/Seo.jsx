@@ -12,13 +12,19 @@ function appendMeta(attribute, name, content) {
   document.head.appendChild(element);
 }
 
-export default function Seo() {
+export default function Seo({ article }) {
   const location = useLocation();
   const [announcement, setAnnouncement] = useState("");
 
   useEffect(() => {
     const metadata = getSeoMetadata(location.pathname, location.hash);
 
+    if (article) {
+      metadata.title = article.title + " | BarnBuddy News";
+      metadata.description = article.excerpt;
+      metadata.robots = "index, follow";
+      metadata.type = "article";
+    }
     document.title = metadata.title;
     document.querySelectorAll(`[${SEO_ATTRIBUTE}]`).forEach((element) => element.remove());
 
@@ -55,7 +61,7 @@ export default function Seo() {
 
     const frame = window.requestAnimationFrame(() => setAnnouncement(metadata.title));
     return () => window.cancelAnimationFrame(frame);
-  }, [location.hash, location.pathname]);
+  }, [article, location.hash, location.pathname]);
 
   return (
     <p className="sr-only" aria-live="polite" aria-atomic="true">

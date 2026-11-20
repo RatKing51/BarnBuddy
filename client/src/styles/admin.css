@@ -1,0 +1,79 @@
+.admin-page .admin-layout {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  min-height: 100vh;
+  align-items: start;
+}
+.admin-page { overflow-x: clip }
+.admin-rail {
+  position: sticky; top: 0; max-height: 100dvh; overflow-y: auto;
+  min-height: 100dvh; background: #101d32; color: #e6edf7;
+  border-right: 1px solid #39465a; color-scheme: dark;
+}
+.admin-brand { padding: .85rem 1rem; border-bottom: 1px solid #35445b; font-size: 1.12rem; font-weight: 720 }
+.admin-brand span { color: #a7bbd2; font-size: .8rem; font-weight: 500 }
+.admin-nav { padding-block: .4rem 1rem }
+.admin-nav-group { margin: .8rem .9rem .2rem; color: #a4b6ce; font-size: .66rem; font-weight: 650; text-transform: uppercase; letter-spacing: .08em }
+.admin-nav-button { width: 100%; text-align: left; padding: .34rem .9rem; border-left: 3px solid transparent; font-size: .86rem; line-height: 1.4 }
+.admin-nav-button:hover { background: #1f3049 }
+.admin-nav-button[aria-current] { background: #223e62; border-left-color: #69acff; color: white; font-weight: 650 }
+.admin-work {
+  --desk-bg: #111b29; --desk-panel: #192637; --desk-line: #394858;
+  --desk-ink: #edf2fa; --desk-muted: #b2c1d4; --desk-link: #9dcaff;
+  --color-slate-900: var(--desk-panel); --color-slate-800: var(--desk-line);
+  --color-slate-500: #a5b4c7;
+  background: var(--desk-bg); color: var(--desk-ink); min-height: 100vh;
+}
+.bb-light .admin-work {
+  --desk-bg: #eff1f4; --desk-panel: #fff; --desk-line: #c3cbd5;
+  --desk-ink: #192a40; --desk-muted: #475a70; --desk-link: #135798;
+  --color-white: var(--desk-ink); --color-slate-950: #f5f7fa;
+  --color-slate-700: #aab6c5; --color-slate-600: #67798c; --color-slate-500: #506176;
+  --color-slate-400: #475a70; --color-slate-300: #354861; --color-slate-200: #24374d; --color-slate-100: #20354d;
+}
+.bb-light .admin-work :is([class*="text-sky-"],[class*="text-blue-"]) { color: #165387 }
+.bb-light .admin-work :is([class*="text-green-"],[class*="text-emerald-"]) { color: #165a43 }
+.bb-light .admin-work [class*="text-amber-"] { color: #77470d }
+.bb-light .admin-work [class*="text-red-"] { color: #943039 }
+.bb-light .admin-work :is(.bg-sky-500,.bg-sky-600,.bg-blue-600) { background-color: #1c639e; color: white }
+.bb-light .admin-work :is([class*="bg-[#0"],[class*="bg-[#1"]) { background-color: var(--desk-panel) }
+.admin-work .admin-command-bar { position: sticky; top: 0; z-index: 30; background: var(--desk-panel); border-bottom: 1px solid var(--desk-line) }
+.admin-toolbar,.admin-toolbar-actions,.admin-panel-heading { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap }
+.admin-toolbar,.admin-panel-heading { justify-content: space-between; padding: .55rem 1rem }
+.admin-work .admin-toolbar h1 { font: 650 1.16rem/1.35 var(--bb-heading-font); letter-spacing: -.02em; margin: 0 }
+.admin-site-link,.admin-panel-heading button { color: var(--desk-link); font-size: .82rem; font-weight: 600 }
+.admin-site-link:hover,.admin-panel-heading button:hover { text-decoration: underline }
+.admin-body { padding: 0 clamp(.75rem,1.5vw,1.5rem) 3rem; font-size: .91rem }
+.admin-page .admin-work :where([class*="rounded-"]:not(img):not(.h-2):not(.h-1\.5)) { border-radius: 2px }
+.admin-page .admin-work :is(section,aside).border-slate-800.bg-slate-900 { border-color: var(--desk-line); box-shadow: none }
+.admin-work :where([class*="shadow-"]) { box-shadow: none }
+.admin-panel-heading { border-bottom: 1px solid var(--desk-line); font-weight: 650 }
+.admin-request summary { cursor: pointer; display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr) auto; padding: .6rem 1rem; gap: .5rem; align-items: baseline }
+.admin-request summary strong { color: var(--desk-link) }
+.admin-request summary strong::before { content: '+'; margin-right: .55rem }
+.admin-request[open] summary strong::before { content: '−' }
+.admin-request summary span,.admin-request time { font-size: .78rem; color: var(--desk-muted) }
+.admin-request + .admin-request { border-top: 1px solid var(--desk-line) }
+.admin-metrics { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,9rem),1fr)); gap: 1px; border: 1px solid var(--desk-line); background: var(--desk-line) }
+.admin-metrics div { background: var(--desk-panel); padding: .65rem .85rem }
+.admin-metrics dt { font-size: .8rem; font-weight: 600 }
+.admin-metrics dd:first-of-type { font-size: 1.3rem; font-weight: 700; line-height: 1.4 }
+.admin-metrics dd:last-child { color: var(--desk-muted); font-size: .74rem }
+.admin-body :is(.p-5,.p-6) { padding: 1rem }
+.admin-body .py-4 { padding-block: .65rem }
+.admin-body :is(.mt-6,.mt-8) { margin-top: 1rem }
+.admin-body :is(.gap-5,.gap-6) { gap: 1rem }
+.admin-work :is(h2,h3).text-2xl { font-size: 1.15rem }
+.admin-work :focus-visible { outline: 2px solid #4088d6; outline-offset: 2px }
+@media (min-width: 1024px) {
+  .admin-work :is(button,summary,select,input):is(.min-h-11,.min-h-12) { min-height: 2.15rem; padding-block: .3rem }
+}
+@media (max-width: 1023px) {
+  .admin-page .admin-layout { display: block }
+  .admin-rail { position: static; min-height: 0; max-height: none; display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .45rem .75rem }
+  .admin-brand { padding: 0; border: 0 }
+  .admin-rail select { max-width: 50vw }
+  .admin-work .admin-command-bar { position: static }
+  .admin-toolbar-actions { flex-wrap: wrap }
+  .admin-request summary { grid-template-columns: 1fr; gap: .1rem }
+}

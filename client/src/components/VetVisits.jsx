@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getVetVisitsForAnimal, createVetVisit, updateVetVisit, deleteVetVisit } from "../api/vetVisits";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import EmptyState from "./EmptyState";
 import { SkeletonBlock } from "./LoadingSpinner";
 
@@ -117,7 +117,7 @@ function getVisitStatus(visit) {
 function VetVisitsSkeleton() {
   return (
     <div
-      className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(280px,360px)_1fr]"
+      className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]"
       aria-busy="true"
       aria-label="Loading vet visits"
     >
@@ -361,7 +361,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
   }
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[minmax(280px,360px)_1fr] gap-6">
+    <div className="grid grid-cols-1 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)] gap-6">
       <aside className="space-y-4">
         <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
           <div className="flex items-start justify-between gap-4">
@@ -635,7 +635,6 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
         )}
       </section>
 
-      <ToastContainer autoClose="1000" />
     </div>
   );
 }

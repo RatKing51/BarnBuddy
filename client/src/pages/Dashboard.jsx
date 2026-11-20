@@ -1079,7 +1079,7 @@ export default function Dashboard() {
   return (
     <div className={`dashboard-page flex min-h-screen flex-col bg-gray-950 text-gray-100 xl:h-screen xl:flex-row xl:overflow-hidden ${isCompact ? "dashboard-compact" : "dashboard-comfortable"}`}>
       {/* SIDEBAR */}
-      <aside className="hidden w-full flex-shrink-0 flex-col border-b border-gray-700 bg-gray-800 shadow-lg xl:flex xl:h-screen xl:w-72 xl:border-b-0 xl:border-r">
+      <aside className="hidden w-full flex-shrink-0 flex-col border-b border-gray-700 bg-gray-800 xl:flex xl:h-screen xl:w-72 xl:border-b-0 xl:border-r">
         <div className="px-6 py-6 border-b border-gray-700">
           <button
             type="button"
@@ -1262,7 +1262,7 @@ export default function Dashboard() {
       {/* MAIN AREA */}
       <main className={`dashboard-main min-h-screen flex-1 overflow-y-auto bg-gray-950 pb-24 xl:min-h-0 xl:pb-0 ${isCompact ? "xl:p-5" : "xl:p-8"}`}>
         {/* MOBILE + TABLET APP HEADER */}
-        <section className="dashboard-app-header sticky top-0 z-30 border-b border-gray-800 bg-gray-950/95 px-3 pb-3 pt-3 shadow-lg shadow-black/20 backdrop-blur md:px-6 md:pb-4 md:pt-4 xl:hidden">
+        <section className="dashboard-app-header sticky top-0 z-30 border-b border-gray-800 bg-gray-950/95 px-3 pb-3 pt-3 backdrop-blur md:px-6 md:pb-4 md:pt-4 xl:hidden">
           <div className="flex items-center justify-between gap-3">
             <button
               type="button"

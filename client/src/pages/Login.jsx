@@ -104,10 +104,10 @@ export default function Login() {
   return (
     <div className="signup-page public-page min-h-screen text-white">
       <main>
-        <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-10 lg:items-center">
-            <div className="flex min-w-0 items-center lg:col-span-5">
-              <div className="mx-auto w-full max-w-[25rem] rounded-xl border border-white/10 bg-[#0f2650] p-4 shadow-lg sm:p-8">
+        <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-12 lg:items-start">
+            <div className="flex min-w-0 items-center lg:col-span-6">
+              <div className="mx-auto w-full max-w-[28rem] rounded-lg border border-white/15 bg-[#0f2650] p-5 sm:p-8">
                 <div className="mb-5 sm:mb-6">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-blue-200 sm:hidden">
                     BarnBuddy.
@@ -116,7 +116,7 @@ export default function Login() {
                     Welcome back
                   </h1>
                   <p className="mt-2 text-sm text-white/70">
-                    Sign in to keep your farm records moving.
+                    Sign in to your BarnBuddy account.
                   </p>
                 </div>
 
@@ -130,32 +130,31 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="flex min-w-0 items-center lg:col-span-7">
+            <div className="flex min-w-0 items-center lg:col-span-6">
               <div className="mx-auto w-full max-w-xl bg-transparent py-2 sm:py-4 lg:p-6">
                 <h2 className="hidden text-3xl font-semibold sm:mb-4 sm:block lg:text-4xl">
                   BarnBuddy.
                 </h2>
                 <p className="hidden text-white/80 sm:mb-6 sm:block sm:text-base">
-                  Get back to your dashboard, check upcoming care, and keep
-                  records current without extra noise.
+                  Open your herd dashboard to check upcoming care.
                 </p>
 
                 <div className="grid grid-cols-1 gap-3 text-sm text-white/80 sm:grid-cols-3 lg:grid-cols-1">
-                  <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 sm:border-0 sm:bg-transparent sm:p-0">
+                  <div className="border-t border-white/15 pt-3">
                     <h3 className="font-semibold text-white">Quick check-ins</h3>
                     <p className="mt-1">
                       Jump back into animals, herds, and upcoming care from one dashboard.
                     </p>
                   </div>
 
-                  <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 sm:border-0 sm:bg-transparent sm:p-0">
+                  <div className="border-t border-white/15 pt-3">
                     <h3 className="font-semibold text-white">Records ready</h3>
                     <p className="mt-1">
                       Keep health notes, vaccinations, vet visits, and exports close at hand.
                     </p>
                   </div>
 
-                  <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 sm:border-0 sm:bg-transparent sm:p-0">
+                  <div className="border-t border-white/15 pt-3">
                     <h3 className="font-semibold text-white">Secure access</h3>
                     <p className="mt-1">
                       Your account stays protected while your farm data stays yours.

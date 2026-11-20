@@ -14,7 +14,7 @@ export default function SettingsHeader() {
   const { subscription } = useAuth();
 
   return (
-    <header className="border-b border-white/10 bg-[#101D42] text-white shadow-lg shadow-black/10">
+    <header className="border-b border-white/10 bg-[#101D42] text-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
           <Link
@@ -27,7 +27,7 @@ export default function SettingsHeader() {
               <span className="text-gray-300">Buddy.</span>
             </span>
             <span className="border-l border-white/20 pl-3 text-xs font-bold leading-tight text-white/90 sm:text-sm">
-              Doing for<br className="sm:hidden" /> the Small
+              Settings
             </span>
           </Link>
 
@@ -48,7 +48,7 @@ export default function SettingsHeader() {
           </div>
         </div>
 
-        <nav aria-label="Settings navigation" className="grid grid-cols-3 gap-1 sm:flex sm:gap-2">
+        <nav aria-label="Settings navigation" className="grid grid-cols-3 gap-1 border-t border-white/10 sm:flex sm:gap-2">
           {settingsLinks.map((item) => {
             const isCurrent = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
 
@@ -57,7 +57,7 @@ export default function SettingsHeader() {
                 key={item.to}
                 to={item.to}
                 aria-current={isCurrent ? "page" : undefined}
-                className={`relative inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-t-xl px-2 text-sm font-semibold transition sm:px-4 ${
+                className={`relative inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-t-md px-2 text-sm font-semibold transition sm:px-4 ${
                   isCurrent
                     ? "bg-white/10 text-white after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-blue-400"
                     : "text-blue-100/70 hover:bg-white/5 hover:text-white"

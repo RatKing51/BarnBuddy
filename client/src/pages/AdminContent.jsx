@@ -1,3 +1,4 @@
+import '../styles/admin.css'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-toastify'
 import { API_BASE_URL, API_URL } from '../config/env'
@@ -6,6 +7,7 @@ import ImageCropModal from '../components/ImageCropModal'
 import AdminSupportDesk from '../components/AdminSupportDesk'
 import AdminFfaChapters from '../components/AdminFfaChapters'
 import ReviewLandingCard from '../components/ReviewLandingCard'
+import { reviseNewsPost } from '../data/newsPosts'
 import { defaultSiteContent } from '../data/siteContent'
 import { getSiteAssetUrl, resolveSiteImageUrl } from '../config/siteImages'
 
@@ -78,12 +80,7 @@ const dotClasses = {
   amber: 'bg-amber-300',
 }
 
-const statCardClasses = {
-  emerald: 'border-emerald-300/20 bg-emerald-400/[0.06]',
-  sky: 'border-sky-300/20 bg-sky-400/[0.06]',
-  amber: 'border-amber-300/20 bg-amber-400/[0.06]',
-  red: 'border-red-300/20 bg-red-400/[0.06]',
-}
+
 
 function Field({ label, children, span = '' }) {
   return (
@@ -417,6 +414,7 @@ export default function AdminContent() {
   const [adminNoteDraft, setAdminNoteDraft] = useState('')
   const [savingAdminFlags, setSavingAdminFlags] = useState(false)
   const [mediaLibrary, setMediaLibrary] = useState([])
+  const [supportAvailable, setSupportAvailable] = useState(false)
   const [supportMessages, setSupportMessages] = useState([])
   const [adminDataLoading, setAdminDataLoading] = useState(false)
   const [accessDenied, setAccessDenied] = useState(false)
@@ -554,10 +552,12 @@ export default function AdminContent() {
       ])
 
       if (mediaRes.ok) setMediaLibrary(Array.isArray(mediaData.media) ? mediaData.media : [])
+      setSupportAvailable(supportRes.ok)
       if (supportRes.ok) {
         setSupportMessages(Array.isArray(supportData.messages) ? supportData.messages : [])
       }
     } catch (err) {
+      setSupportAvailable(false)
       console.warn('Failed to load admin tools:', err.message)
     } finally {
       setAdminDataLoading(false)
@@ -580,7 +580,7 @@ export default function AdminContent() {
 
         if (!cancelled) {
           const loadedContent = {
-            newsPosts: Array.isArray(data.newsPosts) ? data.newsPosts : defaultSiteContent.newsPosts,
+            newsPosts: Array.isArray(data.newsPosts) ? data.newsPosts.map(reviseNewsPost) : defaultSiteContent.newsPosts,
             status: { ...defaultSiteContent.status, ...(data.status || {}) },
             announcement: { ...defaultSiteContent.announcement, ...(data.announcement || {}) },
             maintenance: { ...defaultSiteContent.maintenance, ...(data.maintenance || {}) },
@@ -658,8 +658,8 @@ export default function AdminContent() {
     return [
       {
         label: 'Open support',
-        value: openSupport,
-        helper: `${supportMessages.length} total messages`,
+        value: supportAvailable ? openSupport : '—',
+        helper: supportAvailable ? `${supportMessages.length} total messages` : 'Awaiting support data',
         tone: openSupport ? 'amber' : 'emerald',
       },
       {
@@ -687,14 +687,15 @@ export default function AdminContent() {
         tone: flaggedServices ? 'red' : 'emerald',
       },
     ]
-  }, [activityUsers.length, adminUsers.length, content, supportMessages])
+  }, [activityUsers.length, adminUsers.length, content, supportMessages, supportAvailable])
 
   const selectedPost = content.newsPosts[selectedPostIndex] || null
   const selectedReview = (content.reviews || [])[selectedReviewIndex] || null
   const selectedCarouselSlide = (content.carouselSlides || [])[selectedCarouselIndex] || null
   const selectedAdminUser = adminUsers.find((user) => user.clerkUserId === selectedAdminUserId) || adminUsers[0] || null
   const selectedAdminUserFlags = useMemo(() => selectedAdminUser?.adminFlags || [], [selectedAdminUser?.adminFlags])
-  const unresolvedSupportCount = supportMessages.filter((message) => message.status !== 'closed').length
+  const openRequests = supportMessages.filter((message) => message.status !== 'closed')
+  const unresolvedSupportCount = openRequests.length
   const isWebsiteContentTab = websiteContentTabs.has(activeTab)
   const featuredPostId = content.newsPosts.find((post) => post.featured)?.id || ''
   const hasUnsavedChanges = useMemo(
@@ -898,7 +899,7 @@ export default function AdminContent() {
       }
 
       setContent({
-        newsPosts: Array.isArray(data.newsPosts) ? data.newsPosts : content.newsPosts,
+        newsPosts: Array.isArray(data.newsPosts) ? data.newsPosts.map(reviseNewsPost) : content.newsPosts,
         status: { ...content.status, ...(data.status || {}) },
         announcement: { ...content.announcement, ...(data.announcement || {}) },
         maintenance: { ...content.maintenance, ...(data.maintenance || {}) },
@@ -907,7 +908,7 @@ export default function AdminContent() {
         carouselSlides: Array.isArray(data.carouselSlides) ? data.carouselSlides : content.carouselSlides,
       })
       setLastSavedContent({
-        newsPosts: Array.isArray(data.newsPosts) ? data.newsPosts : content.newsPosts,
+        newsPosts: Array.isArray(data.newsPosts) ? data.newsPosts.map(reviseNewsPost) : content.newsPosts,
         status: { ...content.status, ...(data.status || {}) },
         announcement: { ...content.announcement, ...(data.announcement || {}) },
         maintenance: { ...content.maintenance, ...(data.maintenance || {}) },
@@ -1277,37 +1278,11 @@ export default function AdminContent() {
       />
     )}
     <main className="admin-page min-h-screen overflow-x-hidden bg-[#070b16] text-white">
-      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[17.5rem_minmax(0,1fr)]">
-        <aside className="border-b border-slate-800 bg-slate-900/90 px-4 py-4 backdrop-blur lg:sticky lg:top-0 lg:h-dvh lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5 lg:py-6">
-          <div className="flex items-center justify-between gap-4 lg:block">
-            <a href="/" target="_blank" rel="noreferrer" className="group block w-fit" aria-label="Open BarnBuddy in a new tab">
-              <span className="text-2xl font-bold tracking-tight">
-                <span className="text-sky-400 transition group-hover:text-sky-300">Barn</span>
-                <span className="text-slate-200">Buddy.</span>
-              </span>
-              <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Control center</span>
-            </a>
-            <a
-              href="/"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-700 bg-slate-950/55 px-3 text-sm font-semibold text-slate-200 transition hover:border-sky-400/50 hover:text-white lg:hidden"
-            >
-              View site
-            </a>
-          </div>
-
-          <a
-            href="/"
-            target="_blank"
-            rel="noreferrer"
-            className="mt-6 hidden min-h-11 items-center justify-center rounded-xl border border-slate-700 bg-slate-950/55 px-3 text-center text-sm font-semibold text-slate-200 transition hover:border-sky-400/50 hover:bg-slate-800 hover:text-white lg:flex"
-          >
-            View live site
-          </a>
-
-          <div className="mt-4 lg:hidden">
-            <label htmlFor="admin-mobile-section" className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+      <div className="admin-layout">
+        <aside className="admin-rail">
+          <div className="admin-brand">BarnBuddy <span>Admin</span></div>
+          <div className="lg:hidden">
+            <label htmlFor="admin-mobile-section" className="sr-only">
               Admin workspace
             </label>
             <select
@@ -1330,11 +1305,11 @@ export default function AdminContent() {
             </select>
           </div>
 
-          <nav aria-label="Admin navigation" className="mt-7 hidden space-y-6 lg:block">
+          <nav aria-label="Admin navigation" className="admin-nav hidden lg:block">
             {adminNavigationGroups.map((group) => (
               <div key={group.label}>
-                <p className="px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-600">{group.label}</p>
-                <div className="mt-2 space-y-1.5">
+                <p className="admin-nav-group">{group.label}</p>
+                <div className="admin-nav-items">
                   {group.items.map((item) => (
                     <button
                       key={item.id}
@@ -1345,11 +1320,7 @@ export default function AdminContent() {
                         setMobilePreviewTab('')
                       }}
                       aria-current={activeTab === item.id ? 'page' : undefined}
-                      className={`w-full rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition ${
-                        activeTab === item.id
-                          ? 'border-sky-400/55 bg-sky-500/15 text-white shadow-[0_10px_28px_rgba(14,165,233,0.08)]'
-                          : 'border-transparent text-slate-400 hover:border-slate-700 hover:bg-slate-800/70 hover:text-white'
-                      }`}
+                      className="admin-nav-button"
                     >
                       <span className="flex items-center justify-between gap-2">
                         <span>{item.label}</span>
@@ -1366,22 +1337,13 @@ export default function AdminContent() {
             ))}
           </nav>
 
-          <div className="mt-8 hidden rounded-2xl border border-slate-800 bg-slate-950/55 p-4 lg:block">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Public status</p>
-            <div className={`mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${toneClasses[content.status.overallTone] || toneClasses.green}`}>
-              <span className={`h-2 w-2 rounded-full ${dotClasses[content.status.overallTone] || dotClasses.green}`} />
-              {content.status.overallStatus || 'Operational'}
-            </div>
-          </div>
         </aside>
 
-        <section className="min-w-0">
-          <header className="admin-command-bar sticky top-0 z-30 border-b border-slate-800 bg-[#070b16]/92 backdrop-blur-xl">
-            <div className="mx-auto flex w-full max-w-[1520px] flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8 xl:flex-row xl:items-center xl:justify-between">
-              <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-400/80">{activeHeader.eyebrow}</p>
-                <div className="mt-1.5 flex flex-wrap items-center gap-3">
-                  <h2 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{activeHeader.title}</h2>
+        <section className="admin-work min-w-0">
+          <header className="admin-command-bar">
+            <div className="admin-toolbar">
+              <div className="flex flex-wrap items-center gap-2">
+                  <h1>{activeHeader.title}</h1>
                   {showContentActions && (
                     <span
                       aria-live="polite"
@@ -1395,14 +1357,14 @@ export default function AdminContent() {
                       {saving ? 'Saving' : hasUnsavedChanges ? 'Unsaved' : 'Saved'}
                     </span>
                   )}
-                </div>
-                <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-slate-400">{activeHeader.description}</p>
+
               </div>
 
-              {showContentActions && (
-                <div className="flex w-full items-center gap-2 xl:w-auto xl:justify-end">
+              <div className="admin-toolbar-actions">
+                <a href="/" target="_blank" rel="noreferrer" className="admin-site-link">View site</a>
+                {showContentActions && <>
                   {activePreviewLinks.length > 0 && (
-                    <details className="relative hidden sm:block">
+                    <details className="relative">
                       <summary className="inline-flex min-h-11 cursor-pointer list-none items-center justify-center rounded-xl border border-slate-700 bg-slate-900 px-4 text-sm font-semibold text-slate-200 transition hover:border-sky-400/40 hover:bg-slate-800">
                         Preview
                       </summary>
@@ -1431,34 +1393,48 @@ export default function AdminContent() {
                   >
                     {saving ? 'Saving...' : 'Save changes'}
                   </button>
-                </div>
-              )}
+                </>}
+              </div>
             </div>
           </header>
 
-          <div className="mx-auto w-full max-w-[1520px] px-4 pb-24 sm:px-6 lg:px-8">
+          <div className="admin-body">
 
           {activeTab === 'overview' && (
             <div className="mt-6 space-y-5 sm:mt-8 sm:space-y-6">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                {dashboardStats.map((stat) => (
-                  <div key={stat.label} className={`rounded-2xl border p-5 shadow-lg shadow-black/10 ${statCardClasses[stat.tone] || statCardClasses.sky}`}>
-                    <div className="flex items-center gap-2">
-                      <span className={`h-2 w-2 rounded-full ${dotClasses[stat.tone] || dotClasses.sky}`} aria-hidden="true" />
-                      <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate-400">{stat.label}</p>
+              <dl className="admin-metrics">
+                {dashboardStats.map(stat => <div key={stat.label}>
+                  <dt>{stat.label}</dt><dd>{stat.value}</dd><dd>{stat.helper}</dd>
+                </div>)}
+              </dl>
+
+              <section className="border border-slate-800 bg-slate-900">
+                <div className="admin-panel-heading">
+                  <h3>Open support requests</h3>
+                  <button type="button" onClick={() => setActiveTab('support')}>Support desk</button>
+                </div>
+                {supportAvailable && openRequests.slice(0, 5).map(message => (
+                  <details className="admin-request" key={message.id}>
+                    <summary><strong>{message.topic || 'Support request'}</strong><span>{message.name || message.email}</span><time>{formatDateTime(message.created_at)}</time></summary>
+                    <div className="px-4 pb-3">
+                      <p className="whitespace-pre-wrap">{message.message}</p>
+                      <button className="admin-site-link mt-2" type="button" onClick={() => {
+                        setActiveTab('support')
+                        findSupportCustomer(message.email)
+                      }}>Look up customer</button>
                     </div>
-                    <p className="mt-4 text-3xl font-semibold tracking-tight text-white">{stat.value}</p>
-                    <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{stat.helper}</p>
-                  </div>
+                  </details>
                 ))}
-              </div>
+                {!openRequests.length || !supportAvailable ? <p className="px-4 py-3 text-sm text-slate-400">
+                  {adminDataLoading ? 'Loading support requests…' : supportAvailable ? 'No open requests.' : 'Support requests are unavailable.'}
+                </p> : null}
+              </section>
 
               <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr_0.85fr]">
                 <section className="rounded-2xl border border-slate-800 bg-slate-900">
                   <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h3 className="font-semibold">Recent news</h3>
-                      <p className="mt-1 text-sm text-slate-400">Newest content at a glance.</p>
                     </div>
                     <button
                       type="button"
@@ -1506,7 +1482,7 @@ export default function AdminContent() {
                 </section>
 
                 <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-                  <h3 className="font-semibold">Status summary</h3>
+                  <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Status summary</h3><button type="button" className="admin-site-link" onClick={() => setActiveTab('status')}>Manage status</button></div>
                   <p className="mt-3 text-2xl font-semibold">{content.status.headline}</p>
                   <p className="mt-2 text-sm leading-relaxed text-slate-400">{content.status.summary}</p>
                   <div className="mt-5 space-y-2">
@@ -2071,7 +2047,7 @@ export default function AdminContent() {
                           <Field label="Excerpt" span="md:col-span-2">
                             <textarea className={inputClass('min-h-28 resize-y')} value={selectedPost.excerpt} onChange={(event) => updatePost(selectedPostIndex, { excerpt: event.target.value })} />
                           </Field>
-                          <Field label="Body" span="md:col-span-2">
+                          <Field label="Article body (separate paragraphs with a blank line, use ## for a section heading)" span="md:col-span-2">
                             <textarea className={inputClass('min-h-44 resize-y')} value={selectedPost.body} onChange={(event) => updatePost(selectedPostIndex, { body: event.target.value })} />
                           </Field>
                         </div>

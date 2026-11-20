@@ -25,7 +25,7 @@ const clerkPricingAppearance = {
     pricingTableCard: {
       backgroundColor: "#0f2650",
       border: "1px solid rgba(255, 255, 255, 0.12)",
-      boxShadow: "0 24px 60px rgba(0, 0, 0, 0.28)",
+      boxShadow: "none",
       color: "#f8fafc",
     },
     pricingTableCardHeader: {
@@ -150,13 +150,11 @@ export default function Pricing() {
     <div className="public-page flex min-h-screen flex-col text-white">
       <main className="flex-grow">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto mb-10 max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-300">Pricing</p>
-            <h1 className="mt-3 text-4xl font-semibold sm:text-5xl">Choose your BarnBuddy plan</h1>
-            <p className="mt-4 text-base leading-relaxed text-white/78 sm:text-lg">
-              Start with essential animal and herd records for free. Upgrade when you need advanced exports, reminders, FFA Project Mode, and deeper herd insight.
-            </p>
-          </div>
+          <header className="bb-route-intro">
+            <h1>Plans for your herd</h1>
+            <p>Start with Free to keep animal profiles and herd records. Premium adds tools for reminders, exports, and FFA projects.</p>
+            <a className="bb-text-link" href="#plan-comparison">Compare Free and Premium</a>
+          </header>
 
           {requestedPremiumFeature && (
             <div className="mx-auto mb-8 max-w-3xl rounded-xl border border-blue-300/25 bg-blue-500/10 px-5 py-4 text-center text-sm text-blue-100">
@@ -166,7 +164,7 @@ export default function Pricing() {
 
           <section
             id="clerk-checkout"
-            className="rounded-2xl border border-white/10 bg-[#0b1730] p-3 shadow-xl shadow-black/25 sm:p-5"
+            aria-label="Available plans"
           >
             <PricingTable
               for="user"
@@ -182,22 +180,21 @@ export default function Pricing() {
             />
           </section>
 
-          <section className="mt-10 overflow-hidden rounded-2xl border border-white/10 bg-white/6">
+          <section id="plan-comparison" className="mt-12 scroll-mt-24 border-y border-white/15">
             <div className="border-b border-white/10 px-5 py-4 sm:px-6">
-              <h2 className="text-xl font-semibold">Compare plans</h2>
-              <p className="mt-1 text-sm text-white/68">See what is included with Free and Premium.</p>
+              <h2 className="text-xl font-semibold">What each plan includes</h2>
             </div>
 
             <div className="space-y-4 p-4 md:hidden">
               {PRICING_FEATURES.map((feature) => (
-                <article key={feature.label} className="rounded-xl border border-white/10 bg-[#0f2650] p-4">
+                <article key={feature.label} className="border-t border-white/15 py-4">
                   <h3 className="font-semibold leading-snug text-white">{feature.label}</h3>
-                  <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="rounded-lg border border-white/8 bg-white/5 p-3">
+                  <dl className="mt-4 grid grid-cols-2 gap-4">
+                    <div className="border-l border-white/20 pl-3">
                       <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-white/55">Free</dt>
                       <dd className="mt-1.5 text-sm leading-relaxed text-white/75">{feature.free}</dd>
                     </div>
-                    <div className="rounded-lg border border-blue-300/20 bg-blue-500/10 p-3">
+                    <div className="border-l-2 border-blue-400/60 pl-3">
                       <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-200">Premium</dt>
                       <dd className="mt-1.5 text-sm leading-relaxed text-white/90">{feature.premium}</dd>
                     </div>
@@ -219,7 +216,7 @@ export default function Pricing() {
                 <tbody className="divide-y divide-white/10">
                   {PRICING_FEATURES.map((feature) => (
                     <tr key={feature.label}>
-                      <td className="px-5 py-4 font-medium text-white">{feature.label}</td>
+                      <th scope="row" className="px-5 py-4 font-medium text-white">{feature.label}</th>
                       <td className="px-5 py-4 text-white/72">{feature.free}</td>
                       <td className="px-5 py-4 text-white/88">{feature.premium}</td>
                     </tr>
@@ -233,7 +230,7 @@ export default function Pricing() {
             <div>
               <h2 className="text-xl font-semibold">Schools, chapters, and group licenses</h2>
               <p className="mt-2 text-sm text-white/75">
-                Ask about options for multiple seats, centralized billing, shared farm access, and priority support.
+                Tell us how many people need access and whether your school needs one invoice for the group.
               </p>
             </div>
             <Link

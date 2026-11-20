@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import { createAnimal, deleteAnimal, updateAnimal } from "../api/animal";
 import * as birthsAPI from "../api/births";
 import * as reproductionsAPI from "../api/reproductions";
@@ -87,8 +87,8 @@ function PremiumLocked({ label }) {
 
 function PremiumRecordsSkeleton({ view }) {
   const isReproduction = view === "reproduction";
-  const panelClass = "rounded-2xl border border-gray-700 bg-gray-900 p-5 shadow-md";
-  const surfaceClass = "rounded-2xl border border-gray-700 bg-gray-800 p-5 shadow-md";
+  const panelClass = "rounded-2xl border border-gray-700 bg-gray-900 p-4 sm:p-5";
+  const surfaceClass = "rounded-2xl border border-gray-700 bg-gray-800 p-4 sm:p-5";
 
   return (
     <div className="space-y-6" aria-busy="true">
@@ -104,14 +104,14 @@ function PremiumRecordsSkeleton({ view }) {
         <>
           <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {[0, 1, 2].map((item) => (
-              <div key={item} className="rounded-2xl border border-gray-700 bg-gray-900 p-4 shadow-md">
+              <div key={item} className="rounded-2xl border border-gray-700 bg-gray-900 p-4">
                 <SkeletonBlock className="h-3 w-40" />
                 <SkeletonBlock className="mt-2 h-10 w-full" />
                 <SkeletonBlock className="mt-2 h-4 w-48 max-w-full" />
               </div>
             ))}
           </section>
-          <section className="grid grid-cols-1 gap-6 xl:grid-cols-[340px_1fr]">
+          <section className="grid grid-cols-1 gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
             <div className={surfaceClass}>
               <div className="mb-4 space-y-2">
                 <SkeletonBlock className="h-5 w-40" />
@@ -806,7 +806,7 @@ export default function PremiumRecords({
           </div>
         </section>
 
-        <section className="grid grid-cols-1 gap-6 xl:grid-cols-[340px_1fr]">
+        <section className="grid grid-cols-1 gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
           <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
@@ -1082,7 +1082,6 @@ export default function PremiumRecords({
             )}
           </div>
         </section>
-        <ToastContainer autoClose="1000" />
       </div>
     );
   }
@@ -1171,7 +1170,6 @@ export default function PremiumRecords({
           </div>
         </div>
       </section>
-      <ToastContainer autoClose="1000" />
     </div>
   );
 }

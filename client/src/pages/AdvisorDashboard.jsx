@@ -164,7 +164,7 @@ function AdvisorHeader() {
           </Link>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">BarnBuddy FFA</p>
-            <h1 className="mt-1 text-xl font-semibold text-white">Advisor Dashboard</h1>
+            <h1 className="mt-1 text-xl font-semibold text-white">Chapter advisor workspace</h1>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -409,10 +409,10 @@ export default function AdvisorDashboard() {
             </p>
           )}
 
-          <section className="rounded-3xl border border-blue-400/20 bg-gradient-to-br from-blue-500/15 via-gray-900 to-gray-900 p-6 shadow-2xl shadow-black/20 sm:p-8">
+          <section className="rounded-xl border border-gray-700 bg-gray-900 p-6 sm:p-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">Advisor workspace</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">Your chapter</p>
                 <h2 className="mt-2 text-3xl font-semibold text-white">{advisorData.chapter.chapterName}</h2>
                 {(advisorData.chapter.schoolName || advisorData.chapter.state) && (
                   <p className="mt-2 text-gray-400">

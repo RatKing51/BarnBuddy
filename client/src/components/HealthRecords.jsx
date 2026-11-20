@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import * as healthEventsAPI from "../api/healthEvents";
 import * as premiumRecordsAPI from "../api/premiumRecords";
 import * as vaccinationsAPI from "../api/vaccinations";
@@ -1063,7 +1063,6 @@ export default function HealthRecords({ animal, onVaccinationUpdate, selectedHer
 
       </div>
       </div>
-      <ToastContainer autoClose="1000" />
     </div>
   );
 }

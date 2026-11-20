@@ -289,13 +289,13 @@ export default function AccountSettings() {
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8 max-w-3xl">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-400">Settings</p>
-          <h1 className="mt-2 text-3xl font-semibold text-white">Manage your BarnBuddy account</h1>
+          <h1 className="mt-2 text-3xl font-semibold text-white">Account settings</h1>
           <p className="mt-3 text-gray-400">
-            Update profile basics, adjust app preferences, manage herds, or handle account-level actions from one place.
+            Edit your profile, manage billing, or change how your dashboard looks.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(260px,340px)_1fr]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
           <aside className="space-y-4">
             <button
               onClick={() => navigate("/settings/herd")}
@@ -365,7 +365,7 @@ export default function AccountSettings() {
                   <p className={`mt-2 text-sm ${subscription.isPremium ? "text-gray-400" : "text-blue-100/80"}`}>
                     {chapterOnlyPremium
                       ? "Your chapter benefit and personal billing are kept separate."
-                      : "Review your current plan, available features, and billing options in one place."}
+                      : "Review your plan and billing options."}
                   </p>
                 </div>
                 {!subscription.isPremium && (
@@ -612,7 +612,7 @@ export default function AccountSettings() {
             </section>
 
             <section className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6">
-              <h2 className="text-xl font-semibold text-white">Danger zone</h2>
+              <h2 className="text-xl font-semibold text-white">Delete account</h2>
               <p className="mt-2 text-sm leading-relaxed text-red-100/80">
                 Deleting your account removes your BarnBuddy user record and farm data. This action cannot be undone.
               </p>

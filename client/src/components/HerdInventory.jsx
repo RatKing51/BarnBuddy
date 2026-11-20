@@ -298,7 +298,7 @@ export default function HerdInventory({ selectedHerd, isPremium = false }) {
           ["Expiring soon", summary.expiring],
           ["Stock value", money(summary.value)],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-2xl border border-gray-700 bg-gray-900 p-3 sm:p-4">
+          <div key={label} className="min-w-0 border-l-2 border-gray-700 px-3 py-1 tabular-nums sm:px-4">
             <p className="text-xs text-gray-500">{label}</p>
             <p className="mt-2 text-xl font-bold text-white sm:text-2xl">{value}</p>
           </div>

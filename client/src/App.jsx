@@ -5,7 +5,8 @@ import Navbar from "./components/Navbar";
 import PrivateRoute from "./routes/PrivateRoute";
 import PremiumRoute from "./routes/PremiumRoute";
 import AdvisorRoute from "./routes/AdvisorRoute";
-import { ToastContainer } from "react-toastify";
+import "./styles/notifications.css";
+import { Slide, ToastContainer } from "react-toastify";
 import { LoadingSpinner, PageLoadingBar } from "./components/LoadingSpinner";
 import { getSiteContent } from "./api/siteContent";
 import { defaultSiteContent } from "./data/siteContent";
@@ -79,8 +80,8 @@ function NotFound() {
     <main className="grid min-h-[70vh] place-items-center bg-[#0b1730] px-4 text-center text-white">
       <div className="max-w-lg">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-300">404</p>
-        <h1 className="mt-3 text-4xl font-semibold">That page wandered off.</h1>
-        <p className="mt-4 text-white/70">The page may have moved, or the address may be incorrect.</p>
+        <h1 className="mt-3 text-4xl font-semibold">Page not found</h1>
+        <p className="mt-4 text-white/70">Check the address or head back to BarnBuddy to find your page.</p>
         <Link className="mt-6 inline-flex rounded-lg bg-blue-500 px-5 py-3 font-semibold hover:bg-blue-400" to="/">
           Return home
         </Link>
@@ -125,8 +126,15 @@ function AppContent() {
   const announcementStyle = announcementStyles[announcement?.tone] || announcementStyles.blue;
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-  }, [location.pathname]);
+    const target = location.hash ? document.getElementById(location.hash.slice(1)) : null;
+    if (target) {
+      const unhandled = window.dispatchEvent(new CustomEvent('barnbuddy:scroll-to', {
+        cancelable: true, detail: { id: target.id },
+      }));
+      if (unhandled) target.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+    }
+    else window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [location.pathname, location.hash, location.key]);
 
   function skipToMainContent(event) {
     event.preventDefault();
@@ -201,10 +209,10 @@ function AppContent() {
 
   return (
     <>
-      <Seo />
+      {!/^\/news\/[^/]+\/?$/.test(location.pathname) && <Seo />}
       <a className="skip-link" href="#main-content" onClick={skipToMainContent}>Skip to main content</a>
       <PageLoadingBar active={pageLoading} />
-      <ToastContainer autoClose={2600} position="top-right" theme="dark" newestOnTop closeOnClick />
+      <ToastContainer className="bb-notifications" transition={Slide} autoClose={2600} position="top-right" theme="dark" newestOnTop closeOnClick />
       {showMaintenance ? (
         <main id="main-content" tabIndex="-1" className="grid min-h-screen place-items-center bg-[#07111f] px-4 text-center text-white">
           <section className="w-full max-w-3xl rounded-lg border border-sky-300/20 bg-[#0f2650] p-8 shadow-2xl shadow-black/30 sm:p-10">
@@ -246,7 +254,7 @@ function AppContent() {
           </div>
         </section>
       )}
-      <div id="main-content" tabIndex="-1">
+      <div id="main-content" className={showShell ? "bb-public" : "bb-workspace"} tabIndex="-1">
       <Suspense fallback={(
         <main className="grid min-h-[70vh] place-items-center bg-[#0b1730] text-white">
           <LoadingSpinner label="Loading page..." />
@@ -261,7 +269,7 @@ function AppContent() {
         <Route path="/terms" element={<TOSandPP documentType="terms" />} />
         <Route path="/privacy" element={<TOSandPP documentType="privacy" />} />
         <Route path="/termsofserviceandprivacypolicy" element={<LegacyLegalRedirect />} />
-        <Route path="/news" element={<News />} />
+        <Route path="/news/:postId?" element={<News />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/help" element={<HelpCenter />} />
         <Route path="/status" element={<Status />} />

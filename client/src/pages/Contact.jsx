@@ -3,29 +3,15 @@ import { Link, useSearchParams } from 'react-router'
 import Footer from '../components/Footer'
 import { API_URL } from '../config/env'
 
-const contactMethods = [
-  {
-    label: 'Email',
-    value: 'barnbuddyapp@gmail.com',
-    detail: 'Best for product questions, support, and partnership ideas.',
-    href: 'mailto:barnbuddyapp@gmail.com',
-  },
-  {
-    label: 'Location',
-    value: 'Kansas, United States',
-    detail: 'Built with small farms, FFA, and 4-H communities in mind.',
-  },
-]
-
-const supportTopics = ['Account help', 'Feature ideas', 'School or chapter plans', 'Bug reports']
-const contactTopicOptions = [
-  'General question',
-  'Support request',
-  'Bug report',
-  'Review or feedback',
-  'School or chapter pricing',
-  'Feature idea',
-]
+const topicPrompts = {
+  'General question': 'What would you like to know about BarnBuddy?',
+  'Support request': 'Which part of BarnBuddy are you using, and where are you getting stuck?',
+  'Bug report': 'What did you try, and what happened? Include any error message you saw.',
+  'Review or feedback': 'What worked well for you? What would you change?',
+  'School or chapter pricing': 'Which school or chapter is this for, and about how many members need access?',
+  'Feature idea': 'What would you like to do with your herd or project records?',
+}
+const contactTopicOptions = Object.keys(topicPrompts)
 const CONTACT_COOLDOWN_KEY = 'barnbuddy_contact_last_sent_at'
 const CONTACT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -104,7 +90,7 @@ export default function Contact() {
       })
       window.localStorage.setItem(CONTACT_COOLDOWN_KEY, String(Date.now()))
       setCooldown(getContactCooldown())
-      setStatus({ type: 'success', message: 'Thanks — your message was sent. We will reply by email as soon as we can.' })
+      setStatus({ type: 'success', message: `Message sent. Look for a reply at ${form.email}.` })
     } catch (err) {
       setStatus({ type: 'error', message: err.message })
     } finally {
@@ -115,157 +101,98 @@ export default function Contact() {
   return (
     <div className="public-page flex min-h-screen flex-col text-white">
       <main className="flex-grow">
-        <section className="px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
-          <div className="max-w-7xl mx-auto">
-            <div className="max-w-3xl mb-10">
-              <p className="text-blue-300 text-sm font-semibold uppercase tracking-[0.18em]">Contact</p>
-              <h1 className="mt-3 text-4xl sm:text-5xl font-semibold leading-tight">Get in touch with BarnBuddy</h1>
-              <p className="mt-4 text-white/78 text-lg leading-relaxed">
-                Send a product question, ask for account help, share feedback, or start a conversation about a school or chapter plan.
+        <div className="bb-container bb-section bb-contact-layout">
+          <header className="bb-contact-intro bb-route-intro">
+            <h1>Contact BarnBuddy</h1>
+            <p>Need help with a record, have an idea, or want pricing for your FFA chapter? Send a note here. We’ll reply by email.</p>
+          </header>
+          <form className="bb-contact-form space-y-5" aria-label="Contact BarnBuddy" onSubmit={handleSubmit}>
+            <label className="block">
+              <span className="text-sm font-medium text-white/78">Topic</span>
+              <select
+                value={form.topic}
+                onChange={(e) => updateField('topic', e.target.value)}
+                className="mt-2 w-full rounded-lg border border-white/10 bg-[#101D42] px-4 py-3 text-white outline-none transition-colors focus:border-blue-300"
+              >
+                {contactTopicOptions.map((topic) => (
+                  <option key={topic}>{topic}</option>
+                ))}
+              </select>
+            </label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <label className="block">
+                <span className="text-sm font-medium text-white/78">Name</span>
+                <input
+                  autoComplete="name"
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => updateField('name', e.target.value)}
+                  placeholder="Your name"
+                  required
+                  className="mt-2 w-full rounded-lg border border-white/10 bg-[#101D42] px-4 py-3 text-white placeholder-white/38 outline-none transition-colors focus:border-blue-300"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-medium text-white/78">Email</span>
+                <input
+                  autoComplete="email"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => updateField('email', e.target.value)}
+                  placeholder="you@farm.com"
+                  required
+                  className="mt-2 w-full rounded-lg border border-white/10 bg-[#101D42] px-4 py-3 text-white placeholder-white/38 outline-none transition-colors focus:border-blue-300"
+                />
+              </label>
+            </div>
+
+            <label className="block">
+              <span className="text-sm font-medium text-white/78">Message</span>
+              <textarea
+                rows="5"
+                value={form.message}
+                onChange={(e) => updateField('message', e.target.value)}
+                aria-describedby="contact-message-hint"
+                required
+                className="mt-2 w-full resize-y rounded-lg border border-white/10 bg-[#101D42] px-4 py-3 text-white placeholder-white/38 outline-none transition-colors focus:border-blue-300"
+              />
+            </label>
+            <p id="contact-message-hint" className="text-sm text-slate-300">{topicPrompts[form.topic]}</p>
+
+            {status.message && (
+              <p role={status.type === 'error' ? 'alert' : 'status'} aria-live="polite" aria-atomic="true" className={`rounded-lg border px-4 py-3 text-sm ${
+                status.type === 'success'
+                  ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
+                  : 'border-red-400/30 bg-red-500/10 text-red-100'
+              }`}>
+                {status.message}
               </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting || cooldown.active}
+              className="min-h-11 w-full rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+            >
+              {submitting ? 'Sending...' : cooldown.active ? 'Message already sent' : 'Send message'}
+            </button>
+            {cooldown.active && (
+              <p className="text-sm text-white/60">
+                You can send another message from this device in {cooldown.remainingDays} day{cooldown.remainingDays === 1 ? '' : 's'}.
+              </p>
+            )}
+          </form>
+          <aside className="bb-contact-links" aria-label="Other ways to get help">
+            <h2>Prefer email?</h2>
+            <a className="bb-text-link" href="mailto:barnbuddyapp@gmail.com">barnbuddyapp@gmail.com</a>
+            <div className="mt-5 border-t border-white/15 pt-4">
+              <h2>Looking for instructions?</h2>
+              <Link className="bb-text-link" to="/help">Browse the help guides</Link>
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              <aside className="lg:col-span-5 space-y-5">
-                <div className="rounded-xl border border-white/10 bg-[#0f2650] p-6 sm:p-8 shadow-xl shadow-black/20">
-                  <h2 className="text-2xl font-semibold">How to reach us</h2>
-                  <p className="mt-3 text-sm leading-relaxed text-white/72">
-                    Send product questions, support requests, and partnership ideas through the contact form or email.
-                  </p>
-
-                  <div className="mt-7 space-y-4">
-                    {contactMethods.map((method) => (
-                      <div key={method.label} className="rounded-lg border border-white/10 bg-white/6 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-200">{method.label}</p>
-                        {method.href ? (
-                          <a className="mt-2 inline-block break-all text-lg font-semibold text-white underline decoration-white/30 underline-offset-4 hover:text-blue-200" href={method.href}>
-                            {method.value}
-                          </a>
-                        ) : (
-                          <p className="mt-2 text-lg font-semibold text-white">{method.value}</p>
-                        )}
-                        <p className="mt-1 text-sm leading-relaxed text-white/62">{method.detail}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-white/10 bg-white/6 p-6">
-                  <h3 className="text-lg font-semibold">What we can help with</h3>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {supportTopics.map((topic) => (
-                      <span key={topic} className="rounded-full border border-white/10 bg-white/7 px-3 py-1.5 text-sm text-white/78">
-                        {topic}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="mt-5 text-sm leading-relaxed text-white/65">
-                    Looking for a walkthrough first? <Link className="font-semibold text-blue-200 underline decoration-blue-200/30 underline-offset-4 hover:text-white" to="/help">Visit the Help Center</Link>.
-                  </p>
-                </div>
-              </aside>
-
-              <section className="lg:col-span-7 rounded-xl border border-white/10 bg-white/6 p-6 sm:p-8 shadow-xl shadow-black/20">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <h2 className="text-2xl font-semibold">Send a message</h2>
-                    <p className="mt-2 text-sm text-white/65">Share the details below and BarnBuddy will reply to the email you provide.</p>
-                  </div>
-                  <span className="rounded-full bg-emerald-500/16 px-3 py-1 text-xs font-semibold text-emerald-100">Replies by email</span>
-                </div>
-
-                <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <label className="block">
-                      <span className="text-sm font-medium text-white/78">Name</span>
-                      <input
-                        type="text"
-                        value={form.name}
-                        onChange={(e) => updateField('name', e.target.value)}
-                        placeholder="Your name"
-                        required
-                        className="mt-2 w-full rounded-lg border border-white/10 bg-[#101D42] px-4 py-3 text-white placeholder-white/38 outline-none transition-colors focus:border-blue-300"
-                      />
-                    </label>
-
-                    <label className="block">
-                      <span className="text-sm font-medium text-white/78">Email</span>
-                      <input
-                        type="email"
-                        value={form.email}
-                        onChange={(e) => updateField('email', e.target.value)}
-                        placeholder="you@farm.com"
-                        required
-                        className="mt-2 w-full rounded-lg border border-white/10 bg-[#101D42] px-4 py-3 text-white placeholder-white/38 outline-none transition-colors focus:border-blue-300"
-                      />
-                    </label>
-                  </div>
-
-                  <label className="block">
-                    <span className="text-sm font-medium text-white/78">Topic</span>
-                    <select
-                      value={form.topic}
-                      onChange={(e) => updateField('topic', e.target.value)}
-                      className="mt-2 w-full rounded-lg border border-white/10 bg-[#101D42] px-4 py-3 text-white outline-none transition-colors focus:border-blue-300"
-                    >
-                      {contactTopicOptions.map((topic) => (
-                        <option key={topic}>{topic}</option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="block">
-                    <span className="text-sm font-medium text-white/78">Message</span>
-                    <textarea
-                      rows="6"
-                      value={form.message}
-                      onChange={(e) => updateField('message', e.target.value)}
-                      placeholder="Tell us what is going on..."
-                      required
-                      className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-[#101D42] px-4 py-3 text-white placeholder-white/38 outline-none transition-colors focus:border-blue-300"
-                    />
-                  </label>
-
-                  {status.message && (
-                    <p role={status.type === 'error' ? 'alert' : 'status'} aria-live="polite" aria-atomic="true" className={`rounded-lg border px-4 py-3 text-sm ${
-                      status.type === 'success'
-                        ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
-                        : 'border-red-400/30 bg-red-500/10 text-red-100'
-                    }`}>
-                      {status.message}
-                    </p>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={submitting || cooldown.active}
-                    className="min-h-11 w-full rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
-                  >
-                    {submitting ? 'Sending...' : cooldown.active ? 'Message already sent' : 'Send message'}
-                  </button>
-                  {cooldown.active && (
-                    <p className="text-sm text-white/60">
-                      You can send another message from this device in {cooldown.remainingDays} day{cooldown.remainingDays === 1 ? '' : 's'}.
-                    </p>
-                  )}
-                </form>
-              </section>
-            </div>
-
-            <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                ['For farmers', 'Ask about setup, animal records, reminders, or keeping workflows simple.'],
-                ['For students', 'Use this for FFA, 4-H, SAE, or project record questions.'],
-                ['For programs', 'Reach out for school, chapter, or group-license conversations.'],
-              ].map(([title, copy]) => (
-                <div key={title} className="rounded-lg border border-white/8 bg-white/5 p-5">
-                  <h3 className="font-semibold text-white">{title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-white/64">{copy}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+          </aside>
+        </div>
       </main>
 
       <Footer />

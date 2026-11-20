@@ -1,3 +1,4 @@
+import { reviseNewsPost } from '../data/newsPosts'
 import { API_BASE_URL, API_URL } from "./env";
 
 const publicR2BaseUrl = (import.meta.env.VITE_R2_PUBLIC_BASE_URL || "").replace(/\/+$/, "");
@@ -39,7 +40,7 @@ export function normalizeSiteContentImages(content) {
   return {
     ...content,
     newsPosts: Array.isArray(content?.newsPosts)
-      ? content.newsPosts.map((post) => ({ ...post, image: resolveSiteImageUrl(post.image) }))
+      ? content.newsPosts.map((post) => ({ ...reviseNewsPost(post), image: resolveSiteImageUrl(post.image) }))
       : content?.newsPosts,
     carouselSlides: Array.isArray(content?.carouselSlides)
       ? content.carouselSlides.map((slide) => ({ ...slide, image: resolveSiteImageUrl(slide.image) }))

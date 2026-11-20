@@ -11,14 +11,14 @@ export default function TOSandPP({ documentType = 'terms' }) {
             {/* Main Content */}
             <main className="flex-grow flex flex-col items-center px-4 py-10">
 
-                <nav className="flex flex-wrap justify-center gap-4 mb-8" aria-label="Legal documents">
+                <nav className="flex flex-wrap justify-center gap-1 mb-8 rounded-lg border border-white/15 p-1" aria-label="Legal documents">
                     <Link
                         to="/terms"
                         aria-current={!showPrivacy ? 'page' : undefined}
                         className={`px-5 py-3 rounded-md font-semibold transition-colors ${
                             !showPrivacy
                                 ? 'bg-blue-600'
-                                : 'bg-blue-700 hover:bg-blue-800'
+                                : 'text-blue-200 hover:bg-white/10'
                         }`}
                     >
                         Terms of Service
@@ -30,7 +30,7 @@ export default function TOSandPP({ documentType = 'terms' }) {
                         className={`px-5 py-3 rounded-md font-semibold transition-colors ${
                             showPrivacy
                                 ? 'bg-blue-600'
-                                : 'bg-blue-700 hover:bg-blue-800'
+                                : 'text-blue-200 hover:bg-white/10'
                         }`}
                     >
                         Privacy Policy
@@ -38,7 +38,7 @@ export default function TOSandPP({ documentType = 'terms' }) {
                 </nav>
 
                 {/* Content Box */}
-                <div className="bg-[#0f2650] border border-white/10 rounded-xl shadow-lg w-full max-w-6xl p-8">
+                <div className="bg-[#0f2650] border border-white/10 rounded-lg w-full max-w-3xl p-5 leading-7 sm:p-10">
 
                     {showPrivacy && (
                         <div className="space-y-6" id="privacy-policy">

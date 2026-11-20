@@ -6,9 +6,11 @@ import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";
 import PremiumExpiryBadge from "./PremiumExpiryBadge";
 
 const publicLinks = [
+  { to: "/#features", label: "Features" },
+  { to: "/#chapter-mode", label: "Chapter Mode" },
   { to: "/aboutus", label: "About" },
-  { to: "/pricing", label: "Pricing" },
   { to: "/news", label: "News" },
+  { to: "/pricing", label: "Pricing" },
   { to: "/help", label: "Help" },
 ];
 
@@ -20,7 +22,7 @@ function Brand() {
           <span className="text-blue-500">Barn</span>
           <span className="text-gray-300">Buddy.</span>
         </span>
-        <span className="mt-1 block text-[10px] font-bold text-slate-400 sm:text-xs">
+        <span className="bb-brand-tagline mt-1 block text-[10px] font-bold text-slate-400 sm:text-xs">
           Doing for the Small
         </span>
       </span>
@@ -30,6 +32,7 @@ function Brand() {
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
   const menuButtonRef = useRef(null);
   const location = useLocation();
   const { isLoaded, isSignedIn } = useClerkAuth();
@@ -53,7 +56,7 @@ export default function Navbar() {
 
   useEffect(() => {
     setOpen(false);
-  }, [location.pathname]);
+  }, [location.pathname, location.hash]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -69,6 +72,38 @@ export default function Navbar() {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [open]);
 
+  useEffect(() => {
+    if (location.pathname !== "/") return;
+    const main = document.getElementById("main-content");
+    let frame = 0;
+    function updateSection() {
+      frame = 0;
+      const readingLine = Math.min(window.innerHeight * 0.32, 240);
+      const section = publicLinks.find(({ to }) => {
+        if (!to.startsWith("/#")) return false;
+        const bounds = document.getElementById(to.slice(2))?.getBoundingClientRect();
+        return bounds && bounds.top <= readingLine && bounds.bottom > readingLine;
+      });
+      setActiveSection(section?.to || "");
+    }
+    function scheduleUpdate() {
+      if (!frame) frame = requestAnimationFrame(updateSection);
+    }
+    const observer = new ResizeObserver(scheduleUpdate);
+    if (main) observer.observe(main);
+    updateSection();
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("resize", scheduleUpdate);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+    };
+  }, [location.pathname]);
+
+  const currentSection = location.pathname === "/" ? activeSection : "";
+  const isCurrentPage = (to) => location.pathname === to || location.pathname.startsWith(to + "/");
   const desktopLinkClass = ({ isActive }) =>
     `inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold transition-colors ${
       isActive
@@ -84,7 +119,7 @@ export default function Navbar() {
     }`;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0b1730]/95 text-white shadow-lg shadow-black/15 backdrop-blur-xl">
+    <header className="bb-public-header sticky top-0 z-50 border-b border-white/10 bg-[#0b1730] text-white">
       <nav aria-label="Primary navigation">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-[4.5rem] items-center justify-between gap-5">
@@ -94,9 +129,9 @@ export default function Navbar() {
 
             <div className="hidden items-center gap-1 lg:flex">
               {publicLinks.map((link) => (
-                <NavLink key={link.to} to={link.to} className={desktopLinkClass}>
-                  {link.label}
-                </NavLink>
+                link.to.includes('#') ? (
+                  <Link key={link.to} to={link.to} className={desktopLinkClass({ isActive: currentSection === link.to })} aria-current={currentSection === link.to ? 'location' : undefined}>{link.label}</Link>
+                ) : <NavLink key={link.to} to={link.to} className={desktopLinkClass}>{link.label}</NavLink>
               ))}
             </div>
 
@@ -116,7 +151,7 @@ export default function Navbar() {
                   <PremiumExpiryBadge subscription={subscription} className="hidden xl:inline-flex" />
                   <Link
                     to="/dashboard"
-                    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white shadow-lg shadow-blue-950/25 transition hover:bg-blue-500"
+                    className="inline-flex min-h-11 items-center justify-center rounded-md bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-500"
                   >
                     Dashboard
                   </Link>
@@ -134,7 +169,7 @@ export default function Navbar() {
                   </Link>
                   <Link
                     to="/signup"
-                    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-950/25 transition hover:bg-blue-500"
+                    className="inline-flex min-h-11 items-center justify-center rounded-md bg-blue-600 px-5 text-sm font-bold text-white transition hover:bg-blue-500"
                   >
                     Get started free
                   </Link>
@@ -142,6 +177,11 @@ export default function Navbar() {
               )}
             </div>
 
+            {currentSection && !open && (
+              <span className="bb-mobile-location ml-auto mr-1 text-sm text-blue-200 lg:hidden">
+                {publicLinks.find(link => link.to === currentSection)?.label}
+              </span>
+            )}
             <button
               ref={menuButtonRef}
               type="button"
@@ -160,13 +200,13 @@ export default function Navbar() {
         </div>
 
         {open && (
-          <div id="mobile-primary-menu" className="border-t border-white/10 bg-[#0b1730] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 lg:hidden">
+          <div id="mobile-primary-menu" className="absolute inset-x-0 top-full max-h-[calc(100dvh-4.5rem)] overflow-y-auto overscroll-contain border-t border-white/10 bg-[#0b1730] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 lg:hidden">
             <div className="mx-auto max-w-7xl space-y-1">
               {publicLinks.map((link) => (
-                <NavLink key={link.to} to={link.to} className={mobileLinkClass}>
+                <Link key={link.to} to={link.to} onClick={() => setOpen(false)} aria-current={link.to === currentSection ? "location" : isCurrentPage(link.to) ? "page" : undefined} className={mobileLinkClass({ isActive: link.to.includes('#') ? currentSection === link.to : isCurrentPage(link.to) })}>
                   <span>{link.label}</span>
                   <span aria-hidden="true" className="text-blue-300">→</span>
-                </NavLink>
+                </Link>
               ))}
 
               <div className="my-3 border-t border-white/10" />
@@ -194,7 +234,7 @@ export default function Navbar() {
                   </Link>
                   <Link
                     to="/dashboard"
-                    className="flex min-h-12 items-center justify-center rounded-xl bg-blue-600 px-4 font-bold text-white shadow-lg shadow-blue-950/25 hover:bg-blue-500"
+                    className="flex min-h-12 items-center justify-center rounded-md bg-blue-600 px-4 font-bold text-white hover:bg-blue-500"
                   >
                     Open dashboard
                   </Link>
@@ -219,7 +259,7 @@ export default function Navbar() {
                   </Link>
                   <Link
                     to="/signup"
-                    className="flex min-h-12 items-center justify-center rounded-xl bg-blue-600 font-bold text-white hover:bg-blue-500"
+                    className="flex min-h-12 items-center justify-center rounded-md bg-blue-600 font-bold text-white hover:bg-blue-500"
                   >
                     Get started free
                   </Link>

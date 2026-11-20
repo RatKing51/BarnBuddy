@@ -123,7 +123,7 @@ function ModalDialog({ open, onClose, labelledBy, describedBy, initialFocusRef, 
         aria-modal="true"
         aria-labelledby={labelledBy}
         aria-describedby={describedBy}
-        className="max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-3xl border border-gray-700 bg-gray-900 p-5 text-gray-100 shadow-2xl shadow-black/40 sm:p-6"
+        className="max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-lg border border-gray-700 bg-gray-900 p-5 text-gray-100 shadow-2xl shadow-black/40 sm:p-6"
       >
         {children}
       </div>
@@ -416,10 +416,10 @@ export default function HerdSettings() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-3xl">
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-blue-400">Herd workspace</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">Manage your herds</h1>
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-blue-400">Settings</p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">Your herds</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-400 sm:text-base">
-                Keep herd names and details organized so animals and records stay easy to find across BarnBuddy.
+                Select a herd to see its details and animals. Use separate herds for different pastures, pens, or project groups.
               </p>
             </div>
             <span className="w-fit rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1.5 text-sm font-semibold text-blue-200" aria-live="polite">
@@ -448,7 +448,7 @@ export default function HerdSettings() {
           )}
 
           <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-[minmax(260px,330px)_minmax(0,1fr)] lg:gap-6">
-            <aside className="h-fit min-w-0 overflow-hidden rounded-3xl border border-gray-800 bg-gray-900/80 shadow-xl shadow-black/10 lg:sticky lg:top-6" aria-labelledby="herd-list-title">
+            <aside className="h-fit min-w-0 overflow-hidden rounded-lg border border-gray-800 bg-gray-900/80 lg:sticky lg:top-6" aria-labelledby="herd-list-title">
               <div className="flex items-center justify-between gap-3 border-b border-gray-800 p-4 sm:p-5">
                 <div className="min-w-0">
                   <h2 id="herd-list-title" className="font-semibold text-white">Your herds</h2>
@@ -529,7 +529,7 @@ export default function HerdSettings() {
 
             <div className="min-w-0 space-y-5">
               {loadingHerds ? (
-                <section className="rounded-3xl border border-gray-800 bg-gray-900/80 p-5 sm:p-7" aria-label="Loading herd details" aria-busy="true">
+                <section className="rounded-lg border border-gray-800 bg-gray-900/80 p-5 sm:p-7" aria-label="Loading herd details" aria-busy="true">
                   <div className="bb-skeleton h-7 w-48 animate-pulse rounded-lg bg-gray-800" />
                   <div className="mt-3 bb-skeleton h-4 w-full max-w-lg animate-pulse rounded bg-gray-800" />
                   <div className="mt-8 grid gap-5 sm:grid-cols-2">
@@ -539,7 +539,7 @@ export default function HerdSettings() {
                   </div>
                 </section>
               ) : herds.length === 0 && !loadError ? (
-                <section className="grid min-h-[25rem] place-items-center rounded-3xl border border-dashed border-gray-700 bg-gray-900/60 p-6 text-center">
+                <section className="grid min-h-[25rem] place-items-center rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-6 text-center">
                   <div className="max-w-md">
                     <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-blue-400/20 bg-blue-500/10 text-blue-300">
                       <EmptyStateIcon />
@@ -556,7 +556,7 @@ export default function HerdSettings() {
                   </div>
                 </section>
               ) : !selectedHerd ? (
-                <section className="grid min-h-[25rem] place-items-center rounded-3xl border border-dashed border-gray-700 bg-gray-900/60 p-6 text-center">
+                <section className="grid min-h-[25rem] place-items-center rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-6 text-center">
                   <div className="max-w-md">
                     <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gray-800 text-blue-300"><EmptyStateIcon /></span>
                     <h2 className="mt-5 text-2xl font-semibold text-white">Choose a herd</h2>
@@ -565,7 +565,7 @@ export default function HerdSettings() {
                 </section>
               ) : (
                 <>
-                  <section className="overflow-hidden rounded-3xl border border-gray-800 bg-gray-900/80 shadow-xl shadow-black/10" aria-labelledby="herd-details-title">
+                  <section className="overflow-hidden rounded-lg border border-gray-800 bg-gray-900/80" aria-labelledby="herd-details-title">
                     <div className="flex flex-col gap-3 border-b border-gray-800 p-5 sm:flex-row sm:items-start sm:justify-between sm:p-7">
                       <div className="min-w-0">
                         <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-400">Herd details</p>
@@ -667,7 +667,7 @@ export default function HerdSettings() {
                     </form>
                   </section>
 
-                  <section className="rounded-3xl border border-red-500/25 bg-red-500/[0.07] p-5 sm:p-6" aria-labelledby="danger-zone-title">
+                  <section className="rounded-lg border border-red-500/25 bg-red-500/[0.07] p-5 sm:p-6" aria-labelledby="danger-zone-title">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div className="max-w-2xl">
                         <h2 id="danger-zone-title" className="font-semibold text-white">Delete this herd</h2>

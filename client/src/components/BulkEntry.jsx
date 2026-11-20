@@ -164,7 +164,7 @@ export default function BulkEntry({
         <h2 className="mt-1 text-xl font-semibold text-white sm:text-2xl">Bulk entry</h2>
       </div>
 
-      <form onSubmit={submit} className="grid grid-cols-1 gap-3 sm:gap-5 xl:grid-cols-[360px_1fr]">
+      <form onSubmit={submit} className="grid grid-cols-1 gap-3 sm:gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
         <section className="rounded-2xl border border-gray-700 bg-gray-800 p-3 sm:p-4">
           <div className="flex items-center justify-between gap-3">
             <h3 className="font-semibold text-white">Choose animals</h3>
