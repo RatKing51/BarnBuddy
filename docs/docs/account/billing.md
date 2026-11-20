@@ -1,5 +1,6 @@
 ---
 title: Billing
+description: Review BarnBuddy Free and Premium features, subscription management, and what happens to records when Premium ends.
 ---
 
 # Billing
@@ -13,10 +14,13 @@ Free is intended for core livestock records and small herds getting started.
 ## Premium
 
 Premium unlocks advanced reporting, reminders, exports, breeding, finance, and feed planning tools.
+Premium is listed at $5 per month on the pricing page. Review the amount and terms displayed in checkout before confirming a subscription.
 
 ## Manage Billing
 
-Open Account Settings to review plan status and billing actions.
+Open **Account Settings → Subscription** to review plan status. Premium accounts can open **Manage billing** in Clerk Billing to view or change their subscription. The provider screen shows the effective cancellation date and any remaining access.
+
+Deleting a BarnBuddy account does not itself cancel a paid subscription. Manage billing and confirm cancellation separately before deleting an account.
 
 ## Data After Premium Ends
 

@@ -1,6 +1,6 @@
 import '../styles/reviews.css'
 
-export default function ReviewLandingCard({ name, role, rating, text, date, tag, verified }) {
+export default function ReviewLandingCard({ name, role, rating, text, date, tag }) {
   const score = Number(rating)
   return (
     <figure className="bb-review">
@@ -13,7 +13,7 @@ export default function ReviewLandingCard({ name, role, rating, text, date, tag,
       <blockquote>{text}</blockquote>
       <figcaption>
         <strong>{name}</strong>
-        {[role, tag, verified && 'Verified'].filter(Boolean).join(' · ')}
+        {[role, tag].filter(Boolean).join(' · ')}
       </figcaption>
     </figure>
   )

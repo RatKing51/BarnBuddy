@@ -241,7 +241,7 @@ export default function AccountSettings() {
 
   const handleDeleteAccount = async () => {
     const confirmed = window.confirm(
-      "Delete your BarnBuddy account and all farm records? This cannot be undone."
+      "Delete your BarnBuddy account and linked records? This cannot be undone. Account deletion does not cancel a paid subscription; manage billing separately first."
     );
 
     if (!confirmed) return;
@@ -614,7 +614,7 @@ export default function AccountSettings() {
             <section className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6">
               <h2 className="text-xl font-semibold text-white">Delete account</h2>
               <p className="mt-2 text-sm leading-relaxed text-red-100/80">
-                Deleting your account removes your BarnBuddy user record and farm data. This action cannot be undone.
+                Deleting your account removes its linked BarnBuddy records and asks Clerk to remove your sign-in. Uploaded-file cleanup is attempted separately and may take longer. Account deletion does not cancel a paid subscription; manage billing separately first.
               </p>
 
               <button

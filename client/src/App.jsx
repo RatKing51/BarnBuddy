@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter as Router, Link, Navigate, Routes, Route, useLocation } from "react-router";
-import Landing from "./pages/Landing";
 import Navbar from "./components/Navbar";
 import PrivateRoute from "./routes/PrivateRoute";
 import PremiumRoute from "./routes/PremiumRoute";
@@ -18,6 +17,7 @@ const DOCS_URL = "https://doc.barnbuddy.pro";
 const ANNOUNCEMENT_EVENT = "barnbuddy:announcement-updated";
 const MAINTENANCE_EVENT = "barnbuddy:maintenance-updated";
 const Login = lazy(() => import("./pages/Login"));
+const Landing = lazy(() => import("./pages/Landing"));
 const SignUp = lazy(() => import("./pages/SignUp"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const FfaProjects = lazy(() => import("./pages/FfaProjects"));
@@ -268,6 +268,12 @@ function AppContent() {
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/terms" element={<TOSandPP documentType="terms" />} />
         <Route path="/privacy" element={<TOSandPP documentType="privacy" />} />
+        <Route path="/refunds" element={<TOSandPP documentType="refunds" />} />
+        <Route path="/cancellation" element={<TOSandPP documentType="cancellation" />} />
+        <Route path="/cookies" element={<TOSandPP documentType="cookies" />} />
+        <Route path="/data-retention" element={<TOSandPP documentType="data-retention" />} />
+        <Route path="/accessibility" element={<TOSandPP documentType="accessibility" />} />
+        <Route path="/security" element={<TOSandPP documentType="security" />} />
         <Route path="/termsofserviceandprivacypolicy" element={<LegacyLegalRedirect />} />
         <Route path="/news/:postId?" element={<News />} />
         <Route path="/contact" element={<Contact />} />

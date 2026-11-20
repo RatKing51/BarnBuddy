@@ -153,7 +153,7 @@ export default function SignUp() {
                   <div className="border-t border-white/15 pt-3">
                     <h3 className="font-semibold text-white">Privacy first</h3>
                     <p className="mt-1">
-                      Your data stays yours. Export anytime and delete your account whenever you want.
+                      Selected record exports are available, with some exports on Premium. You can request account deletion in Account Settings.
                     </p>
                   </div>
                 </div>

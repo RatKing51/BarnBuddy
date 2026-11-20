@@ -68,10 +68,9 @@ async function deleteUserDataByUserId(userId) {
 
         await client.query("COMMIT");
         const cleanupResults = await Promise.allSettled(objectKeys.map((key) => deleteObject(key)));
-        cleanupResults.forEach((result, index) => {
+        cleanupResults.forEach((result) => {
             if (result.status === "rejected") {
                 console.error("Failed to delete user object from R2:", {
-                    key: objectKeys[index],
                     error: result.reason?.message || String(result.reason),
                 });
             }
