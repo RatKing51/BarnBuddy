@@ -10,6 +10,9 @@ const {
 } = require("../middleware/authMiddleware");
 const { clearRateLimitStore, createRateLimit } = require("../middleware/rateLimit");
 const securityHeaders = require("../middleware/securityHeaders");
+const { isAdminUser } = require("../middleware/adminAuthorization");
+const { buildClientUrls, validateProductionConfig, resolveNodeEnv } = require("../config/env");
+const { getDatabaseSslOptions } = require("../config/databaseTls");
 const { getEffectiveReminderSubscription } = require("../services/notificationService");
 const { detectImageMimeType } = require("../utils/imageFiles");
 
@@ -243,6 +246,23 @@ test("the request limiter rejects traffic after the configured allowance", () =>
   assert.equal(typeof third.headers["Retry-After"], "string");
 });
 
+test("admin access is granted by Clerk user ID and never by email alone", () => {
+  const previousIds = process.env.ADMIN_CLERK_USER_IDS;
+  const previousEmails = process.env.ADMIN_EMAILS;
+  process.env.ADMIN_CLERK_USER_IDS = "user_admin_test";
+  process.env.ADMIN_EMAILS = "admin@example.com";
+
+  try {
+    assert.equal(isAdminUser({ clerkUserId: "user_admin_test", email: "other@example.com" }), true);
+    assert.equal(isAdminUser({ clerkUserId: "user_regular", email: "admin@example.com" }), false);
+  } finally {
+    if (previousIds === undefined) delete process.env.ADMIN_CLERK_USER_IDS;
+    else process.env.ADMIN_CLERK_USER_IDS = previousIds;
+    if (previousEmails === undefined) delete process.env.ADMIN_EMAILS;
+    else process.env.ADMIN_EMAILS = previousEmails;
+  }
+});
+
 test("security headers deny framing and content-type sniffing", () => {
   const response = createResponse();
   let nextCalled = false;
@@ -252,6 +272,93 @@ test("security headers deny framing and content-type sniffing", () => {
   assert.equal(response.headers["X-Frame-Options"], "DENY");
   assert.equal(response.headers["X-Content-Type-Options"], "nosniff");
   assert.match(response.headers["Content-Security-Policy"], /default-src 'none'/);
+});
+
+test("production CORS origins exclude localhost even if it is configured", () => {
+  const productionOrigins = buildClientUrls("https://app.example.com,http://localhost:5173", "production");
+  const developmentOrigins = buildClientUrls("https://app.example.com,http://localhost:5173", "development");
+
+  assert.deepEqual(productionOrigins, [
+    "https://app.example.com",
+    "https://barnbuddy.pro",
+    "https://www.barnbuddy.pro",
+  ]);
+  assert.ok(developmentOrigins.includes("http://localhost:5173"));
+});
+
+test("Railway's production environment enables production protections without relying on NODE_ENV", () => {
+  assert.equal(resolveNodeEnv({ RAILWAY_ENVIRONMENT_NAME: "production" }), "production");
+  assert.equal(resolveNodeEnv({ RAILWAY_ENVIRONMENT_NAME: "Staging", NODE_ENV: "development" }), "development");
+});
+
+test("production PostgreSQL TLS verifies the Railway CA and certificate name", () => {
+  assert.deepEqual(getDatabaseSslOptions({
+    nodeEnv: "production",
+    databaseSslCaCert: "test-ca",
+    databaseSslServername: "localhost",
+  }), {
+    ca: "test-ca",
+    rejectUnauthorized: true,
+    servername: "localhost",
+  });
+  assert.equal(getDatabaseSslOptions({ nodeEnv: "development" }), false);
+});
+
+test("production configuration rejects missing database and non-live Clerk credentials", () => {
+  const configuration = {
+    databaseUrl: "",
+    databaseSslCaCert: "-----BEGIN CERTIFICATE-----test-----END CERTIFICATE-----",
+    databaseSslServername: "localhost",
+    rateLimitHmacSecret: "unit-test-rate-limit-secret-at-least-32",
+    adminClerkUserIds: ["user_admin_test"],
+    clerk: {
+      publishableKey: "pk_test_placeholder",
+      secretKey: "sk_test_placeholder",
+      webhookSigningSecret: "whsec_configured_by_test",
+      premiumPlanSlug: "premium",
+    },
+  };
+  assert.throws(() => validateProductionConfig(configuration), /DATABASE_URL/);
+
+  configuration.databaseUrl = "postgres://configured-by-test";
+  assert.throws(() => validateProductionConfig(configuration), /live Clerk publishable key/);
+
+  configuration.clerk.publishableKey = "pk_live_configured-by-test";
+  assert.throws(() => validateProductionConfig(configuration), /live Clerk secret key/);
+
+  configuration.clerk.secretKey = "sk_live_configured-by-test";
+  assert.doesNotThrow(() => validateProductionConfig(configuration));
+
+  configuration.databaseSslCaCert = "";
+  assert.throws(() => validateProductionConfig(configuration), /DATABASE_SSL_CA_CERT/);
+});
+
+test("production API responses receive HSTS", () => {
+  const previousNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = "production";
+  const response = createResponse();
+  try {
+    securityHeaders({}, response, () => {});
+    assert.equal(response.headers["Strict-Transport-Security"], "max-age=31536000; includeSubDomains");
+  } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
+  }
+});
+
+test("auth middleware rejects cookie-only requests to avoid CSRF", async () => {
+  const authMiddleware = require("../middleware/authMiddleware");
+  const response = createResponse();
+  let nextCalled = false;
+  const request = {
+    headers: { cookie: "__session=present" },
+    path: "/api/animals",
+    get(name) { return this.headers[name.toLowerCase()]; },
+  };
+
+  await authMiddleware(request, response, () => { nextCalled = true; });
+  assert.equal(response.statusCode, 401);
+  assert.equal(nextCalled, false);
 });
 
 test("uploaded images are identified by file bytes, not their filename", () => {

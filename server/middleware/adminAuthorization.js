@@ -6,13 +6,8 @@ function readEnvList(name) {
 }
 
 function isAdminUser(user = {}) {
-  const allowedEmails = readEnvList("ADMIN_EMAILS").map((email) => email.toLowerCase());
   const allowedClerkIds = readEnvList("ADMIN_CLERK_USER_IDS");
-
-  return Boolean(
-    (user.email && allowedEmails.includes(user.email.toLowerCase())) ||
-      (user.clerkUserId && allowedClerkIds.includes(user.clerkUserId))
-  );
+  return Boolean(user.clerkUserId && allowedClerkIds.includes(user.clerkUserId));
 }
 
 function requireAdmin(req, res, next) {

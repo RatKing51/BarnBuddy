@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { UserButton, useAuth as useClerkAuth, useUser } from "@clerk/react";
 import { Link, NavLink, useLocation } from "react-router";
-import { ADMIN_CLERK_USER_IDS, ADMIN_EMAILS } from "../config/env";
 import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";
 import PremiumExpiryBadge from "./PremiumExpiryBadge";
 
@@ -39,12 +38,8 @@ export default function Navbar() {
   const { backendUser, subscription } = useBarnBuddyAuth();
   const { user } = useUser();
   const showSignedIn = isLoaded && isSignedIn;
-  const primaryEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || "";
-  const showAdmin = Boolean(
-    showSignedIn &&
-      ((primaryEmail && ADMIN_EMAILS.includes(primaryEmail)) ||
-        (user?.id && ADMIN_CLERK_USER_IDS.includes(user.id)))
-  );
+  const primaryEmail = user?.primaryEmailAddress?.emailAddress || "";
+  const showAdmin = showSignedIn && backendUser?.isAdmin === true;
   const showAdvisor = Boolean(
     showSignedIn &&
       (backendUser?.ffa?.isAdvisor === true ||

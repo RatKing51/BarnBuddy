@@ -64,11 +64,11 @@ test("record creation routes share the recommended cooldown and quotas", () => {
   }
 });
 
-test("updates, uploads, and non-record actions do not consume creation quota", () => {
+test("updates and uploads do not consume record creation quota", () => {
   assert.equal(getUsageLimit(requestFor("/api/animals/123", { method: "PUT" })), null);
   assert.equal(getUsageLimit(requestFor("/api/animals/123/upload")), null);
   assert.equal(getUsageLimit(requestFor("/api/notifications/reminders/send")), null);
-  assert.equal(getUsageLimit(requestFor("/api/import-assistant/request")), null);
+  assert.equal(getUsageLimit(requestFor("/api/import-assistant/request")).group, "support-request");
 });
 
 test("AI extraction uses plan-aware daily limits and a 60-second cooldown", () => {
@@ -84,6 +84,23 @@ test("AI extraction uses plan-aware daily limits and a 60-second cooldown", () =
     [1, 60],
     [25, 86_400],
   ]);
+});
+
+test("sensitive account, email, and admin mutations receive durable quotas", () => {
+  const cases = [
+    ["/auth/me", "DELETE", "account-delete", 3, 3_600],
+    ["/api/email/test", "POST", "email-test", 5, 3_600],
+    ["/api/import-assistant/request", "POST", "support-request", 5, 3_600],
+    ["/api/site-content/admin/users/user_123/flags", "PATCH", "admin-mutation", 60, 900],
+    ["/api/admin/ffa-chapters/12/members/user_123", "DELETE", "admin-mutation", 60, 900],
+  ];
+
+  for (const [path, method, group, max, windowSeconds] of cases) {
+    const limit = getUsageLimit(requestFor(path, { method }));
+    assert.equal(limit.group, group, path);
+    assert.equal(limit.policies[0].max, max, path);
+    assert.equal(limit.policies[0].windowSeconds, windowSeconds, path);
+  }
 });
 
 test("blocked usage returns retry headers and a structured 429 response", async () => {

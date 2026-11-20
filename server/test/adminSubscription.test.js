@@ -36,21 +36,21 @@ test("expired metadata and local grants do not appear active", () => {
   }).isPremium, false);
 });
 
-test("Clerk Billing subscription items resolve paid and canceled access", () => {
+test("Clerk Billing subscription items resolve configured paid and canceled access", () => {
   const active = getClerkBillingSubscriptionState({
     subscriptionItems: [{ status: "active", planId: "plan_premium", plan: { slug: "premium" } }],
   }, ["plan_premium", "premium"]);
   assert.equal(active.isPremium, true);
   assert.equal(active.source, "clerk_billing");
 
-  const paidCustomPlan = getClerkBillingSubscriptionState({
+  const paidUnconfiguredPlan = getClerkBillingSubscriptionState({
     subscriptionItems: [{
       status: "active",
       amount: { amount: 500, currency: "USD" },
       plan: { slug: "barnbuddy-plus", isDefault: false, hasBaseFee: true },
     }],
   }, ["premium"]);
-  assert.equal(paidCustomPlan.isPremium, true);
+  assert.equal(paidUnconfiguredPlan.isPremium, false);
 
   const canceled = getClerkBillingSubscriptionState({
     subscriptionItems: [{

@@ -119,8 +119,8 @@ async function resolvePersonalSubscription({
     const candidates = [...new Set([
         ...planCandidates,
         ...readEnvList("CLERK_PREMIUM_PLAN_ID"),
-        ...readEnvList("CLERK_PREMIUM_PLAN_SLUG", ["premium", "pro"]),
-        ...readEnvList("CLERK_PREMIUM_FEATURE_SLUG", ["premium_access"]),
+        ...readEnvList("CLERK_PREMIUM_PLAN_SLUG"),
+        ...readEnvList("CLERK_PREMIUM_FEATURE_SLUG"),
     ].filter(Boolean))];
 
     try {
@@ -190,6 +190,15 @@ function sanitizeFfaAccessForUser(ffaAccess = {}) {
 
 async function authMiddleware(req, res, next) {
     try {
+        // The browser client sends Clerk session tokens in Authorization. Requiring
+        // that header prevents ambient Clerk cookies from authorizing cross-site
+        // state-changing requests (CSRF).
+        const authorization = req.get?.("authorization") || req.headers?.authorization || "";
+        if (!/^Bearer\s+\S+$/i.test(authorization)) {
+            return res.status(401).json({ message: "Not authenticated" });
+        }
+        res.set("Cache-Control", "private, no-store");
+
         const auth =
             typeof req.auth === "function"
                 ? req.auth({ acceptsToken: "any" })
@@ -199,7 +208,7 @@ async function authMiddleware(req, res, next) {
         if (!authenticatedUserId) {
             const details = {
                 method: req.method,
-                path: req.originalUrl,
+                path: req.path || req.originalUrl?.split("?", 1)[0],
             };
 
             if (process.env.NODE_ENV !== "production") {
@@ -219,9 +228,9 @@ async function authMiddleware(req, res, next) {
             return res.status(401).json({ message: "Not authenticated" });
         }
 
-        const premiumPlanCandidates = readEnvList("CLERK_PREMIUM_PLAN_SLUG", ["premium", "pro"]);
+        const premiumPlanCandidates = readEnvList("CLERK_PREMIUM_PLAN_SLUG");
         const premiumPlanIdCandidates = readEnvList("CLERK_PREMIUM_PLAN_ID");
-        const premiumFeatureCandidates = readEnvList("CLERK_PREMIUM_FEATURE_SLUG", ["premium_access"]);
+        const premiumFeatureCandidates = readEnvList("CLERK_PREMIUM_FEATURE_SLUG");
         // Clerk's `has()` reflects the active context. An active Organization
         // entitlement must not be mistaken for the user's personal plan.
         const hasPremiumAccess = hasPersonalClerkAccess(
@@ -318,7 +327,7 @@ async function authMiddleware(req, res, next) {
     } catch (err) {
         console.error("Auth middleware failed:", {
             method: req.method,
-            path: req.originalUrl,
+            path: req.path || req.originalUrl?.split("?", 1)[0],
             error: err.message,
         });
         return res.status(500).json({

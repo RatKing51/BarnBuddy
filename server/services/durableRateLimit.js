@@ -1,6 +1,7 @@
 const pool = require("../data-source");
 
 const RATE_LIMIT_TABLE = "usage_rate_limits";
+const PUBLIC_RATE_LIMIT_TABLE = "public_rate_limits";
 
 function ensureRateLimitSchema() {
   return pool.query(`
@@ -16,6 +17,19 @@ function ensureRateLimitSchema() {
 
     CREATE INDEX IF NOT EXISTS idx_usage_rate_limits_expiry
       ON ${RATE_LIMIT_TABLE} (expires_at);
+
+    CREATE TABLE IF NOT EXISTS ${PUBLIC_RATE_LIMIT_TABLE} (
+      subject_hash CHAR(64) NOT NULL,
+      bucket_key VARCHAR(120) NOT NULL,
+      window_started_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      expires_at TIMESTAMPTZ NOT NULL,
+      request_count INTEGER NOT NULL DEFAULT 0 CHECK (request_count >= 0),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (subject_hash, bucket_key)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_public_rate_limits_expiry
+      ON ${PUBLIC_RATE_LIMIT_TABLE} (expires_at);
   `);
 }
 

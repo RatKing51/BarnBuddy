@@ -13,10 +13,56 @@ function positiveDayList(value, fallback = [7, 3, 1]) {
   return [...new Set(days.length ? days : fallback)].sort((a, b) => a - b);
 }
 
-const configuredClientUrls = (process.env.CLIENT_URL || "")
-  .split(",")
-  .map((url) => url.trim())
-  .filter(Boolean);
+function resolveNodeEnv(environment = process.env) {
+  const railwayEnvironment = String(environment.RAILWAY_ENVIRONMENT_NAME || "").trim().toLowerCase();
+  return railwayEnvironment === "production" ? "production" : (environment.NODE_ENV || "development");
+}
+
+const nodeEnv = resolveNodeEnv();
+
+function buildClientUrls(value, environment = nodeEnv) {
+  const configured = String(value || "").split(",").map((url) => url.trim()).filter(Boolean);
+  const allowedConfigured = configured.filter((url) => (
+    environment !== "production" || !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(url)
+  ));
+
+  return uniqueUrls([
+    ...allowedConfigured,
+    "https://barnbuddy.pro",
+    "https://www.barnbuddy.pro",
+    ...(environment === "production" ? [] : ["http://localhost:5173", "http://127.0.0.1:5173"]),
+  ]);
+}
+
+function validateProductionConfig(configuration) {
+  const missing = [];
+  if (!configuration.databaseUrl) missing.push("DATABASE_URL");
+  if (!configuration.databaseSslCaCert) missing.push("DATABASE_SSL_CA_CERT");
+  if (!configuration.databaseSslServername) missing.push("DATABASE_SSL_SERVERNAME");
+  if (!configuration.rateLimitHmacSecret) missing.push("RATE_LIMIT_HMAC_SECRET");
+  if (!configuration.clerk.publishableKey) missing.push("CLERK_PUBLISHABLE_KEY");
+  if (!configuration.clerk.secretKey) missing.push("CLERK_SECRET_KEY");
+  if (!configuration.clerk.webhookSigningSecret) missing.push("CLERK_WEBHOOK_SIGNING_SECRET");
+  if (!configuration.adminClerkUserIds?.length) missing.push("ADMIN_CLERK_USER_IDS");
+  if (!configuration.clerk.premiumPlanId && !configuration.clerk.premiumPlanSlug && !configuration.clerk.premiumFeatureSlug) {
+    missing.push("CLERK_PREMIUM_PLAN_ID or CLERK_PREMIUM_PLAN_SLUG or CLERK_PREMIUM_FEATURE_SLUG");
+  }
+  if (missing.length) {
+    throw new Error(`Missing required production configuration: ${missing.join(", ")}.`);
+  }
+  if (!configuration.clerk.publishableKey.startsWith("pk_live_")) {
+    throw new Error("Production requires a live Clerk publishable key.");
+  }
+  if (!configuration.clerk.secretKey.startsWith("sk_live_")) {
+    throw new Error("Production requires a live Clerk secret key.");
+  }
+  if (String(configuration.rateLimitHmacSecret).length < 32) {
+    throw new Error("RATE_LIMIT_HMAC_SECRET must contain at least 32 characters in production.");
+  }
+  if (!String(configuration.databaseSslCaCert).includes("BEGIN CERTIFICATE")) {
+    throw new Error("DATABASE_SSL_CA_CERT must contain a PEM-encoded PostgreSQL CA certificate.");
+  }
+}
 
 const usePublicDatabaseUrl = process.env.USE_PUBLIC_DATABASE_URL === "true";
 const databaseUrl = usePublicDatabaseUrl
@@ -24,27 +70,32 @@ const databaseUrl = usePublicDatabaseUrl
   : process.env.DATABASE_URL || process.env.DB_URL || "";
 
 const env = {
-  nodeEnv: process.env.NODE_ENV || "development",
+  nodeEnv,
   port: Number(process.env.PORT) || 5000,
   clientUrl: process.env.CLIENT_URL || "http://localhost:5173",
-  clientUrls: uniqueUrls([
-    ...configuredClientUrls,
-    "http://localhost:5173",
-    "https://barnbuddy.pro",
-    "https://www.barnbuddy.pro",
-  ]),
+  clientUrls: buildClientUrls(process.env.CLIENT_URL, nodeEnv),
   databaseUrl,
+  databaseSslCaCert: process.env.DATABASE_SSL_CA_CERT || "",
+  databaseSslServername: process.env.DATABASE_SSL_SERVERNAME || "",
+  rateLimitHmacSecret: process.env.RATE_LIMIT_HMAC_SECRET || "",
+  adminClerkUserIds: (process.env.ADMIN_CLERK_USER_IDS || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean),
   db: {
     user: process.env.PGUSER || "postgres",
     host: process.env.PGHOST || "localhost",
     database: process.env.PGDATABASE || "BarnBuddy",
-    password: process.env.PGPASSWORD || "password",
+    password: process.env.PGPASSWORD || "",
     port: Number(process.env.PGPORT) || 5432,
   },
   clerk: {
     publishableKey: process.env.CLERK_PUBLISHABLE_KEY || process.env.VITE_CLERK_PUBLISHABLE_KEY || "",
     secretKey: process.env.CLERK_SECRET_KEY || "",
     webhookSigningSecret: process.env.CLERK_WEBHOOK_SIGNING_SECRET || "",
+    premiumPlanId: process.env.CLERK_PREMIUM_PLAN_ID || "",
+    premiumPlanSlug: process.env.CLERK_PREMIUM_PLAN_SLUG || "",
+    premiumFeatureSlug: process.env.CLERK_PREMIUM_FEATURE_SLUG || "",
   },
   email: {
     enabled: process.env.EMAIL_ENABLED === "true",
@@ -88,13 +139,10 @@ const env = {
 };
 
 if (env.nodeEnv === "production") {
-  if (env.clerk.publishableKey.startsWith("pk_test_")) {
-    throw new Error("Production is using a Clerk test publishable key. Set CLERK_PUBLISHABLE_KEY to a pk_live key.");
-  }
-
-  if (env.clerk.secretKey.startsWith("sk_test_")) {
-    throw new Error("Production is using a Clerk test secret key. Set CLERK_SECRET_KEY to a sk_live key.");
-  }
+  validateProductionConfig(env);
 }
 
 module.exports = env;
+module.exports.buildClientUrls = buildClientUrls;
+module.exports.validateProductionConfig = validateProductionConfig;
+module.exports.resolveNodeEnv = resolveNodeEnv;

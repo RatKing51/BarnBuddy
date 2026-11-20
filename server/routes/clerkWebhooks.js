@@ -12,19 +12,25 @@ const {
 } = require("../services/premiumDowngradeCleanup");
 
 const router = express.Router();
-const premiumPlanValues = new Set([
-  "premium",
-  "pro",
-  "paid",
-  "active",
-  ...(process.env.CLERK_PREMIUM_PLAN_SLUG || "").split(",").map(normalizeValue).filter(Boolean),
-]);
+const premiumPlanValues = new Set((process.env.CLERK_PREMIUM_PLAN_SLUG || "").split(",").map(normalizeValue).filter(Boolean));
+const premiumPlanIds = new Set(
+  (process.env.CLERK_PREMIUM_PLAN_ID || "").split(",").map(normalizeValue).filter(Boolean)
+);
+const premiumFeatureValues = new Set(
+  (process.env.CLERK_PREMIUM_FEATURE_SLUG || "").split(",").map(normalizeValue).filter(Boolean)
+);
 const downgradeBillingEvents = new Set([
   "subscription.pastDue",
   "subscriptionItem.ended",
   "subscriptionItem.pastDue",
 ]);
 const activateBillingEvents = new Set(["subscriptionItem.active", "subscriptionItem.updated"]);
+const billingStateEvents = new Set([
+  ...downgradeBillingEvents,
+  ...activateBillingEvents,
+  "subscriptionItem.canceled",
+  "subscriptionItem.freeTrialEnding",
+]);
 
 function verifyClerkWebhook(req) {
   if (!env.clerk.webhookSigningSecret) {
@@ -85,8 +91,10 @@ function getBillingPayerUserId(data = {}) {
 }
 
 function getPlanSlugs(data = {}) {
+  const item = data.subscription_item || data.subscriptionItem || data.item || {};
   return [
     data.plan?.slug,
+    item.plan?.slug,
     data.plan_slug,
     data.planSlug,
     ...(Array.isArray(data.items) ? data.items.map((item) => item?.plan?.slug) : []),
@@ -95,11 +103,38 @@ function getPlanSlugs(data = {}) {
     .filter(Boolean);
 }
 
-function isPremiumBillingEvent(data = {}) {
-  const planSlugs = getPlanSlugs(data);
+function getPlanIds(data = {}) {
+  const item = data.subscription_item || data.subscriptionItem || data.item || {};
+  return [
+    data.plan?.id,
+    item.plan?.id,
+    data.plan_id,
+    data.planId,
+    item.plan_id,
+    item.planId,
+    ...(Array.isArray(data.items) ? data.items.map((entry) => entry?.plan?.id || entry?.plan_id || entry?.planId) : []),
+  ].map(normalizeValue).filter(Boolean);
+}
 
-  if (planSlugs.length === 0) return true;
-  return planSlugs.some((slug) => slug !== "free" && premiumPlanValues.has(slug));
+function getFeatureSlugs(data = {}) {
+  const item = data.subscription_item || data.subscriptionItem || data.item || {};
+  const plans = [data.plan, item.plan, ...(Array.isArray(data.items) ? data.items.map((entry) => entry?.plan) : [])];
+  return plans.flatMap((plan) => Array.isArray(plan?.features) ? plan.features.map((feature) => feature?.slug) : [])
+    .map(normalizeValue)
+    .filter(Boolean);
+}
+
+function isPremiumBillingEvent(data = {}, configured = {}) {
+  const planSlugs = getPlanSlugs(data);
+  const planIds = getPlanIds(data);
+  const featureSlugs = getFeatureSlugs(data);
+  const allowedPlanSlugs = configured.planSlugs || premiumPlanValues;
+  const allowedPlanIds = configured.planIds || premiumPlanIds;
+  const allowedFeatureSlugs = configured.featureSlugs || premiumFeatureValues;
+  if (planSlugs.length === 0 && planIds.length === 0 && featureSlugs.length === 0) return false;
+  return planSlugs.some((slug) => allowedPlanSlugs.has(slug)) ||
+    planIds.some((id) => allowedPlanIds.has(id)) ||
+    featureSlugs.some((slug) => allowedFeatureSlugs.has(slug));
 }
 
 function normalizeBillingTimestamp(value) {
@@ -118,6 +153,10 @@ function normalizeBillingTimestamp(value) {
   }
 
   return "";
+}
+
+function getBillingEventCreatedAt(event = {}) {
+  return normalizeBillingTimestamp(event.timestamp || event.created_at || event.createdAt);
 }
 
 function getBillingPeriodEnd(data = {}) {
@@ -150,6 +189,15 @@ router.post("/", async (req, res) => {
   }
 
   try {
+    const billingEventCreatedAt = getBillingEventCreatedAt(event);
+    if (billingStateEvents.has(event.type) && isPremiumBillingEvent(event.data) && !billingEventCreatedAt) {
+      console.warn("Clerk billing webhook lacked a valid event timestamp.", {
+        eventType: event.type,
+        eventId: event.id,
+      });
+      return res.status(400).json({ error: "Invalid webhook event" });
+    }
+
     if (event.type === "user.created") {
       const user = await syncClerkWebhookUser(event.data);
       const email = getPrimaryEmail(event.data);
@@ -185,6 +233,7 @@ router.post("/", async (req, res) => {
       } else {
         await markPremiumExpiringByClerkId(clerkUserId, {
           expiresAt,
+          eventCreatedAt: billingEventCreatedAt,
           source: event.type === "subscriptionItem.freeTrialEnding" ? "clerk_trial" : "clerk_billing_canceled",
           status: event.type === "subscriptionItem.freeTrialEnding" ? "trialing" : "canceled",
         });
@@ -193,7 +242,10 @@ router.post("/", async (req, res) => {
 
     if (activateBillingEvents.has(event.type) && isPremiumBillingEvent(event.data)) {
       const clerkUserId = getBillingPayerUserId(event.data);
-      if (clerkUserId) await activatePremiumUserByClerkId(clerkUserId);
+      if (clerkUserId) {
+        const applied = await activatePremiumUserByClerkId(clerkUserId, billingEventCreatedAt);
+        if (!applied) console.info("Ignored stale or unlinked Clerk billing activation.", { eventId: event.id });
+      }
     }
 
     if (downgradeBillingEvents.has(event.type) && isPremiumBillingEvent(event.data)) {
@@ -206,7 +258,8 @@ router.post("/", async (req, res) => {
           eventId: event.id,
         });
       } else {
-        await downgradePremiumUserByClerkId(clerkUserId, status);
+        const applied = await downgradePremiumUserByClerkId(clerkUserId, status, billingEventCreatedAt);
+        if (!applied) console.info("Ignored stale or unlinked Clerk billing downgrade.", { eventId: event.id });
       }
     }
 
@@ -220,3 +273,5 @@ router.post("/", async (req, res) => {
 module.exports = router;
 module.exports.getBillingPeriodEnd = getBillingPeriodEnd;
 module.exports.normalizeBillingTimestamp = normalizeBillingTimestamp;
+module.exports.isPremiumBillingEvent = isPremiumBillingEvent;
+module.exports.getBillingEventCreatedAt = getBillingEventCreatedAt;

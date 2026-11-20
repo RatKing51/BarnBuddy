@@ -27,6 +27,7 @@ function ensureSchema() {
         ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'free',
         ADD COLUMN IF NOT EXISTS subscription_source TEXT DEFAULT '',
         ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS subscription_event_created_at TIMESTAMPTZ,
         ADD COLUMN IF NOT EXISTS onboarding_required BOOLEAN DEFAULT false,
         ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT false,
         ADD COLUMN IF NOT EXISTS user_type TEXT,
