@@ -1,0 +1,15 @@
+.bb-review { margin: 0; min-width: 0; padding: 1.25rem 0; border-top: 2px solid #6087b8; color: #edf3fb; overflow-wrap: anywhere }
+.bb-review-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; color: #b7c8dd; font-size: .8rem }
+.bb-review-meta span[aria-hidden] { color: #edc47a }
+.bb-review blockquote { margin: 1rem 0 1.1rem; font-size: clamp(1.05rem,1.4vw,1.35rem); line-height: 1.55; letter-spacing: -.015em; max-width: 60ch; white-space: pre-line }
+.bb-review figcaption { color: #b7c8dd; font-size: .86rem; line-height: 1.55 }
+.bb-review figcaption strong { display: block; color: #edf3fb; font-size: .96rem }
+.bb-light .admin-work .bb-review { color: var(--desk-ink) }
+.bb-light .admin-work .bb-review figcaption strong { color: inherit }
+.bb-light .admin-work .bb-review-meta,.bb-light .admin-work .bb-review figcaption { color: var(--desk-muted) }
+.bb-light .admin-work .bb-review-meta span[aria-hidden] { color: #835b11 }
+.bb-reviews { border-top: 1px solid #293b58 }
+.bb-review-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,19rem),1fr)); gap: 1.25rem 2.5rem }
+.bb-review-grid:has(> :only-child) { max-width: 52rem }
+.bb-review-grid:has(> :only-child) blockquote { font-size: clamp(1.25rem,2vw,1.7rem) }
+.bb-reviews .bb-section-heading { margin-bottom: 1.5rem }

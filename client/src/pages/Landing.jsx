@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import LargeLandingCard from '../components/LargeLandingCard';
+import ReviewLandingCard from '../components/ReviewLandingCard';
 import Footer from '../components/Footer';
 import MarketingMotion from '../components/MarketingMotion';
 import FeatureExplorer from '../components/FeatureExplorer';
@@ -49,7 +50,15 @@ export default function Landing() {
           <div data-reveal><h2>It started with our goats</h2><p>My family raises meat goats in Kansas. We had health notes in notebooks and project records in spreadsheets. I built BarnBuddy so we could look up an animal and find both.</p><p>That’s the idea behind the animal profile. When it’s time for another weigh-in or vet visit, the last entry is right there with the new one.</p><Link className="bb-text-link" to="/aboutus">Read the BarnBuddy story</Link></div>
           <div className="bb-founder-photo" data-reveal><img src={getSiteAssetUrl('IMG_5761.JPEG')} alt="BarnBuddy founder Gage Billinger at a Kansas FFA event" loading="lazy" width="1620" height="1080" /><span>Gage Billinger · Founder, BarnBuddy</span></div>
         </section>
-        {reviews.length > 0 && <section className="bb-section bb-container bb-reviews" data-reveal><div className="bb-section-heading"><h2>What farmers are saying</h2><Link className="bb-text-link" to="/contact?topic=Review%20or%20feedback">Share your experience</Link></div>{reviews.map(review => <blockquote key={review.id || `${review.name}-${review.date}`}><p>{review.text}</p><footer>{review.name}{review.role ? ` · ${review.role}` : ''}</footer></blockquote>)}</section>}
+        <section className="bb-section bb-container bb-reviews" aria-labelledby="reviews-heading">
+          <div className="bb-section-heading">
+            <h2 id="reviews-heading">{reviews.length ? 'What farmers are saying' : 'How has BarnBuddy worked for you?'}</h2>
+            <Link className="bb-text-link" to="/contact?topic=Review%20or%20feedback">Share your experience</Link>
+          </div>
+          {reviews.length > 0 && <div className="bb-review-grid">
+            {reviews.map(review => <ReviewLandingCard key={review.id || `${review.name}-${review.date}`} {...review} />)}
+          </div>}
+        </section>
         <section className="bb-section bb-container bb-news"><div className="bb-section-heading"><h2>What’s new</h2><Link to="/news" className="bb-text-link">All updates</Link></div><div className="bb-news-grid" data-reveal>{posts.length ? posts.map(post => <Link to={`/news/${encodeURIComponent(post.id)}`} className="bb-news-item" key={post.id}><div className="bb-news-image"><img src={resolveSiteImageUrl(post.image)} alt={post.imageAlt || ''} loading="lazy" style={{ objectFit: post.imageFit === 'contain' ? 'contain' : 'cover' }} /></div><div><span className="bb-category">{post.category || 'Product update'}</span><h3>{post.title}</h3><p>{post.excerpt}</p><time dateTime={post.date}>{new Date(`${post.date.slice(0,10)}T12:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</time></div></Link>) : <p>No updates yet.</p>}</div></section>
         <section className="bb-closing"><div className="bb-container" data-reveal><div><h2>Add your first animal</h2><p>Start with a name or ear tag. You can fill in weights and care records as you go.</p></div><div className="bb-actions"><Link to="/signup" className="bb-button bb-button-primary">Create a free account</Link><Link to="/pricing" className="bb-button bb-button-secondary">Compare plans</Link></div></div></section>
       </main>

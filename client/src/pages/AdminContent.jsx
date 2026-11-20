@@ -2262,12 +2262,9 @@ export default function AdminContent() {
                         <h4 className="font-semibold">Landing page preview</h4>
                         <div className="mt-4 rounded-lg bg-slate-950 p-3">
                           <ReviewLandingCard
-                            name={selectedReview.name || 'Customer Name'}
-                            role={selectedReview.role || 'BarnBuddy user'}
-                            rating={Number(selectedReview.rating) || 5}
-                            date={selectedReview.date || 'Jun 2026'}
-                            tag={selectedReview.tag || 'Verified user'}
-                            text={selectedReview.text || 'Write the review text here and the preview will update.'}
+                            {...selectedReview}
+                            name={selectedReview.name || 'Reviewer name'}
+                            text={selectedReview.text || 'Your review preview will appear here.'}
                           />
                         </div>
                         <p className="mt-3 text-xs leading-relaxed text-slate-500">

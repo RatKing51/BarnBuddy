@@ -71,9 +71,6 @@
 .bb-news h3 { margin-top: 12px; font-size: 20px; }
 .bb-news p { margin-top: 12px; font-size: 14px; }
 .bb-news time { display: block; margin-top: 18px; font-size: 12px; color: #a8b5c9; }
-.bb-reviews { border-top: 1px solid #293b58; }
-.bb-reviews blockquote { margin: 30px 0 0; padding-top: 24px; border-top: 1px solid #293b58; max-width: 720px; }
-.bb-reviews blockquote footer { margin-top: 16px; color: #93c5fd; font-size: 14px; }
 .bb-closing { color: #f8fafc; background: #0b1730; padding-block: 70px; border-top: 1px solid #293b58; }
 .bb-closing > div { display: flex; align-items: center; justify-content: space-between; gap: 40px; }
 .bb-closing h2 { font-size: 34px; }
