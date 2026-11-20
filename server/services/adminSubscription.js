@@ -82,11 +82,9 @@ function getClerkBillingSubscriptionState(subscription = {}, planCandidates = []
       ...features.flatMap((feature = {}) => [feature.id, feature.slug]),
     ].map(normalizeValue).filter(Boolean);
     const matchesPremiumConfig = values.some((value) => candidates.has(value));
-    const isClearlyPaidPlan = plan.isDefault === false && (
-      plan.hasBaseFee === true ||
-      Boolean(plan.fee || plan.annualFee || item.amount)
-    );
-    const isPremiumPlan = matchesPremiumConfig || isClearlyPaidPlan;
+    // Price alone does not identify a BarnBuddy entitlement. Other paid Clerk plans
+    // must never grant this application's Premium features.
+    const isPremiumPlan = matchesPremiumConfig;
     const status = normalizeValue(item.status);
     const periodEnd = Number(item.periodEnd || item.period_end) || 0;
     const hasAccess = status === "active" || (status === "canceled" && periodEnd > now);

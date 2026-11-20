@@ -21,10 +21,9 @@ function getRequestPath(req) {
 }
 
 function getUsageLimit(req) {
-  if (String(req.method || "").toUpperCase() !== "POST") return null;
-
+  const method = String(req.method || "").toUpperCase();
   const path = getRequestPath(req);
-  if (/^\/api\/import-assistant\/extract\/?$/i.test(path)) {
+  if (method === "POST" && /^\/api\/import-assistant\/extract\/?$/i.test(path)) {
     const isPremium = req.user?.subscription?.isPremium === true;
     return {
       group: "ai-extraction",
@@ -32,10 +31,38 @@ function getUsageLimit(req) {
     };
   }
 
-  if (RECORD_CREATION_PATHS.some((pattern) => pattern.test(path))) {
+  if (method === "POST" && RECORD_CREATION_PATHS.some((pattern) => pattern.test(path))) {
     return {
       group: "record-create",
       policies: RECORD_CREATION_POLICIES,
+    };
+  }
+
+  if (method === "DELETE" && /^\/auth\/me\/?$/i.test(path)) {
+    return {
+      group: "account-delete",
+      policies: [{ key: "account-delete:hour", max: 3, windowSeconds: 3_600, message: "Too many account deletion attempts." }],
+    };
+  }
+
+  if (method === "POST" && /^\/api\/email\/test\/?$/i.test(path)) {
+    return {
+      group: "email-test",
+      policies: [{ key: "email-test:hour", max: 5, windowSeconds: 3_600, message: "Too many test email requests." }],
+    };
+  }
+
+  if (method === "POST" && /^\/api\/import-assistant\/request\/?$/i.test(path)) {
+    return {
+      group: "support-request",
+      policies: [{ key: "support-request:hour", max: 5, windowSeconds: 3_600, message: "Too many support requests." }],
+    };
+  }
+
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(method) && /^\/api\/(?:site-content\/admin(?:\/.*)?|admin\/ffa-chapters(?:\/.*)?)$/i.test(path)) {
+    return {
+      group: "admin-mutation",
+      policies: [{ key: "admin-mutation:15-minute", max: 60, windowSeconds: 900, message: "Too many administrative changes." }],
     };
   }
 

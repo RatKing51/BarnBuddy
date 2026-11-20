@@ -8,6 +8,7 @@ const clientDirectory = path.dirname(fileURLToPath(import.meta.url));
 const outputDirectory = path.join(clientDirectory, "dist");
 const port = Number(process.env.PORT || 4173);
 const siteApiUrl = (process.env.VITE_API_URL || "https://api.barnbuddy.pro").replace(/\/$/, "");
+const siteApiOrigin = new URL(siteApiUrl.includes("://") ? siteApiUrl : `https://${siteApiUrl}`).origin;
 let publicNewsCache = null;
 let publicNewsCacheUntil = 0;
 let publicNewsUnavailableUntil = 0;
@@ -89,7 +90,21 @@ function routeHtmlPath(route) {
 
 function securityHeaders() {
   return {
-    "Content-Security-Policy": "base-uri 'self'; frame-ancestors 'none'; object-src 'none'",
+    "Content-Security-Policy": [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "form-action 'self' https://*.clerk.accounts.dev https://*.clerk.com https://clerk.barnbuddy.pro https://checkout.stripe.com",
+      "script-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://clerk.barnbuddy.pro https://js.stripe.com https://challenges.cloudflare.com",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data: https:",
+      `connect-src 'self' ${siteApiOrigin} https://clerk.accounts.dev https://*.clerk.accounts.dev https://*.clerk.com https://clerk.barnbuddy.pro https://api.stripe.com wss://*.clerk.accounts.dev wss://*.clerk.com`,
+      "frame-src 'self' https://clerk.accounts.dev https://*.clerk.accounts.dev https://*.clerk.com https://clerk.barnbuddy.pro https://checkout.stripe.com https://js.stripe.com https://challenges.cloudflare.com",
+      "worker-src 'self' blob:",
+    ].join("; "),
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
     "Permissions-Policy": "camera=(), geolocation=(), microphone=(), usb=()",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "X-Content-Type-Options": "nosniff",

@@ -2,7 +2,6 @@ const env = require("./config/env");
 
 process.env.CLERK_PUBLISHABLE_KEY = env.clerk.publishableKey;
 console.log("Clerk publishable key mode:", env.clerk.publishableKey.startsWith("pk_live_") ? "live" : "test-or-missing");
-console.log("Clerk secret key mode:", env.clerk.secretKey.startsWith("sk_live_") ? "live" : "test-or-missing");
 
 const express = require("express");
 const cors = require("cors");
@@ -45,7 +44,9 @@ app.use(cors({
     console.warn("Blocked by CORS:", origin);
     return callback(new Error("Not allowed by CORS"));
   },
-  credentials: true,
+  credentials: false,
+  methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Authorization", "Content-Type", "Accept"],
 }));
 app.get("/health", (req, res) => {
   res.json({

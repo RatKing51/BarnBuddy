@@ -69,36 +69,43 @@ async function deletePremiumDataForUser(userId) {
   }
 }
 
-async function downgradePremiumUser(userId, status = "free") {
-  await pool.query(
+async function downgradePremiumUser(userId, status = "free", eventCreatedAt) {
+  if (!eventCreatedAt) return false;
+  const result = await pool.query(
     `UPDATE users
      SET subscription_plan = 'free',
          subscription_status = $2,
          subscription_is_premium = false,
          subscription_source = '',
-         subscription_expires_at = NULL
-     WHERE id = $1`,
-    [userId, status || "free"]
+         subscription_expires_at = NULL,
+         subscription_event_created_at = $3
+     WHERE id = $1
+       AND (subscription_event_created_at IS NULL OR subscription_event_created_at <= $3)`,
+    [userId, status || "free", eventCreatedAt]
   );
+  return result.rowCount > 0;
 }
 
-async function downgradePremiumUserByClerkId(clerkUserId, status = "free") {
-  if (!clerkUserId) return false;
+async function downgradePremiumUserByClerkId(clerkUserId, status = "free", eventCreatedAt) {
+  if (!clerkUserId || !eventCreatedAt) return false;
 
   const result = await pool.query(
-    "SELECT id FROM users WHERE clerk_user_id = $1",
-    [clerkUserId]
+    `UPDATE users
+     SET subscription_plan = 'free',
+         subscription_status = $2,
+         subscription_is_premium = false,
+         subscription_source = '',
+         subscription_expires_at = NULL,
+         subscription_event_created_at = $3
+     WHERE clerk_user_id = $1
+       AND (subscription_event_created_at IS NULL OR subscription_event_created_at <= $3)`,
+    [clerkUserId, status || "free", eventCreatedAt]
   );
-  const user = result.rows[0];
-
-  if (!user) return false;
-
-  await downgradePremiumUser(user.id, status);
-  return true;
+  return result.rowCount > 0;
 }
 
-async function markPremiumExpiringByClerkId(clerkUserId, { expiresAt, source, status } = {}) {
-  if (!clerkUserId || !expiresAt) return false;
+async function markPremiumExpiringByClerkId(clerkUserId, { expiresAt, source, status, eventCreatedAt } = {}) {
+  if (!clerkUserId || !expiresAt || !eventCreatedAt) return false;
 
   const result = await pool.query(
     `UPDATE users
@@ -106,16 +113,18 @@ async function markPremiumExpiringByClerkId(clerkUserId, { expiresAt, source, st
          subscription_status = $2,
          subscription_is_premium = true,
          subscription_source = $3,
-         subscription_expires_at = $4
-     WHERE clerk_user_id = $1`,
-    [clerkUserId, status || "active", source || "clerk_billing", expiresAt]
+         subscription_expires_at = $4,
+         subscription_event_created_at = $5
+     WHERE clerk_user_id = $1
+       AND (subscription_event_created_at IS NULL OR subscription_event_created_at <= $5)`,
+    [clerkUserId, status || "active", source || "clerk_billing", expiresAt, eventCreatedAt]
   );
 
   return result.rowCount > 0;
 }
 
-async function activatePremiumUserByClerkId(clerkUserId) {
-  if (!clerkUserId) return false;
+async function activatePremiumUserByClerkId(clerkUserId, eventCreatedAt) {
+  if (!clerkUserId || !eventCreatedAt) return false;
 
   const result = await pool.query(
     `UPDATE users
@@ -123,9 +132,11 @@ async function activatePremiumUserByClerkId(clerkUserId) {
          subscription_status = 'active',
          subscription_is_premium = true,
          subscription_source = 'clerk_billing',
-         subscription_expires_at = NULL
-     WHERE clerk_user_id = $1`,
-    [clerkUserId]
+         subscription_expires_at = NULL,
+         subscription_event_created_at = $2
+     WHERE clerk_user_id = $1
+       AND (subscription_event_created_at IS NULL OR subscription_event_created_at <= $2)`,
+    [clerkUserId, eventCreatedAt]
   );
 
   return result.rowCount > 0;

@@ -3,7 +3,6 @@ const multer = require("multer");
 const pool = require("../data-source");
 const env = require("../config/env");
 const authMiddleware = require("../middleware/authMiddleware");
-const { createRateLimit } = require("../middleware/rateLimit");
 const { MAX_BULK_RECORDS } = require("../config/usageLimits");
 const {
   isR2Configured,
@@ -11,11 +10,6 @@ const {
 } = require("../services/r2Storage");
 
 const router = express.Router();
-const helpRequestRateLimit = createRateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  message: "Too many transfer-help requests. Please wait before trying again.",
-});
 
 const MAX_IMPORT_ROWS = MAX_BULK_RECORDS;
 const MAX_HELP_FILE_SIZE = 15 * 1024 * 1024;
@@ -414,7 +408,7 @@ router.post("/import", authMiddleware, async (req, res) => {
 
 const helpUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_HELP_FILE_SIZE },
+  limits: { fileSize: MAX_HELP_FILE_SIZE, files: 1, fields: 20, parts: 25, fieldSize: 1024 * 1024 },
   fileFilter(req, file, cb) {
     const extension = String(file.originalname || "").split(".").pop().toLowerCase();
     const allowedExtension = HELP_FILE_EXTENSIONS.has(extension);
@@ -425,7 +419,7 @@ const helpUpload = multer({
 
 const aiUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_AI_FILE_SIZE },
+  limits: { fileSize: MAX_AI_FILE_SIZE, files: 1, fields: 20, parts: 25, fieldSize: 1024 * 1024 },
   fileFilter(req, file, cb) {
     const extension = String(file.originalname || "").split(".").pop().toLowerCase();
     const allowedExtension = AI_FILE_EXTENSIONS.has(extension);
@@ -537,7 +531,7 @@ router.post("/extract", authMiddleware, aiUpload.single("file"), async (req, res
   }
 });
 
-router.post("/request", authMiddleware, helpRequestRateLimit, helpUpload.single("file"), async (req, res) => {
+router.post("/request", authMiddleware, helpUpload.single("file"), async (req, res) => {
   const recordFormat = cleanText(req.body.recordFormat);
   const transferPriority = cleanText(req.body.transferPriority);
   const notes = cleanText(req.body.notes);

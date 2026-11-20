@@ -10,7 +10,6 @@ import { LoadingSpinner, PageLoadingBar } from "./components/LoadingSpinner";
 import { getSiteContent } from "./api/siteContent";
 import { defaultSiteContent } from "./data/siteContent";
 import { useAuth } from "./context/AuthContext";
-import { ADMIN_CLERK_USER_IDS, ADMIN_EMAILS } from "./config/env";
 import Seo from "./seo/Seo";
 
 const DOCS_URL = "https://doc.barnbuddy.pro";
@@ -97,7 +96,7 @@ function LegacyLegalRedirect() {
 
 function AppContent() {
   const location = useLocation();
-  const { user, subscription } = useAuth();
+  const { subscription, backendUser } = useAuth();
   const [pageLoading, setPageLoading] = useState(false);
   const [announcement, setAnnouncement] = useState(defaultSiteContent.announcement);
   const [maintenance, setMaintenance] = useState(defaultSiteContent.maintenance);
@@ -110,12 +109,7 @@ function AppContent() {
     maintenance?.enabled &&
       !maintenanceAllowedPaths.some((path) => location.pathname === path || location.pathname.startsWith(`${path}/`))
   );
-  const primaryEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || "";
-  const isAdmin = Boolean(
-    user &&
-      ((primaryEmail && ADMIN_EMAILS.includes(primaryEmail)) ||
-        (user?.id && ADMIN_CLERK_USER_IDS.includes(user.id)))
-  );
+  const isAdmin = backendUser?.isAdmin === true;
   const announcementAudience = announcement?.targetAudience || "all";
   const announcementMatchesAudience =
     announcementAudience === "all" ||

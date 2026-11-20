@@ -1,6 +1,7 @@
 const express = require("express");
 const { clerkClient } = require("@clerk/express");
 const authMiddleware = require("../middleware/authMiddleware");
+const { isAdminUser } = require("../middleware/adminAuthorization");
 const { deleteUserDataByUserId } = require("../services/deleteUserData");
 const { getUserPreferences, updateUserPreferences } = require("../services/userPreferences");
 const { unsubscribeFromNewsletter } = require("../services/newsletterService");
@@ -65,7 +66,7 @@ router.get("/me", authMiddleware, async (req, res) => {
 
     res.json({
         message: 'You are auth',
-        user: req.user,
+        user: { ...req.user, isAdmin: isAdminUser(req.user) },
         preferences,
     });
 });

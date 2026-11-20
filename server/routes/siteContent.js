@@ -38,7 +38,7 @@ const validTones = new Set(["green", "blue", "yellow", "red"]);
 const validAnnouncementAudiences = new Set(["all", "free", "premium", "admins"]);
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 20, parts: 25, fieldSize: 1024 * 1024 },
   fileFilter(req, file, cb) {
     if (supportedImageTypes.has(file.mimetype)) {
       cb(null, true);
@@ -215,9 +215,6 @@ function getPremiumPlanCandidates() {
     ...readEnvList("CLERK_PREMIUM_PLAN_ID"),
     ...readEnvList("CLERK_PREMIUM_PLAN_SLUG"),
     ...readEnvList("CLERK_PREMIUM_FEATURE_SLUG"),
-    "premium",
-    "pro",
-    "premium_access",
   ];
 }
 
@@ -1194,9 +1191,12 @@ router.put("/admin", authMiddleware, requireAdmin, async (req, res) => {
     });
     res.json(content);
   } catch (err) {
-    const statusCode = err.message.includes("needs") || err.message.includes("must") ? 400 : 500;
+    const isClientError = /^(?:News posts must be a list\.|News post \d+ needs (?:a title|a valid date)\.|Reviews must be a list\.|Published review \d+ needs (?:a name|review text)\.|Carousel slides must be a list\.|Published carousel slide \d+ needs (?:a title|an image)\.)$/.test(err.message || "");
+    const statusCode = isClientError ? 400 : 500;
     console.error("Failed to update site content:", err);
-    res.status(statusCode).json({ error: err.message || "Failed to update site content" });
+    res.status(statusCode).json({
+      error: isClientError ? err.message : "Failed to update site content. Please try again.",
+    });
   }
 });
 

@@ -4,7 +4,6 @@ const env = require("../config/env");
 const { sendTestEmail } = require("../services/emailService");
 
 const router = express.Router();
-
 router.post("/test", authMiddleware, async (req, res) => {
   const userEmail = String(req.user.email || "").toLowerCase();
   const allowedEmails = env.email.testAllowedEmails;
