@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "react-toastify";
 import { getAnimalsForUser } from "../api/animal";
@@ -105,7 +105,48 @@ function StatCard({ label, value, note, tone = "slate" }) {
 }
 
 function ProjectModal({ animals, onClose, onCreated }) {
+  const dialogRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const savingRef = useRef(false);
+  const onCloseRef = useRef(onClose);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => { savingRef.current = saving; }, [saving]);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement;
+    const focusFrame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && !savingRef.current) {
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = [...(dialogRef.current?.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+      ) || [])].filter((element) => element.getClientRects().length > 0);
+      if (!focusable.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !dialogRef.current?.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current?.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener("keydown", handleKeyDown);
+      if (previousFocus instanceof HTMLElement) previousFocus.focus();
+    };
+  }, []);
   const [selectedAnimals, setSelectedAnimals] = useState([]);
   const [form, setForm] = useState({
     name: "",
@@ -147,7 +188,7 @@ function ProjectModal({ animals, onClose, onCreated }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="new-project-title">
+    <div ref={dialogRef} className="fixed inset-0 z-50 overflow-y-auto bg-black/75 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="new-project-title">
       <form onSubmit={submit} className="mx-auto w-full max-w-3xl rounded-3xl border border-slate-700 bg-slate-900 shadow-2xl shadow-black/40">
         <div className="flex items-start justify-between border-b border-slate-800 p-5 sm:p-7">
           <div>
@@ -155,7 +196,7 @@ function ProjectModal({ animals, onClose, onCreated }) {
             <h2 id="new-project-title" className="mt-2 text-2xl font-black text-white">Start a project</h2>
             <p className="mt-1 text-sm text-slate-400">Link animals you already use—BarnBuddy will not duplicate them.</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Close">✕</button>
+          <button ref={closeButtonRef} type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Close">✕</button>
         </div>
 
         <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-7">

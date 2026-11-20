@@ -159,19 +159,18 @@ router.delete("/me", authMiddleware, async (req, res) => {
                 console.error("Failed to unsubscribe deleted user from newsletter provider:", err.message);
             });
         }
-        const user = await deleteUserDataByUserId(req.user.id);
-
-        if (!user) {
-            return res.status(404).json({ error: "User not found"});
-        }
-
         if (req.user.clerkUserId) {
             await clerkClient.users.deleteUser(req.user.clerkUserId);
         }
-        
-        res.json({ message: "User account deleted successfully", user });
+
+        // Delete the identity first so a Clerk API failure cannot leave a live
+        // sign-in that silently provisions a new, empty BarnBuddy account.
+        // The user.deleted webhook performs the same idempotent local cleanup.
+        await deleteUserDataByUserId(req.user.id);
+
+        res.json({ message: "User account deletion started successfully" });
     } catch (err) {
-        console.error(err);
+        console.error("Failed to delete account:", err.message);
         res.status(500).json({ error: "Failed to delete user" });
     }
 })

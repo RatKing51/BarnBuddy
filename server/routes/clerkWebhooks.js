@@ -4,6 +4,7 @@ const env = require("../config/env");
 const { syncClerkWebhookUser } = require("../services/clerkUserSync");
 const { deleteUserDataByClerkUserId } = require("../services/deleteUserData");
 const { sendWelcomeEmail } = require("../services/emailService");
+const { unsubscribeFromNewsletter } = require("../services/newsletterService");
 const {
   activatePremiumUserByClerkId,
   downgradePremiumUserByClerkId,
@@ -163,6 +164,12 @@ router.post("/", async (req, res) => {
     }
 
     if (event.type === "user.deleted" && event.data?.id) {
+      const email = getPrimaryEmail(event.data);
+      if (email) {
+        await unsubscribeFromNewsletter({ email }).catch((error) => {
+          console.error("Failed to unsubscribe deleted Clerk user from newsletter provider:", error.message);
+        });
+      }
       await deleteUserDataByClerkUserId(event.data.id);
     }
 

@@ -51,6 +51,105 @@ body {
   background-color: var(--bb-navy-900);
 }
 
+.legal-page__nav a {
+  min-height: 2.75rem;
+  align-items: center;
+  font-size: 0.9375rem;
+}
+
+.legal-page__article {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.16);
+}
+
+.legal-page__header {
+  padding-bottom: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.legal-page__header h1 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.legal-page__intro {
+  max-width: 64ch;
+  margin: 1.25rem 0 0;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: clamp(1.0625rem, 1.4vw, 1.1875rem);
+  line-height: 1.8;
+}
+
+.legal-page__date {
+  margin: 1rem 0 0;
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.legal-page__sections {
+  max-width: 72ch;
+  padding-top: 0.5rem;
+}
+
+.legal-page__sections section {
+  padding-top: 2rem;
+}
+
+.legal-page__sections section + section {
+  margin-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.legal-page__sections h2 {
+  margin: 0 0 0.75rem;
+  color: #fff;
+  font-size: clamp(1.375rem, 2vw, 1.625rem);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.legal-page__sections p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 1.0625rem;
+  line-height: 1.85;
+}
+
+.legal-page__contact {
+  margin: 2.5rem 0 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+
+.legal-page :is(a, button):focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .legal-page__nav {
+    justify-content: flex-start;
+  }
+
+  .legal-page__sections p {
+    font-size: 1rem;
+    line-height: 1.8;
+  }
+
+  .legal-page__sections section {
+    padding-top: 1.5rem;
+  }
+}
+
 .public-grid-glow {
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),

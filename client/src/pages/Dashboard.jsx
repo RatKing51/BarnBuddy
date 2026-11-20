@@ -827,7 +827,6 @@ export default function Dashboard() {
     const handleEsc = (e) => {
       if (e.key === "Escape") {
         setMobileMoreOpen(false);
-        setSelectedAnimal(null);
       }
     };
 
@@ -1645,6 +1644,7 @@ export default function Dashboard() {
                   type="button"
                   onClick={() => handleAnimalTabClick(tab.key)}
                   aria-label={tab.label}
+                  aria-pressed={activeTab === tab.key}
                   className={`dashboard-mobile-tab ${
                     activeTab === tab.key ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"
                   }`}
@@ -1657,13 +1657,13 @@ export default function Dashboard() {
                   type="button"
                   onClick={() => setMobileMoreOpen((current) => !current)}
                   aria-expanded={mobileMoreOpen}
-                  aria-haspopup="menu"
+                  aria-controls="animal-mobile-more-options"
                   className={`dashboard-mobile-tab w-full ${animalMoreActive || mobileMoreOpen ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"}`}
                 >
                   More
                 </button>
                 {mobileMoreOpen && (
-                  <div className="dashboard-mobile-more-menu right-0" role="menu">
+                  <div id="animal-mobile-more-options" className="dashboard-mobile-more-menu right-0" role="group" aria-label="More animal record sections">
                     {animalMoreMobileTabs.map((tab) => (
                       <button
                         key={tab.key}
@@ -1672,7 +1672,6 @@ export default function Dashboard() {
                         className={`dashboard-mobile-more-item ${
                           activeTab === tab.key ? "dashboard-mobile-more-item-active" : ""
                         }`}
-                        role="menuitem"
                       >
                         {tab.label}
                       </button>
@@ -1681,7 +1680,6 @@ export default function Dashboard() {
                       type="button"
                       onClick={handleFfaProjectsClick}
                       className="dashboard-mobile-more-item"
-                      role="menuitem"
                     >
                       FFA Projects
                     </button>
@@ -1690,7 +1688,6 @@ export default function Dashboard() {
                         type="button"
                         onClick={handleAdvisorDashboardClick}
                         className="dashboard-mobile-more-item"
-                        role="menuitem"
                       >
                         Advisor Dashboard
                       </button>
@@ -1704,6 +1701,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={handleFarmOverviewClick}
+                aria-pressed={!['feed', 'herd-finance', 'bulk-entry', 'inventory'].includes(activeTab)}
                 className={`dashboard-mobile-tab ${
                   !["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab) ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"
                 }`}
@@ -1713,6 +1711,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={handleHerdFeedClick}
+                aria-pressed={activeTab === "feed"}
                 className={`dashboard-mobile-tab ${
                   activeTab === "feed" ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"
                 }`}
@@ -1722,6 +1721,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={handleHerdFinanceClick}
+                aria-pressed={activeTab === "herd-finance"}
                 className={`dashboard-mobile-tab ${
                   activeTab === "herd-finance" ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"
                 }`}
@@ -1733,18 +1733,17 @@ export default function Dashboard() {
                   type="button"
                   onClick={() => setMobileMoreOpen((current) => !current)}
                   aria-expanded={mobileMoreOpen}
-                  aria-haspopup="menu"
+                  aria-controls="herd-mobile-more-options"
                   className={`dashboard-mobile-tab w-full ${herdMoreActive || mobileMoreOpen ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"}`}
                 >
                   More
                 </button>
                 {mobileMoreOpen && (
-                  <div className="dashboard-mobile-more-menu right-0" role="menu">
+                  <div id="herd-mobile-more-options" className="dashboard-mobile-more-menu right-0" role="group" aria-label="More herd sections">
                     <button
                       type="button"
                       onClick={handleBulkEntryClick}
                       className={`dashboard-mobile-more-item ${activeTab === "bulk-entry" ? "dashboard-mobile-more-item-active" : ""}`}
-                      role="menuitem"
                     >
                       Bulk Entry
                     </button>
@@ -1752,7 +1751,6 @@ export default function Dashboard() {
                       type="button"
                       onClick={handleInventoryClick}
                       className={`dashboard-mobile-more-item ${activeTab === "inventory" ? "dashboard-mobile-more-item-active" : ""}`}
-                      role="menuitem"
                     >
                       Inventory
                     </button>
@@ -1760,7 +1758,6 @@ export default function Dashboard() {
                       type="button"
                       onClick={handleFfaProjectsClick}
                       className="dashboard-mobile-more-item"
-                      role="menuitem"
                     >
                       FFA Projects
                     </button>
@@ -1769,7 +1766,6 @@ export default function Dashboard() {
                         type="button"
                         onClick={handleAdvisorDashboardClick}
                         className="dashboard-mobile-more-item"
-                        role="menuitem"
                       >
                         Advisor Dashboard
                       </button>

@@ -175,6 +175,7 @@ export default function BulkEntry({
 
           <input
             type="search"
+            aria-label="Search animals by name, tag, or species"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search name, tag, or species"

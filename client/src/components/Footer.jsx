@@ -50,6 +50,7 @@ function FooterLink({ href, children }) {
 
 export default function Footer() {
   const [email, setEmail] = useState("");
+  const [newsletterConsent, setNewsletterConsent] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
   const [submitting, setSubmitting] = useState(false);
 
@@ -69,6 +70,7 @@ export default function Footer() {
       if (!response.ok) throw new Error(data.error || "Could not subscribe right now.");
 
       setEmail("");
+      setNewsletterConsent(false);
       setStatus({ type: "success", message: "You are on the list. Watch your inbox for BarnBuddy updates." });
     } catch (error) {
       setStatus({ type: "error", message: error.message });
@@ -130,7 +132,7 @@ export default function Footer() {
               <p className="mt-2 text-sm leading-6 text-slate-300">
                 Get occasional product news, record-keeping tips, and practical guides for smaller operations.
               </p>
-              <form className="mt-5 flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row" onSubmit={handleNewsletterSubmit}>
+              <form className="mt-5 flex flex-col gap-2" onSubmit={handleNewsletterSubmit}>
                 <label className="sr-only" htmlFor="newsletter-email">Email address for BarnBuddy updates</label>
                 <input
                   id="newsletter-email"
@@ -140,8 +142,19 @@ export default function Footer() {
                   placeholder="you@farm.com"
                   autoComplete="email"
                   required
+                  aria-describedby="newsletter-consent-copy"
                   className="min-h-12 min-w-0 flex-1 rounded-xl border border-white/12 bg-[#0b1730] px-4 text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none"
                 />
+                <label id="newsletter-consent-copy" className="flex items-start gap-3 py-2 text-sm leading-5 text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={newsletterConsent}
+                    onChange={(event) => setNewsletterConsent(event.target.checked)}
+                    required
+                    className="mt-1 h-4 w-4 shrink-0 accent-blue-500"
+                  />
+                  <span>I agree to receive occasional BarnBuddy product updates and tips by email. I can unsubscribe at any time.</span>
+                </label>
                 <button
                   type="submit"
                   disabled={submitting}
@@ -165,9 +178,12 @@ export default function Footer() {
 
         <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
           <p>&copy; {new Date().getFullYear()} BarnBuddy. Built in Kansas for smaller livestock operations.</p>
-          <div className="flex gap-5">
-            <FooterLink href="/privacy">Privacy</FooterLink>
-            <FooterLink href="/terms">Terms</FooterLink>
+            <div className="flex flex-wrap gap-x-5 gap-y-1">
+            {[
+              ["Privacy", "/privacy"], ["Terms", "/terms"], ["Refunds", "/refunds"],
+              ["Cancellation", "/cancellation"], ["Cookies", "/cookies"],
+              ["Data retention", "/data-retention"], ["Accessibility", "/accessibility"], ["Security", "/security"],
+            ].map(([label, href]) => <FooterLink key={href} href={href}>{label}</FooterLink>)}
           </div>
         </div>
       </div>
