@@ -491,6 +491,20 @@
       "skillPath": ".agents/skills/impeccable/SKILL.md",
       "computedHash": "08bd5bf141cb507f46bd8347890cd985865606f15adf88295ed3a73bc9ad5d96"
     },
+    "improve-react": {
+      "source": "millionco/react-doctor",
+      "commit": "b6ba66ef427bf81995555e380eeba679f8b5d305",
+      "sourceType": "github",
+      "skillPath": "skills/improve-react/SKILL.md",
+      "computedHash": "7a5c6bed331b17132d021e199a0871abafc57ecc32ef005178279b1440279ab5"
+    },
+    "improve-ui": {
+      "source": "ibelick/ui-skills",
+      "commit": "347d3189830f8ec3c4c041421bce19182a79dc7a",
+      "sourceType": "github",
+      "skillPath": "skills/improve-ui/SKILL.md",
+      "computedHash": "7f913010ca7e6b5c224d928d4f2500438d7daacebb25f00e2f4df3bed513d51d"
+    },
     "information-architecture": {
       "source": "julianoczkowski/designer-skills",
       "commit": "c259656c76d9758d7ead46b0d2f125cbe84f8665",
