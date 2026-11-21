@@ -8,6 +8,7 @@ const {
   shouldVerifyPersonalBilling,
   subscriptionFromBillingState,
 } = require("../middleware/authMiddleware");
+const authMiddleware = require("../middleware/authMiddleware");
 const { clearRateLimitStore, createRateLimit } = require("../middleware/rateLimit");
 const securityHeaders = require("../middleware/securityHeaders");
 const { getEffectiveReminderSubscription } = require("../services/notificationService");
@@ -50,6 +51,20 @@ test("active Organization entitlements are not mistaken for a personal Clerk pla
   const auth = { has: () => true };
   assert.equal(hasPersonalClerkAccess(auth, ["premium"], ["premium_access"]), true);
   assert.equal(hasPersonalClerkAccess({ ...auth, orgId: "org_active" }, ["premium"], ["premium_access"]), false);
+});
+
+test("server auth middleware rejects requests without a verified Clerk user", async () => {
+  const response = createResponse();
+  let nextCalled = false;
+  await authMiddleware({
+    auth: () => ({ userId: "", sessionClaims: {} }),
+    method: "GET",
+    originalUrl: "/api/animals",
+    headers: {},
+  }, response, () => { nextCalled = true; });
+
+  assert.equal(response.statusCode, 401);
+  assert.equal(nextCalled, false);
 });
 
 test("trusted premium grants require a valid source and expiration", () => {

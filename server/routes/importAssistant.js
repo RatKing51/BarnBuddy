@@ -3,7 +3,7 @@ const multer = require("multer");
 const pool = require("../data-source");
 const env = require("../config/env");
 const authMiddleware = require("../middleware/authMiddleware");
-const { createRateLimit } = require("../middleware/rateLimit");
+const { createPersistentPublicRateLimit } = require("../middleware/persistentPublicRateLimit");
 const { MAX_BULK_RECORDS } = require("../config/usageLimits");
 const {
   isR2Configured,
@@ -11,7 +11,8 @@ const {
 } = require("../services/r2Storage");
 
 const router = express.Router();
-const helpRequestRateLimit = createRateLimit({
+const helpRequestRateLimit = createPersistentPublicRateLimit({
+  endpoint: "import-help-request",
   windowMs: 60 * 60 * 1000,
   max: 5,
   message: "Too many transfer-help requests. Please wait before trying again.",

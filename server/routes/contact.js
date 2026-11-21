@@ -1,10 +1,11 @@
 const express = require("express");
 const { sendContactEmail } = require("../services/emailService");
 const pool = require("../data-source");
-const { createRateLimit } = require("../middleware/rateLimit");
+const { createPersistentPublicRateLimit } = require("../middleware/persistentPublicRateLimit");
 
 const router = express.Router();
-const contactRateLimit = createRateLimit({
+const contactRateLimit = createPersistentPublicRateLimit({
+  endpoint: "contact-submit",
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: "Too many contact requests. Please wait and try again.",

@@ -1,13 +1,8 @@
 const { Pool } = require("pg");
 const env = require("./config/env");
+const { getDatabaseConnectionConfig } = require("./config/databaseTls");
 
-const pool = new Pool(
-    env.databaseUrl
-        ? {
-            connectionString: env.databaseUrl,
-            ssl: env.nodeEnv === "production" ? { rejectUnauthorized: false } : false,
-        }
-        : env.db
-);
+const connection = getDatabaseConnectionConfig(env);
+const pool = new Pool(connection || env.db);
 
 module.exports = pool;

@@ -18,13 +18,16 @@ const configuredClientUrls = (process.env.CLIENT_URL || "")
   .map((url) => url.trim())
   .filter(Boolean);
 
+const railwayEnvironment = String(process.env.RAILWAY_ENVIRONMENT_NAME || "").trim().toLowerCase();
+const nodeEnv = railwayEnvironment === "production" ? "production" : (process.env.NODE_ENV || "development");
+
 const usePublicDatabaseUrl = process.env.USE_PUBLIC_DATABASE_URL === "true";
 const databaseUrl = usePublicDatabaseUrl
   ? process.env.DATABASE_PUBLIC_URL || process.env.DATABASE_URL || process.env.DB_URL || ""
   : process.env.DATABASE_URL || process.env.DB_URL || "";
 
 const env = {
-  nodeEnv: process.env.NODE_ENV || "development",
+  nodeEnv,
   port: Number(process.env.PORT) || 5000,
   clientUrl: process.env.CLIENT_URL || "http://localhost:5173",
   clientUrls: uniqueUrls([
@@ -34,11 +37,12 @@ const env = {
     "https://www.barnbuddy.pro",
   ]),
   databaseUrl,
+  databaseSslCaCert: process.env.DATABASE_SSL_CA_CERT || "",
   db: {
     user: process.env.PGUSER || "postgres",
     host: process.env.PGHOST || "localhost",
     database: process.env.PGDATABASE || "BarnBuddy",
-    password: process.env.PGPASSWORD || "password",
+    password: process.env.PGPASSWORD || "",
     port: Number(process.env.PGPORT) || 5432,
   },
   clerk: {
