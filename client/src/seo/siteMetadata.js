@@ -8,6 +8,21 @@ const DEFAULT_ROBOTS = "index, follow, max-image-preview:large, max-snippet:-1, 
 const NOINDEX_FOLLOW = "noindex, follow";
 const PRIVATE_ROBOTS = "noindex, nofollow, noarchive";
 
+export const PAGE_FAQS = {
+  "/switch-to-barnbuddy": [
+    { question: "Can I switch from another farm management app?", answer: "You can start using BarnBuddy for your records, but direct migration from another platform is not verified or guaranteed. Check the available CSV template and Import Assistant before you begin." },
+    { question: "Can I bring over paper records or spreadsheets?", answer: "The Import Assistant can import a structured CSV directly and can create an editable draft from supported photos and documents. You must review and confirm the draft before anything is saved. You can also enter animals and records manually." },
+    { question: "How much does BarnBuddy cost?", answer: "BarnBuddy has a Free plan for core animal, herd, health, and vet records. Premium is listed at $5 per month and adds tools such as exports, reminders, advanced reporting, and FFA Project Mode. Check the pricing page for current details." },
+    { question: "How do I get started?", answer: "Create a BarnBuddy account, add an animal profile, then organize animals into herds and record weights or care as you go. Use the Import Assistant if your existing animal data is in a supported format." },
+  ],
+  "/ffa-livestock-records": [
+    { question: "Can BarnBuddy keep records for an FFA livestock project?", answer: "Yes. Premium FFA Project Mode lets a student create a project, link an existing animal profile, set goals and dates, keep journal activities and project finances, and review associated animal records." },
+    { question: "Does BarnBuddy replace an official FFA record book or SAE requirements?", answer: "No. BarnBuddy is an independent record-keeping platform. Follow your chapter, school, advisor, and official FFA requirements and use any required official forms or record books." },
+    { question: "Do students need a paid account?", answer: "Core animal and herd records are available on the Free plan. FFA Project Mode is a Premium feature listed at $5 per month. Ask BarnBuddy about school or chapter pricing and check the current pricing page." },
+    { question: "Can an FFA chapter or advisor use BarnBuddy with students?", answer: "Students use individual accounts and can join a participating chapter with a chapter code. They choose which projects to share with an advisor. Contact BarnBuddy about chapter pricing and confirm your school's account and privacy requirements before using it with students." },
+  ],
+};
+
 export const PUBLIC_ROUTE_METADATA = {
   "/": {
     title: "BarnBuddy | Livestock Records for Small Farms",
@@ -30,6 +45,20 @@ export const PUBLIC_ROUTE_METADATA = {
     description:
       "Compare BarnBuddy Free with Premium at $5 per month, including exports, reminders, breeding, finance, feed, inventory, and FFA project tools.",
     robots: DEFAULT_ROBOTS,
+  },
+  "/switch-to-barnbuddy": {
+    title: "Switch to BarnBuddy | Simple Livestock Record Keeping",
+    heading: "Bring your livestock records together",
+    description: "Ready for easier livestock record keeping? Discover how BarnBuddy helps small farms organize animals, herds, health records, and weights.",
+    robots: DEFAULT_ROBOTS,
+    structuredData: true,
+  },
+  "/ffa-livestock-records": {
+    title: "FFA Livestock Record Keeping Software | BarnBuddy",
+    heading: "Keep your FFA livestock project records together",
+    description: "Organize FFA livestock project records with BarnBuddy. Track animal information, weights, health records, vaccinations, and more in one place.",
+    robots: DEFAULT_ROBOTS,
+    structuredData: true,
   },
   "/news": {
     title: "BarnBuddy News | Product Updates and Farm Record Tips",
@@ -275,6 +304,40 @@ export function buildSiteStructuredData() {
             },
           },
         ],
+      },
+    ],
+  };
+}
+
+export function buildPageStructuredData(pathname) {
+  const metadata = getSeoMetadata(pathname);
+  const faqItems = PAGE_FAQS[metadata.pathname];
+  if (!faqItems) return buildSiteStructuredData();
+
+  const webPageId = `${metadata.canonical}#webpage`;
+  return {
+    ...buildSiteStructuredData(),
+    "@graph": [
+      ...buildSiteStructuredData()["@graph"],
+      {
+        "@type": "WebPage",
+        "@id": webPageId,
+        url: metadata.canonical,
+        name: metadata.title,
+        description: metadata.description,
+        isPartOf: { "@id": `${SITE_URL}/#website` },
+        about: { "@id": `${SITE_URL}/#software-application` },
+        inLanguage: "en-US",
+      },
+      {
+        "@type": "FAQPage",
+        "@id": `${metadata.canonical}#faq`,
+        url: metadata.canonical,
+        mainEntity: faqItems.map(({ question, answer }) => ({
+          "@type": "Question",
+          name: question,
+          acceptedAnswer: { "@type": "Answer", text: answer },
+        })),
       },
     ],
   };

@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  buildSiteStructuredData,
+  buildPageStructuredData,
   getSeoMetadata,
   SITE_URL,
   SITE_NAME,
@@ -60,7 +60,7 @@ function renderMetadata(metadata) {
   ];
 
   if (metadata.structuredData) {
-    const json = JSON.stringify(buildSiteStructuredData()).replaceAll("<", "\\u003c");
+    const json = JSON.stringify(buildPageStructuredData(metadata.pathname)).replaceAll("<", "\\u003c");
     tags.push(`<script type="application/ld+json" data-barnbuddy-seo="true">${json}</script>`);
   }
 
@@ -95,6 +95,25 @@ const staticSections = {
   "/pricing": [
     ["Free and Premium", "Free includes animal and herd records, health and vet tracking, and basic care status. Premium is listed at $5 per month and adds advanced reports, exports, reminders, breeding, finance, feed, inventory, and FFA Project Mode."],
     ["Billing", "Review the amount and subscription terms displayed by Clerk Billing checkout before confirming a purchase. Manage an existing subscription from Account Settings."],
+  ],
+  "/switch-to-barnbuddy": [
+    ["When the record is hard to find, it is hard to use", "Paper notes can get separated from the animal. Spreadsheets can be useful, but dates, tabs, and versions take attention to maintain. BarnBuddy brings animal profiles, herds, health events, vaccinations, vet visits, and weights together."],
+    ["Move over at a pace that works for you", "Start with current animals and the details you rely on most. Add older notes as time allows. You can add animals individually, import a structured CSV, or use the Import Assistant to create an editable draft from supported photos and documents. Review every draft and confirm it before import. Direct migration from another platform is not verified or guaranteed, so some historical information may need to be entered manually."],
+    ["Get started", "Create a free account, add an animal profile, organize animals into herds, and record weights or care as you go. BarnBuddy Free includes core animal and herd records. Premium is listed at $5 per month and adds advanced tools; check the pricing page for current details."],
+    ["Switching questions: Can I switch from another farm management app?", "You can start using BarnBuddy for your records, but direct migration from another platform is not verified or guaranteed. Check the available CSV template and Import Assistant before you begin."],
+    ["Switching questions: Can I bring over paper records or spreadsheets?", "The Import Assistant can import a structured CSV directly and can create an editable draft from supported photos and documents. You must review and confirm the draft before anything is saved. You can also enter animals and records manually."],
+    ["Switching questions: How much does BarnBuddy cost?", "BarnBuddy has a Free plan for core animal, herd, health, and vet records. Premium is listed at $5 per month and adds tools such as exports, reminders, advanced reporting, and FFA Project Mode. Check the pricing page for current details."],
+    ["Switching questions: How do I get started?", "Create a BarnBuddy account, add an animal profile, then organize animals into herds and record weights or care as you go. Use the Import Assistant if your existing animal data is in a supported format."],
+  ],
+  "/ffa-livestock-records": [
+    ["Keep your FFA livestock project records together", "BarnBuddy organizes animal profiles, weights, health history, vaccinations, vet visits, and project activities. FFA Project Mode is a Premium feature that links existing animal profiles to student projects, with goals, journal activities, project finances, and member-controlled sharing."],
+    ["A show animal, from weigh-in to show day", "A student can add a market steer with its name and tag, link its existing profile to a Market Steer SAE project, enter dated weigh-ins, record vaccination or vet information, and write a journal entry about ration adjustments or show preparation. These records can help prepare for an advisor conversation; follow chapter record-keeping instructions."],
+    ["For agricultural education teachers and chapter advisors", "Chapter Mode supports joining with a chapter code. Members choose which projects to share with an advisor, who can review the shared projects. Contact BarnBuddy about school or chapter pricing and check your school's account and privacy requirements."],
+    ["Independent platform disclaimer", "BarnBuddy is an independent platform and is not officially affiliated with or endorsed by the National FFA Organization. It does not replace official FFA record books, SAE requirements, or instructions from a student's chapter or advisor."],
+    ["FFA questions: Can BarnBuddy keep records for an FFA livestock project?", "Yes. Premium FFA Project Mode lets a student create a project, link an existing animal profile, set goals and dates, keep journal activities and project finances, and review associated animal records."],
+    ["FFA questions: Does BarnBuddy replace an official FFA record book or SAE requirements?", "No. BarnBuddy is an independent record-keeping platform. Follow your chapter, school, advisor, and official FFA requirements and use any required official forms or record books."],
+    ["FFA questions: Do students need a paid account?", "Core animal and herd records are available on the Free plan. FFA Project Mode is a Premium feature listed at $5 per month. Ask BarnBuddy about school or chapter pricing and check the current pricing page."],
+    ["FFA questions: Can an FFA chapter or advisor use BarnBuddy with students?", "Students use individual accounts and can join a participating chapter with a chapter code. They choose which projects to share with an advisor. Contact BarnBuddy about chapter pricing and confirm your school's account and privacy requirements before using it with students."],
   ],
   "/help": [
     ["Get started", "Find guidance for accounts, herds, animal profiles, care records, exports, and account settings."],

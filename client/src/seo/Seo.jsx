@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router";
-import { buildSiteStructuredData, getSeoMetadata, SITE_NAME } from "./siteMetadata";
+import { buildPageStructuredData, getSeoMetadata, SITE_NAME } from "./siteMetadata";
 
 const SEO_ATTRIBUTE = "data-barnbuddy-seo";
 
@@ -55,7 +55,7 @@ export default function Seo({ article }) {
       const script = document.createElement("script");
       script.setAttribute("type", "application/ld+json");
       script.setAttribute(SEO_ATTRIBUTE, "true");
-      script.textContent = JSON.stringify(buildSiteStructuredData());
+      script.textContent = JSON.stringify(buildPageStructuredData(metadata.pathname));
       document.head.appendChild(script);
     }
 

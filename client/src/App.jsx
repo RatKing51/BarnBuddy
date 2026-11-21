@@ -18,6 +18,8 @@ const ANNOUNCEMENT_EVENT = "barnbuddy:announcement-updated";
 const MAINTENANCE_EVENT = "barnbuddy:maintenance-updated";
 const Login = lazy(() => import("./pages/Login"));
 const Landing = lazy(() => import("./pages/Landing"));
+const SwitchToBarnBuddy = lazy(() => import("./pages/SwitchToBarnBuddy"));
+const FfaLivestockRecords = lazy(() => import("./pages/FfaLivestockRecords"));
 const SignUp = lazy(() => import("./pages/SignUp"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const FfaProjects = lazy(() => import("./pages/FfaProjects"));
@@ -262,6 +264,8 @@ function AppContent() {
       )}>
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/switch-to-barnbuddy" element={<SwitchToBarnBuddy />} />
+        <Route path="/ffa-livestock-records" element={<FfaLivestockRecords />} />
         <Route path="/login/*" element={<Login />} />
         <Route path="/signup/*" element={<SignUp />} />
         <Route path="/aboutus" element={<About />} />

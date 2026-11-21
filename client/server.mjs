@@ -21,6 +21,8 @@ const publicRoutes = new Set([
   "/",
   "/aboutus",
   "/pricing",
+  "/switch-to-barnbuddy",
+  "/ffa-livestock-records",
   "/news",
   "/contact",
   "/help",

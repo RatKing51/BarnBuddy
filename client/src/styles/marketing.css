@@ -337,6 +337,49 @@
   .bb-help-layout { grid-template-columns: 1fr; }
 }
 
+.bb-seo-page { color: #f8fafc; }
+.bb-seo-page .bb-section-heading { align-items: start; }
+.bb-seo-page .bb-section-heading > p { max-width: 48ch; }
+.bb-seo-hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(16rem, .8fr); gap: clamp(2rem, 7vw, 7rem); align-items: center; padding-block: clamp(3rem, 7vw, 6.5rem); }
+.bb-seo-hero .bb-route-intro { margin: 0; max-width: 60ch; }
+.bb-seo-hero h1 { max-width: 16ch; font-size: clamp(2.5rem, 5.2vw, 4.5rem); line-height: 1.05; font-weight: 600; letter-spacing: -.03em; text-wrap: balance; }
+.bb-seo-hero .bb-route-intro > p:not(.bb-hero-label) { max-width: 55ch; }
+.bb-seo-note { align-self: center; padding: 1.5rem 0 1.5rem 1.5rem; border-inline-start: 2px solid #466482; }
+.bb-seo-note h2, .bb-seo-note h3 { font-size: 1.25rem; font-weight: 600; line-height: 1.3; }
+.bb-seo-note p { margin-top: .8rem; color: #b6c4d6; line-height: 1.7; }
+.bb-seo-note .bb-text-link { margin-top: .6rem; }
+.bb-seo-grid { margin-top: 0; }
+.bb-seo-grid article { border-top-color: #466482; }
+.bb-seo-grid article h3 { color: #f8fafc; font-size: 1rem; font-weight: 600; }
+.bb-seo-grid article p, .bb-seo-page p { line-height: 1.7; }
+.bb-seo-two { grid-template-columns: 1fr 1fr; }
+.bb-seo-inline-link { margin-top: 1.75rem; color: #b6c4d6; }
+.bb-seo-inline-link .bb-text-link { margin-inline: .15rem; }
+.bb-seo-transition { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(16rem, .8fr); gap: clamp(2rem, 7vw, 7rem); align-items: center; }
+.bb-seo-transition .bb-route-intro { margin-bottom: 1.5rem; }
+.bb-seo-transition > div > p { max-width: 68ch; color: #b6c4d6; }
+.bb-seo-transition > div > p + p { margin-top: 1rem; }
+.bb-seo-steps { display: grid; grid-template-columns: minmax(14rem, .8fr) minmax(0, 1.2fr); gap: clamp(2rem, 7vw, 7rem); }
+.bb-seo-steps h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); font-weight: 600; line-height: 1.15; }
+.bb-seo-steps > div > p { margin-top: 1rem; color: #b6c4d6; }
+.bb-seo-steps ol { margin: 0; padding: 0; list-style: none; }
+.bb-seo-steps li { border-top: 1px solid #34475e; padding: 1.25rem 0; }
+.bb-seo-steps li h3 { font-weight: 600; }
+.bb-seo-steps li p { margin-top: .4rem; color: #b6c4d6; }
+.bb-seo-faq details { border-top: 1px solid #34475e; padding: 1.2rem 0; }
+.bb-seo-faq details:last-child { border-bottom: 1px solid #34475e; }
+.bb-seo-faq summary { min-height: 2.75rem; display: flex; align-items: center; cursor: pointer; font-weight: 600; }
+.bb-seo-faq details p { max-width: 72ch; padding: .65rem 0 .15rem; color: #b6c4d6; }
+.bb-seo-disclaimer { border-block: 1px solid #34475e; }
+.bb-seo-disclaimer p { max-width: 80ch; color: #b6c4d6; }
+.bb-seo-page :is(a, summary):focus-visible { outline: 2px solid #a5ceff; outline-offset: 4px; border-radius: 3px; }
+@media (max-width: 760px) {
+  .bb-seo-hero, .bb-seo-transition, .bb-seo-steps { grid-template-columns: 1fr; gap: 2rem; }
+  .bb-seo-note { padding: 1rem 0 1rem 1rem; }
+  .bb-seo-two { grid-template-columns: 1fr; }
+  .bb-seo-hero h1 { font-size: clamp(2.4rem, 10vw, 3.4rem); }
+}
+
 .bb-contact-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.22fr);

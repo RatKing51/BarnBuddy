@@ -8,6 +8,8 @@ const footerLinks = [
     links: [
       ["Pricing", "/pricing"],
       ["Help Center", "/help"],
+      ["Switch to BarnBuddy", "/switch-to-barnbuddy"],
+      ["FFA livestock records", "/ffa-livestock-records"],
       ["Documentation", "https://doc.barnbuddy.pro"],
       ["Service status", "/status"],
     ],

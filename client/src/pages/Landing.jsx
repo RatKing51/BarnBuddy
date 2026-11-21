@@ -35,7 +35,7 @@ export default function Landing() {
         </section>
         <section id="chapter-mode" className="bb-chapter">
           <div className="bb-container bb-chapter-layout">
-            <div className="bb-chapter-copy" data-reveal><h2>Chapter Mode</h2><p>Members keep their own project records. A student can log a project animal’s weight, write a journal entry, and bring those records to their next advisor meeting.</p><div className="bb-actions"><Link to="/contact?topic=School%20or%20chapter%20pricing" className="bb-button bb-button-light">Ask about chapter pricing</Link><Link to="/pricing" className="bb-text-link">See plans</Link></div><p className="bb-privacy-note">Members choose what to share. Private projects stay private.</p></div>
+            <div className="bb-chapter-copy" data-reveal><h2>Chapter Mode</h2><p>Members keep their own project records. A student can log a project animal’s weight, write a journal entry, and bring those records to their next advisor meeting.</p><div className="bb-actions"><Link to="/contact?topic=School%20or%20chapter%20pricing" className="bb-button bb-button-light">Ask about chapter pricing</Link><Link to="/pricing" className="bb-text-link">See plans</Link></div><p className="bb-privacy-note">Members choose what to share. Private projects stay private.</p><Link className="bb-text-link" to="/ffa-livestock-records">See how BarnBuddy supports FFA livestock projects</Link></div>
             <div className="bb-chapter-flow" data-reveal>
               <ol>
                 <li><span>1</span><div><h3>Join your chapter</h3><p>Enter the chapter code in your account settings.</p></div></li>
@@ -47,7 +47,7 @@ export default function Landing() {
           </div>
         </section>
         <section className="bb-section bb-container bb-story">
-          <div data-reveal><h2>It started with our goats</h2><p>My family raises meat goats in Kansas. We had health notes in notebooks and project records in spreadsheets. I built BarnBuddy so we could look up an animal and find both.</p><p>That’s the idea behind the animal profile. When it’s time for another weigh-in or vet visit, the last entry is right there with the new one.</p><Link className="bb-text-link" to="/aboutus">Read the BarnBuddy story</Link></div>
+          <div data-reveal><h2>It started with our goats</h2><p>My family raises meat goats in Kansas. We had health notes in notebooks and project records in spreadsheets. I built BarnBuddy so we could look up an animal and find both.</p><p>That’s the idea behind the animal profile. When it’s time for another weigh-in or vet visit, the last entry is right there with the new one.</p><Link className="bb-text-link" to="/aboutus">Read the BarnBuddy story</Link><Link className="bb-text-link" to="/switch-to-barnbuddy">Switch from paper or spreadsheets</Link></div>
           <div className="bb-founder-photo" data-reveal><img src={getSiteAssetUrl('IMG_5761.JPEG')} alt="BarnBuddy founder Gage Billinger at a Kansas FFA event" loading="lazy" width="1620" height="1080" /><span>Gage Billinger · Founder, BarnBuddy</span></div>
         </section>
         <section className="bb-section bb-container bb-reviews" aria-labelledby="reviews-heading">
