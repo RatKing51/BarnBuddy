@@ -65,9 +65,6 @@ export default function PrivateRoute() {
     const onboardingRequired = backendUser?.onboarding?.required === true;
     const onboardingCompleted = backendUser?.onboarding?.completed === true;
     const isOnboardingRoute = location.pathname === "/dashboard/onboarding";
-    const advisorOnboardingReturnTo = location.state?.returnTo === "/advisor"
-        ? "/advisor"
-        : null;
 
     if (onboardingRequired && !onboardingCompleted && !isOnboardingRoute) {
         return (
@@ -77,10 +74,6 @@ export default function PrivateRoute() {
                 state={location.pathname === "/advisor" ? { returnTo: "/advisor" } : undefined}
             />
         );
-    }
-
-    if ((!onboardingRequired || onboardingCompleted) && isOnboardingRoute) {
-        return <Navigate to={advisorOnboardingReturnTo || "/dashboard"} replace />;
     }
 
     return <Outlet />;

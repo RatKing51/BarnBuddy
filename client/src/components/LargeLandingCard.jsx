@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { useAuth } from '@clerk/react';
 import { landingCarouselSlides } from '../data/carouselSlides';
-import { resolveSiteImageUrl } from '../config/siteImages';
+import { resolveProductPreviewUrl } from '../config/siteImages';
 import PwaInstallButton from './PwaInstallButton';
 
 export default function LargeLandingCard({ slides = landingCarouselSlides }) {
@@ -14,6 +14,7 @@ export default function LargeLandingCard({ slides = landingCarouselSlides }) {
   const previews = published.length ? published : landingCarouselSlides;
   const current = Math.min(active, previews.length - 1);
   const selected = previews[current];
+  const previewImage = resolveProductPreviewUrl(selected.image);
   const rotating = previews.length > 1 && !paused && !reducedMotion;
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -56,8 +57,8 @@ export default function LargeLandingCard({ slides = landingCarouselSlides }) {
           )}
         </div>
         <figure>
-          <img key={selected.image} src={resolveSiteImageUrl(selected.image)} alt={selected.alt} fetchPriority="high" width="1600" height="900" />
-          <figcaption aria-live={rotating ? 'off' : 'polite'}><span>{selected.title}</span><a href={resolveSiteImageUrl(selected.image)} target="_blank" rel="noreferrer">View full screenshot<span className="sr-only"> (opens in a new tab)</span></a></figcaption>
+          <img key={previewImage} src={previewImage} alt={selected.alt} fetchPriority="high" width="1600" height="900" />
+          <figcaption aria-live={rotating ? 'off' : 'polite'}><span>{selected.title}</span><a href={previewImage} target="_blank" rel="noreferrer">View full screenshot<span className="sr-only"> (opens in a new tab)</span></a></figcaption>
         </figure>
       </div>
       <div className="bb-audience"><span>Raising livestock for FFA or 4-H?</span><Link to="/#chapter-mode">See how Chapter Mode works</Link></div>

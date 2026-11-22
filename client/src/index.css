@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "./styles/livestock.css";
 
 :root {
   color-scheme: dark;
@@ -9,6 +11,7 @@
   --bb-blue: #3b82f6;
   --bb-blue-strong: #2563eb;
   --bb-page-gutter: clamp(2rem, 3vw, 4rem);
+  --bb-body-font: "Inter Variable", Inter, system-ui, sans-serif;
   --bb-heading-font: "Avenir Next", "Segoe UI Variable Display", "Segoe UI", "Inter Variable", sans-serif;
   --bb-text: #f8fafc;
   --bb-muted: #a8b5c9;
@@ -42,7 +45,7 @@ body {
   margin: 0;
   overflow-x: hidden;
   color: var(--bb-text);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--bb-body-font);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -1505,6 +1508,14 @@ input[type="date"]::-webkit-date-and-time-value {
 
 /* Shared screen styles keep the printed animal and FFA reports independent. */
 @media screen {
+  :is(.bb-public, .bb-livestock) :where(h1, h2, h3) {
+    font-family: var(--bb-heading-font);
+  }
+
+  .admin-page {
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
   :is(.bb-public, .bb-workspace) :where(h1, h2) {
     letter-spacing: -0.025em;
     text-wrap: balance;

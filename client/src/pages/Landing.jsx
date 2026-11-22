@@ -7,7 +7,7 @@ import MarketingMotion from '../components/MarketingMotion';
 import FeatureExplorer from '../components/FeatureExplorer';
 import { getSiteContent } from '../api/siteContent';
 import { defaultSiteContent } from '../data/siteContent';
-import { getSiteAssetUrl, resolveSiteImageUrl } from '../config/siteImages';
+import { getSiteAssetUrl, resolveProductPreviewUrl } from '../config/siteImages';
 import '../styles/marketing.css';
 
 export default function Landing() {
@@ -59,7 +59,7 @@ export default function Landing() {
             {reviews.map(review => <ReviewLandingCard key={review.id || `${review.name}-${review.date}`} {...review} />)}
           </div>}
         </section>
-        <section className="bb-section bb-container bb-news"><div className="bb-section-heading"><h2>What’s new</h2><Link to="/news" className="bb-text-link">All updates</Link></div><div className="bb-news-grid" data-reveal>{posts.length ? posts.map(post => <Link to={`/news/${encodeURIComponent(post.id)}`} className="bb-news-item" key={post.id}><div className="bb-news-image"><img src={resolveSiteImageUrl(post.image)} alt={post.imageAlt || ''} loading="lazy" style={{ objectFit: post.imageFit === 'contain' ? 'contain' : 'cover' }} /></div><div><span className="bb-category">{post.category || 'Product update'}</span><h3>{post.title}</h3><p>{post.excerpt}</p><time dateTime={post.date}>{new Date(`${post.date.slice(0,10)}T12:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</time></div></Link>) : <p>No updates yet.</p>}</div></section>
+        <section className="bb-section bb-container bb-news"><div className="bb-section-heading"><h2>What’s new</h2><Link to="/news" className="bb-text-link">All updates</Link></div><div className="bb-news-grid" data-reveal>{posts.length ? posts.map(post => <Link to={`/news/${encodeURIComponent(post.id)}`} className="bb-news-item" key={post.id}><div className="bb-news-image"><img src={resolveProductPreviewUrl(post.image)} alt={post.imageAlt || ''} loading="lazy" style={{ objectFit: post.imageFit === 'contain' ? 'contain' : 'cover' }} /></div><div><span className="bb-category">{post.category || 'Product update'}</span><h3>{post.title}</h3><p>{post.excerpt}</p><time dateTime={post.date}>{new Date(`${post.date.slice(0,10)}T12:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</time></div></Link>) : <p>No updates yet.</p>}</div></section>
         <section className="bb-closing"><div className="bb-container" data-reveal><div><h2>Add your first animal</h2><p>Start with a name or ear tag. You can fill in weights and care records as you go.</p></div><div className="bb-actions"><Link to="/signup" className="bb-button bb-button-primary">Create a free account</Link><Link to="/pricing" className="bb-button bb-button-secondary">Compare plans</Link></div></div></section>
       </main>
       <Footer />

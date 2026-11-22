@@ -4,7 +4,7 @@ import Footer from '../components/Footer'
 import Seo from '../seo/Seo'
 import { getSiteContent } from '../api/siteContent'
 import { defaultSiteContent } from '../data/siteContent'
-import { resolveSiteImageUrl } from '../config/siteImages'
+import { resolveProductPreviewUrl } from '../config/siteImages'
 import '../styles/news.css'
 
 const storyUrl = (post) => '/news/' + encodeURIComponent(post.id)
@@ -20,7 +20,7 @@ function Dateline({ post }) {
 
 function StoryImage({ post }) {
   if (!post.image || /(?:^|\/)bblogo\.png(?:[?#]|$)/i.test(post.image)) return null
-  return <img className="news-photo" src={resolveSiteImageUrl(post.image)} alt={post.imageAlt || ''} style={{ objectFit: post.imageFit === 'contain' ? 'contain' : 'cover' }} />
+  return <img className="news-photo" src={resolveProductPreviewUrl(post.image)} alt={post.imageAlt || ''} style={{ objectFit: post.imageFit === 'contain' ? 'contain' : 'cover' }} />
 }
 
 function StoryTeaser({ post, lead }) {

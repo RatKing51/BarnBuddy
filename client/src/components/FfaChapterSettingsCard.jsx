@@ -146,7 +146,7 @@ export default function FfaChapterSettingsCard() {
   if (loading) {
     return (
       <section
-        className="rounded-2xl border border-gray-700 bg-gray-800 p-6"
+        className="bb-record-panel p-6"
         aria-label="Loading FFA chapter status"
         aria-busy="true"
       >
@@ -238,7 +238,7 @@ export default function FfaChapterSettingsCard() {
   }
 
   return (
-    <section className="rounded-2xl border border-gray-700 bg-gray-800 p-6">
+    <section className="bb-record-panel p-6">
       <h2 className="text-xl font-semibold text-white">FFA Chapter</h2>
       <p className="mt-2 text-sm leading-relaxed text-gray-400">
         Students can enter the private code shared by their advisor to connect their BarnBuddy account. Advisors join through the secure email invitation sent for their chapter.

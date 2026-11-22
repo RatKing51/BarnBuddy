@@ -132,7 +132,7 @@ function VetVisitsSkeleton() {
           </div>
           <div className="mt-5 grid grid-cols-3 gap-2">
             {[0, 1, 2].map((item) => (
-              <div key={item} className="rounded-lg bg-gray-700/50 p-3">
+              <div key={item} className={`p-3 ${item === 0 ? "bb-vet-total" : "rounded-lg bg-gray-700/50"}`}>
                 <SkeletonBlock className="h-6 w-8" />
                 <SkeletonBlock className="mt-2 h-3 w-12" />
               </div>
@@ -367,7 +367,6 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold text-white">Vet Visits</h3>
-              <p className="mt-1 text-sm text-gray-400">{animal?.name || "This animal"} care timeline</p>
             </div>
             <button
               onClick={handleAddVisit}
@@ -377,20 +376,20 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
             </button>
           </div>
 
-          <div className="mt-5 grid grid-cols-3 gap-2">
-            <div className="rounded-lg bg-gray-700 p-3">
-              <p className="text-xl font-bold text-white">{visits.length}</p>
-              <p className="text-xs text-gray-400">Total</p>
+          <dl className="mt-5 grid grid-cols-3 gap-2">
+            <div className="bb-vet-total flex flex-col-reverse p-3">
+              <dt className="text-xs text-gray-400">Total</dt>
+              <dd className="text-xl font-bold tabular-nums text-white">{visits.length}</dd>
             </div>
-            <div className="rounded-lg bg-blue-500/15 p-3">
-              <p className="text-xl font-bold text-white">{visitGroups.upcoming.length}</p>
-              <p className="text-xs text-blue-200">Visits</p>
+            <div className="flex flex-col-reverse rounded-lg bg-blue-500/15 p-3">
+              <dt className="text-xs text-blue-200">Visits</dt>
+              <dd className="text-xl font-bold tabular-nums text-white">{visitGroups.upcoming.length}</dd>
             </div>
-            <div className="rounded-lg bg-amber-500/15 p-3">
-              <p className="text-xl font-bold text-white">{visitGroups.followUps.length}</p>
-              <p className="text-xs text-amber-200">Follow-ups</p>
+            <div className="flex flex-col-reverse rounded-lg bg-amber-500/15 p-3">
+              <dt className="text-xs text-amber-200">Follow-ups</dt>
+              <dd className="text-xl font-bold tabular-nums text-white">{visitGroups.followUps.length}</dd>
             </div>
-          </div>
+          </dl>
         </div>
 
         <div className="rounded-2xl border border-gray-700 bg-gray-800 p-4">

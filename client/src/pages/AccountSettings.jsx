@@ -283,100 +283,45 @@ export default function AccountSettings() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div className="bb-livestock bb-settings min-h-screen">
       <SettingsHeader />
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8 max-w-3xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-400">Settings</p>
-          <h1 className="mt-2 text-3xl font-semibold text-white">Account settings</h1>
-          <p className="mt-3 text-gray-400">
-            Edit your profile, manage billing, or change how your dashboard looks.
-          </p>
-        </div>
+      <main className="bb-work-container pb-8">
+        <header className="bb-view-header"><h1>Account settings</h1></header>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
-          <aside className="space-y-4">
-            <button
-              onClick={() => navigate("/settings/herd")}
-              className="w-full rounded-2xl border border-gray-700 bg-gray-800 p-5 text-left transition hover:border-blue-400 hover:bg-gray-700"
-            >
-              <p className="font-semibold text-white">Herd settings</p>
-              <p className="mt-2 text-sm text-gray-400">Create, rename, or delete herds.</p>
-            </button>
-
-            <button
-              onClick={() => navigate("/settings/import-assistant")}
-              className="w-full rounded-2xl border border-blue-400/30 bg-blue-500/10 p-5 text-left transition hover:border-blue-300 hover:bg-blue-500/15"
-            >
-              <p className="font-semibold text-white">Import Assistant</p>
-              <p className="mt-2 text-sm text-blue-100/80">
-                Upload CSVs, photos, PDFs, paper records, and other files for animal record transfer.
-              </p>
-            </button>
-
+          <aside className="flex flex-wrap gap-2 self-start lg:flex-col lg:items-start">
             <button
               onClick={restartOnboarding}
               disabled={restartingOnboarding}
-              className="w-full rounded-2xl border border-gray-700 bg-gray-800 p-5 text-left transition hover:border-blue-400 hover:bg-gray-700 disabled:cursor-wait disabled:opacity-70"
+              className="bb-action"
             >
               <p className="font-semibold text-white">{restartingOnboarding ? "Starting onboarding..." : "Restart onboarding"}</p>
-              <p className="mt-2 text-sm text-gray-400">Run the BarnBuddy setup questions again and update your dashboard shortcuts.</p>
             </button>
 
             <button
               onClick={() => navigate("/pricing")}
-              className={`w-full rounded-2xl border p-5 text-left transition ${
-                subscription.isPremium
-                  ? "border-gray-700 bg-gray-800 hover:border-blue-400 hover:bg-gray-700"
-                  : "border-blue-400/30 bg-blue-500/10 hover:border-blue-300 hover:bg-blue-500/15"
-              }`}
+              className="bb-action"
             >
-              <p className="font-semibold text-white">Subscription</p>
-              <p className={`mt-2 text-sm ${subscription.isPremium ? "text-gray-400" : "text-blue-100/80"}`}>
-                {chapterOnlyPremium
-                  ? "Premium is currently provided by your FFA chapter."
-                  : subscription.isPremium
-                    ? "Manage billing and plan details."
-                    : "Review Premium tools and pricing."}
-              </p>
+              View plans
             </button>
 
             <button
               onClick={handleLogout}
               disabled={loggingOut || deletingAccount}
-              className="w-full rounded-2xl border border-gray-700 bg-gray-800 p-5 text-left transition hover:border-blue-400 hover:bg-gray-700 disabled:cursor-wait disabled:opacity-70"
+              className="bb-action"
             >
               <p className="font-semibold text-white">{loggingOut ? "Logging out..." : "Log out"}</p>
-              <p className="mt-2 text-sm text-gray-400">End this session and return to the public site.</p>
             </button>
           </aside>
 
           <div className="space-y-6">
-            <section className={`rounded-2xl border p-6 ${
-              subscription.isPremium
-                ? "border-gray-700 bg-gray-800"
-                : "border-blue-400/30 bg-blue-500/10"
-            }`}>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${subscription.isPremium ? "text-gray-500" : "text-blue-300"}`}>Billing</p>
-                  <h2 className="mt-2 text-xl font-semibold text-white">Subscription</h2>
-                  <p className={`mt-2 text-sm ${subscription.isPremium ? "text-gray-400" : "text-blue-100/80"}`}>
-                    {chapterOnlyPremium
-                      ? "Your chapter benefit and personal billing are kept separate."
-                      : "Review your plan and billing options."}
-                  </p>
-                </div>
-                {!subscription.isPremium && (
-                  <span className="w-fit rounded-full bg-blue-500 px-3 py-1 text-xs font-semibold text-white">
-                    {subscription.planName} - {subscription.statusLabel}
-                  </span>
-                )}
-              </div>
+            <section className="bb-record-panel p-6">
+              <h2 className="text-xl font-semibold">Subscription</h2>
+              {chapterOnlyPremium && <p className="mt-2 text-sm bb-work-muted">Your chapter benefit and personal billing are kept separate.</p>}
 
               <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-                <div className="rounded-xl border border-gray-700 bg-gray-900 p-4">
+                <div className="rounded-xl border border-gray-700 bg-gray-800 p-4">
                   <p className="font-semibold text-white">{PLANS[subscription.planId].name} plan</p>
                   <p className="mt-1 text-sm text-gray-400">
                     {chapterOnlyPremium
@@ -398,7 +343,6 @@ export default function AccountSettings() {
                 <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {PREMIUM_FEATURES.map((feature) => (
                     <div key={feature} className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-sm text-gray-200">
-                      <span className="mr-2 text-blue-300">Premium</span>
                       {feature}
                     </div>
                   ))}
@@ -410,9 +354,8 @@ export default function AccountSettings() {
 
             <FfaProjectSharingPrivacyCard />
 
-            <section className="rounded-2xl border border-gray-700 bg-gray-800 p-6">
+            <section className="bb-record-panel p-6">
               <h2 className="text-xl font-semibold text-white">Profile</h2>
-              <p className="mt-2 text-sm text-gray-400">These details are connected to your BarnBuddy sign-in.</p>
 
               <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block">
@@ -447,12 +390,9 @@ export default function AccountSettings() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-gray-700 bg-gray-800 p-6">
+            <section className="bb-record-panel p-6">
               <h2 className="text-xl font-semibold text-white">Preferences</h2>
-              <p className="mt-2 text-sm text-gray-400">
-                Saved app preferences for this BarnBuddy account.
-                {loadingPreferences && " Loading preferences..."}
-              </p>
+              {loadingPreferences && <p role="status" className="mt-2 bb-work-muted">Loading preferences…</p>}
 
               <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block">

@@ -6,19 +6,16 @@ export default function PremiumRoute() {
 
   if (!subscription?.isPremium) {
     return (
-      <main className="min-h-screen bg-gray-950 px-4 py-8 text-gray-100 sm:px-6">
-        <div className="mx-auto max-w-5xl">
+      <main className="bb-livestock min-h-screen py-8">
+        <div className="bb-work-container">
           <Link
             to="/dashboard"
-            className="inline-flex rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-sm font-semibold text-gray-200 transition hover:border-gray-600 hover:bg-gray-800"
+            className="bb-action"
           >
             Back to dashboard
           </Link>
 
-          <div className="mt-6 rounded-2xl border border-amber-300/30 bg-amber-400/10 p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-200">
-              Premium
-            </p>
+          <div className="bb-record-panel bb-panel-inset mt-6">
             <h1 className="mt-2 text-xl font-semibold text-white">
               FFA Project Mode is a Premium feature
             </h1>
@@ -28,7 +25,7 @@ export default function PremiumRoute() {
             <Link
               to="/pricing"
               state={{ premiumFeature: "FFA Project Mode", returnTo: "/dashboard/ffa-projects" }}
-              className="mt-5 inline-flex rounded-lg bg-amber-300 px-4 py-2 font-semibold text-gray-950 transition hover:bg-amber-200"
+              className="bb-action bb-action-primary mt-5"
             >
               View Premium
             </Link>

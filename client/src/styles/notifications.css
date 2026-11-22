@@ -50,6 +50,22 @@
   }
   .bb-notifications .Toastify__toast { border-radius: .5rem; margin-bottom: .5rem }
 }
+@media (max-width: 767px) {
+  body:has(.bb-livestock) .bb-notifications.Toastify__toast-container {
+    top: auto;
+    bottom: max(.5rem, env(safe-area-inset-bottom));
+    pointer-events: none;
+  }
+  body:has(.bb-dashboard .bb-bottom-nav) .bb-notifications.Toastify__toast-container {
+    bottom: calc(3.75rem + env(safe-area-inset-bottom));
+  }
+  body:has(.bb-livestock) .bb-notifications .Toastify__toast { pointer-events: none; }
+  body:has(.bb-livestock) .bb-notifications .Toastify__close-button {
+    pointer-events: auto;
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .bb-notifications .Toastify__toast, .bb-notifications .Toastify__toast-icon {
     animation-duration: 1ms;

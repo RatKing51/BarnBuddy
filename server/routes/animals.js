@@ -52,6 +52,7 @@ async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
             vaccinationsDueSoon: 0,
             upcomingVetVisits: 0,
             animalUrgencies: {},
+            animalCare: {},
         };
     }
 
@@ -89,6 +90,9 @@ async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
             {
                 hasOverdue: false,
                 hasSoon: false,
+                vaccinations: 0,
+                vet: 0,
+                upcomingVet: 0,
                 urgency: isInactiveAnimalStatus(animal.status) ? animal.status : "green",
             },
         ])
@@ -112,9 +116,11 @@ async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
 
         if (dueDate < today) {
             state.hasOverdue = true;
+            state.vaccinations += 1;
             vaccinationsDue += 1;
         } else if (dueDate <= soonThreshold) {
             state.hasSoon = true;
+            state.vaccinations += 1;
             vaccinationsDue += 1;
             vaccinationsDueSoon += 1;
         }
@@ -131,27 +137,41 @@ async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
 
         if (visitDate && visitDate < today && !visitDone) {
             state.hasOverdue = true;
+            state.vet += 1;
         }
 
         if (followUpDate && followUpDate < today && !followUpDone) {
             state.hasOverdue = true;
+            state.vet += 1;
         }
 
         if (!visitDone && visitDate && visitDate >= today && visitDate <= vetUpcomingThreshold) {
             upcomingVetVisits += 1;
-            if (visitDate <= soonThreshold) state.hasSoon = true;
+            state.upcomingVet += 1;
+            if (visitDate <= soonThreshold) {
+                state.hasSoon = true;
+                state.vet += 1;
+            }
         }
 
         if (!followUpDone && followUpDate && followUpDate >= today && followUpDate <= vetUpcomingThreshold) {
             upcomingVetVisits += 1;
-            if (followUpDate <= soonThreshold) state.hasSoon = true;
+            state.upcomingVet += 1;
+            if (followUpDate <= soonThreshold) {
+                state.hasSoon = true;
+                state.vet += 1;
+            }
         }
     });
 
     const animalUrgencies = {};
+    const animalCare = {};
     animalStates.forEach((state, animalId) => {
         animalUrgencies[animalId] =
             state.urgency !== "green" ? state.urgency : state.hasOverdue ? "red" : state.hasSoon ? "yellow" : "green";
+        if (state.vaccinations || state.vet || state.upcomingVet) {
+            animalCare[animalId] = { vaccinations: state.vaccinations, vet: state.vet, upcomingVet: state.upcomingVet };
+        }
     });
 
     return {
@@ -159,6 +179,7 @@ async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
         vaccinationsDueSoon,
         upcomingVetVisits,
         animalUrgencies,
+        animalCare,
     };
 }
 
@@ -292,6 +313,7 @@ router.get("/dashboard/bootstrap", authMiddleware, async (req, res) => {
                     vaccinationsDueSoon: 0,
                     upcomingVetVisits: 0,
                     animalUrgencies: {},
+                    animalCare: {},
                 },
             });
         }

@@ -154,6 +154,19 @@ export default function AnimalGeneralData({
   const [imageRefreshKey, setImageRefreshKey] = useState(0);
   const [imageToCrop, setImageToCrop] = useState(null);
   const [showQrTag, setShowQrTag] = useState(false);
+  const qrDialogRef = useRef(null);
+  const qrButtonRef = useRef(null);
+
+  useEffect(() => {
+    const dialog = qrDialogRef.current;
+    if (!showQrTag || !dialog) return undefined;
+    const trigger = qrButtonRef.current;
+    dialog.showModal();
+    return () => {
+      dialog.close();
+      trigger?.focus({ preventScroll: true });
+    };
+  }, [showQrTag]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isRemovingImage, setIsRemovingImage] = useState(false);
   const [isDeletingAnimal, setIsDeletingAnimal] = useState(false);
@@ -792,20 +805,19 @@ export default function AnimalGeneralData({
         />
       )}
       {showQrTag && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4 backdrop-blur-sm">
-          <section className="w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 p-5 shadow-2xl">
+        <dialog ref={qrDialogRef} aria-labelledby="animal-qr-title" className="bb-record-panel bb-panel-inset bb-qr-dialog"
+          onCancel={event => { event.preventDefault(); setShowQrTag(false); }}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-300">Animal QR tag</p>
-                <h2 className="mt-1 text-2xl font-semibold text-white">{qrAnimalLabel}</h2>
+                <h2 id="animal-qr-title" className="text-2xl font-semibold">QR tag for {qrAnimalLabel}</h2>
                 <p className="mt-1 text-sm text-gray-400">{tag ? `Tag ${tag}` : species}</p>
               </div>
-              <button type="button" onClick={() => setShowQrTag(false)} className="rounded-full border border-gray-700 px-3 py-1.5 text-sm font-semibold text-gray-300 hover:bg-gray-800">
+              <button type="button" onClick={() => setShowQrTag(false)} className="bb-action">
                 Close
               </button>
             </div>
 
-            <div className="mx-auto mt-5 w-fit rounded-2xl bg-white p-4">
+            <div className="bb-qr-paper mx-auto mt-5 w-fit rounded-lg p-4">
               <QRCodeSVG
                 id="animal-qr-code"
                 value={animalProfileUrl}
@@ -820,18 +832,17 @@ export default function AnimalGeneralData({
             </p>
 
             <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <button type="button" onClick={copyQrLink} className="rounded-lg border border-gray-600 px-3 py-2.5 text-sm font-semibold text-gray-200 hover:bg-gray-800">
+              <button type="button" onClick={copyQrLink} className="bb-action">
                 Copy link
               </button>
-              <button type="button" onClick={downloadQrTag} className="rounded-lg border border-gray-600 px-3 py-2.5 text-sm font-semibold text-gray-200 hover:bg-gray-800">
+              <button type="button" onClick={downloadQrTag} className="bb-action">
                 Download SVG
               </button>
-              <button type="button" onClick={printQrTag} className="rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-blue-500">
+              <button type="button" onClick={printQrTag} className="bb-action bb-action-primary">
                 Print tag
               </button>
             </div>
-          </section>
-        </div>
+        </dialog>
       )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
       {/* Top Left - Basic Info */}
@@ -839,7 +850,7 @@ export default function AnimalGeneralData({
         <div className="mb-2 flex items-center justify-between gap-3">
           <h3 className="text-gray-400 font-semibold">Basic Info</h3>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setShowQrTag(true)} className="rounded-lg border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-100 hover:bg-blue-500/20">
+            <button ref={qrButtonRef} type="button" onClick={() => setShowQrTag(true)} className="bb-action">
               QR tag
             </button>
             <span className={`rounded-lg px-3 py-1 text-xs font-semibold ${

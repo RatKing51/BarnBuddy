@@ -44,7 +44,7 @@ function HerdFeedRecordsSkeleton() {
     <div className="space-y-6" aria-busy="true">
       <SkeletonBlock className="h-8 w-52" />
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <section className="bb-mobile-totals grid grid-cols-1 gap-4 sm:grid-cols-2">
         {[0, 1].map((item) => (
           <div key={item} className={panelClass}>
             <SkeletonBlock className="h-3 w-28" />
@@ -235,11 +235,7 @@ export default function HerdFeedRecords({ selectedHerd, isPremium = false, autom
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold text-white">{selectedHerd?.name || "Herd"} feed</h2>
-      </div>
-
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <section className="bb-mobile-totals grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-gray-700 bg-gray-900 p-5">
           <p className="text-xs uppercase tracking-[0.14em] text-gray-500">Total feed cost</p>
           <p className="mt-3 text-3xl font-bold text-white">{money(feedTotal)}</p>

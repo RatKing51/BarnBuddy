@@ -5,6 +5,17 @@ import { extractRecordsWithAi, importAnimals, sendImportHelpRequest } from "../a
 const TEMPLATE_HEADERS = "name,species,breed,sex,birthdate,tagId,herd,notes";
 const TEMPLATE_EXAMPLE = "Bella,Goat,Boer,Female,2024-03-12,103,Show Herd,Market doe";
 const MAX_ROWS = 500;
+
+function scrollToSection(sectionId) {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({
+    top: window.scrollY + section.getBoundingClientRect().top - 24,
+    behavior: reduceMotion ? "instant" : "smooth",
+  });
+}
+
 const HELP_FILE_ACCEPT = ".csv,.pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,.txt,.xls,.xlsx,.doc,.docx,text/csv,application/pdf,image/png,image/jpeg,image/webp,image/heic,image/heif,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const AI_FILE_ACCEPT = ".csv,.pdf,.png,.jpg,.jpeg,.webp,.txt,.xls,.xlsx,.doc,.docx,.gdoc,text/csv,application/pdf,image/png,image/jpeg,image/webp,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
@@ -182,7 +193,7 @@ function getStatus(row) {
   return { label: "Ready", className: "bg-emerald-500/15 text-emerald-100" };
 }
 
-export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onImported, onViewAnimals }) {
+export default function ImportAssistant({ animals = [], onImported, onViewAnimals }) {
   const fileInputRef = useRef(null);
   const aiFileRef = useRef(null);
   const helpFileRef = useRef(null);
@@ -296,7 +307,7 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
       setFileName(file.name);
       setMessage("Your CSV is ready. Review each row, correct anything needed, then continue to import.");
       window.setTimeout(() => {
-        document.getElementById("import-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        scrollToSection("import-review");
       }, 80);
     } catch (err) {
       setRows([]);
@@ -383,7 +394,7 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
       setAiMessage(`${res.data?.summary || `AI found ${extractedRows.length} possible animal row${extractedRows.length === 1 ? "" : "s"}.`} Review the draft below before importing.`);
       setMessage(`AI created ${extractedRows.length} editable animal row${extractedRows.length === 1 ? "" : "s"}. Check every row before importing.`);
       window.setTimeout(() => {
-        document.getElementById("import-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        scrollToSection("import-review");
       }, 80);
       if (Array.isArray(res.data?.warnings) && res.data.warnings.length) {
         toast.info(res.data.warnings.slice(0, 2).join(" "));
@@ -488,10 +499,6 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
     }
   };
 
-  const scrollToSection = (sectionId) => {
-    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   const aiDraftReady = reviewSource === "ai" && validatedRows.length > 0;
   const aiActionHint = !aiFile
     ? "Choose a file to continue."
@@ -503,37 +510,21 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
 
   return (
     <div className="space-y-6 text-gray-100">
-      <section className="rounded-2xl border border-gray-800 bg-gray-900 p-4 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-300">Import Assistant</p>
-            <h1 className="mt-2 text-3xl font-bold text-white">Bring your animal records into BarnBuddy</h1>
-            <p className="mt-3 text-sm leading-6 text-gray-300 sm:text-base">
-              Choose the option that matches what you have. AI extraction creates an editable draft from photos and documents; it never imports anything until you review and confirm it.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 rounded-xl border border-gray-700 bg-gray-950 p-2 text-center text-xs sm:min-w-96 lg:grid-cols-4">
-            {["Choose a file", "Add context", "Create a draft", "Review & import"].map((step, index) => (
-              <div key={step} className="rounded-lg bg-gray-800 px-2 py-3">
-                <span className="block text-blue-300">Step {index + 1}</span>
-                <strong className="mt-1 block text-gray-100">{step}</strong>
-              </div>
-            ))}
-          </div>
+      <header className="bb-view-header">
+        <div>
+          <h1>Import Assistant</h1>
+          <p>You can edit and confirm a draft before importing any records.</p>
         </div>
-      </section>
+      </header>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rounded-2xl border border-blue-400/40 bg-blue-500/5 p-5 shadow-sm shadow-blue-950/40">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold text-white">Let AI read my records</h2>
-            <span className="rounded-full bg-blue-500/15 px-2.5 py-1 text-xs font-semibold text-blue-200">Best for most files</span>
-          </div>
+          <h2 className="text-xl font-semibold text-white">Let AI read my records</h2>
           <p className="mt-2 text-sm leading-6 text-gray-400">
             Use a photo, PDF, Word document, spreadsheet, or text file. AI will turn it into animal rows that you can correct before importing.
           </p>
           <button type="button" onClick={() => scrollToSection("ai-extraction")} className="mt-5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500">
-            Start AI extraction
+            Set up AI extraction
           </button>
         </div>
 
@@ -566,8 +557,8 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
           <p className="mt-2 text-sm leading-6 text-gray-400">
             Skip importing old files and add animals individually from the dashboard. You can leave an animal name blank.
           </p>
-          <button type="button" onClick={onAddCurrentAnimal} className="mt-5 rounded-lg border border-gray-600 px-4 py-2.5 text-sm font-semibold text-gray-200 hover:bg-gray-800">
-            Go to Add Animal
+          <button type="button" onClick={onViewAnimals} className="bb-action mt-5">
+            View animals
           </button>
         </div>
       </section>
@@ -688,7 +679,7 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
         ) : validatedRows.length > 0 ? (
           <>
             <div className="mt-5 overflow-x-auto rounded-xl border border-gray-800">
-              <table className="min-w-[1100px] divide-y divide-gray-800 text-left text-sm">
+              <table className="bb-stacked-table bb-import-table min-w-[1100px] divide-y divide-gray-800 text-left text-sm" role="table">
                 <thead className="bg-gray-950 text-xs uppercase tracking-wide text-gray-400">
                   <tr>
                     <th className="px-3 py-2">Row</th>
@@ -701,11 +692,13 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
                   {validatedRows.map((row) => {
                     const status = getStatus(row);
                     return (
-                      <tr key={row.id} className={row.removed ? "bg-gray-950/60 opacity-60" : "bg-gray-900"}>
-                        <td className="px-3 py-2 text-gray-400">{row.rowNumber}</td>
-                        {FIELD_LABELS.map(([field]) => (
-                          <td key={field} className="px-2 py-2">
+                      <tr key={row.id} role="row" className={row.removed ? "bg-gray-950/60 opacity-60" : "bg-gray-900"}>
+                        <td role="cell" className="bb-import-row-number px-3 py-2 text-gray-400"><span className="bb-cell-label" aria-hidden="true">Row </span>{row.rowNumber}</td>
+                        {FIELD_LABELS.map(([field, label]) => (
+                          <td role="cell" key={field} className={`px-2 py-2 ${field === "notes" ? "bb-cell-wide" : ""}`}>
+                            <span className="bb-cell-label" aria-hidden="true">{label}</span>
                             <input
+                              aria-label={label}
                               value={row.data[field] || ""}
                               disabled={row.removed}
                               onChange={(event) => updateRow(row.id, field, event.target.value)}
@@ -713,11 +706,11 @@ export default function ImportAssistant({ animals = [], onAddCurrentAnimal, onIm
                             />
                           </td>
                         ))}
-                        <td className="px-3 py-2">
+                        <td role="cell" className="bb-import-row-status bb-cell-wide px-3 py-2">
                           <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}>{status.label}</span>
                           {row.errors.length > 0 && <p className="mt-1 text-xs text-red-200">{row.errors.join(", ")}</p>}
                         </td>
-                        <td className="px-3 py-2">
+                        <td role="cell" className="bb-cell-wide px-3 py-2">
                           {row.removed ? (
                             <button type="button" onClick={() => restoreRow(row.id)} className="text-sm font-semibold text-blue-300 hover:text-blue-200">Restore</button>
                           ) : (
