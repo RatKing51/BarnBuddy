@@ -44,9 +44,9 @@ const saeTypes = [
 ];
 
 const tabs = ["Overview", "Journal", "Finances", "Setup"];
-const fieldClass = "mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/15";
-const labelClass = "text-sm font-semibold text-slate-200";
-const panelClass = "rounded-lg border border-slate-800 bg-slate-900/80";
+const fieldClass = "bb-field mt-1";
+const labelClass = "text-sm font-medium text-slate-200";
+const panelClass = "bb-record-panel";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -81,7 +81,7 @@ function EmptyState({ title, body, action }) {
   return (
     <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/50 px-6 py-14 text-center">
       <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-blue-500/10 text-2xl text-blue-300" aria-hidden="true">★</div>
-      <h2 className="mt-5 text-xl font-bold text-white">{title}</h2>
+      <h2 className="mt-5 text-xl font-medium text-white">{title}</h2>
       <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-400">{body}</p>
       {action}
     </div>
@@ -90,21 +90,21 @@ function EmptyState({ title, body, action }) {
 
 function StatCard({ label, value, note, tone = "slate" }) {
   const tones = {
-    slate: "border-slate-800 bg-slate-900",
-    green: "border-emerald-500/25 bg-emerald-500/10",
-    blue: "border-blue-400/25 bg-blue-500/10",
-    red: "border-rose-500/25 bg-rose-500/10",
+    slate: "",
+    green: "text-emerald-300",
+    blue: "text-blue-300",
+    red: "text-rose-300",
   };
   return (
-    <div className={`rounded-2xl border p-4 ${tones[tone]}`}>
-      <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">{label}</p>
-      <p className="mt-2 text-2xl font-black text-white">{value}</p>
+    <div className="bb-record-panel p-4">
+      <p className="text-sm text-slate-400">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold tabular-nums ${tones[tone]}`}>{value}</p>
       {note && <p className="mt-1 text-xs text-slate-400">{note}</p>}
     </div>
   );
 }
 
-function ProjectModal({ animals, onClose, onCreated }) {
+function ProjectModal({ animals, onClose, onCreated, returnFocusRef }) {
   const dialogRef = useRef(null);
   const closeButtonRef = useRef(null);
   const savingRef = useRef(false);
@@ -115,7 +115,7 @@ function ProjectModal({ animals, onClose, onCreated }) {
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
-    const previousFocus = document.activeElement;
+    const trigger = returnFocusRef.current;
     const focusFrame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
     const handleKeyDown = (event) => {
       if (event.key === "Escape" && !savingRef.current) {
@@ -144,9 +144,9 @@ function ProjectModal({ animals, onClose, onCreated }) {
     return () => {
       window.cancelAnimationFrame(focusFrame);
       document.removeEventListener("keydown", handleKeyDown);
-      if (previousFocus instanceof HTMLElement) previousFocus.focus();
+      trigger?.focus({ preventScroll: true });
     };
-  }, []);
+  }, [returnFocusRef]);
   const [selectedAnimals, setSelectedAnimals] = useState([]);
   const [form, setForm] = useState({
     name: "",
@@ -188,18 +188,17 @@ function ProjectModal({ animals, onClose, onCreated }) {
   }
 
   return (
-    <div ref={dialogRef} className="fixed inset-0 z-50 overflow-y-auto bg-black/75 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="new-project-title">
-      <form onSubmit={submit} className="mx-auto w-full max-w-3xl rounded-3xl border border-slate-700 bg-slate-900 shadow-2xl shadow-black/40">
-        <div className="flex items-start justify-between border-b border-slate-800 p-5 sm:p-7">
+    <div ref={dialogRef} className="bb-project-overlay bb-mobile-overlay fixed inset-0 z-50 overflow-y-auto bg-black/75 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="new-project-title">
+      <form onSubmit={submit} className="bb-project-form mx-auto w-full max-w-3xl rounded-3xl border border-slate-700 bg-slate-900 shadow-2xl shadow-black/40">
+        <div className="bb-project-dialog-heading flex items-start justify-between border-b border-slate-800 p-5 sm:p-7">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300">FFA Project Mode - Premium</p>
-            <h2 id="new-project-title" className="mt-2 text-2xl font-black text-white">Start a project</h2>
+            <h2 id="new-project-title" className="text-2xl font-semibold text-white">Start a project</h2>
             <p className="mt-1 text-sm text-slate-400">Link animals you already use—BarnBuddy will not duplicate them.</p>
           </div>
           <button ref={closeButtonRef} type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Close">✕</button>
         </div>
 
-        <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-7">
+        <div className="bb-project-dialog-fields grid gap-5 p-5 sm:grid-cols-2 sm:p-7">
           <label className={`${labelClass} sm:col-span-2`}>Project name
             <input className={fieldClass} name="name" value={form.name} onChange={change} maxLength="160" required placeholder="2026 Market Steer SAE" autoFocus />
           </label>
@@ -238,12 +237,12 @@ function ProjectModal({ animals, onClose, onCreated }) {
             <legend className={labelClass}>Link existing animals</legend>
             <p className="mt-1 text-xs leading-5 text-slate-500">Their current profile and normal health, weight, feed, and finance records remain the source of truth.</p>
             {animals.length ? (
-              <div className="mt-3 grid max-h-52 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+              <div className="bb-project-animal-choices mt-3 grid max-h-52 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
                 {animals.map((animal) => (
                   <label key={animal.id} className={`flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-xl border p-3 transition ${selectedAnimals.includes(animal.id) ? "border-blue-400 bg-blue-500/10" : "border-slate-700 bg-slate-950 hover:border-slate-600"}`}>
                     <input type="checkbox" className="h-4 w-4 shrink-0 accent-blue-500" checked={selectedAnimals.includes(animal.id)} onChange={() => toggleAnimal(animal.id)} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-bold text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</span>
+                      <span className="block truncate text-sm font-medium text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</span>
                       <span className="block truncate text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · Tag ${animal.tag_id}` : ""}</span>
                     </span>
                   </label>
@@ -255,9 +254,9 @@ function ProjectModal({ animals, onClose, onCreated }) {
           </fieldset>
         </div>
 
-        <div className="flex flex-col-reverse gap-3 border-t border-slate-800 p-5 sm:flex-row sm:justify-end sm:p-7">
-          <button type="button" onClick={onClose} className="rounded-xl border border-slate-700 px-5 py-2.5 font-bold text-slate-200 hover:bg-slate-800">Cancel</button>
-          <button disabled={saving} className="rounded-xl bg-blue-600 px-5 py-2.5 font-black text-white hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60">{saving ? "Creating…" : "Create FFA project"}</button>
+        <div className="bb-project-dialog-actions flex flex-col-reverse gap-3 border-t border-slate-800 p-5 sm:flex-row sm:justify-end sm:p-7">
+          <button type="button" onClick={onClose} className="rounded-xl border border-slate-700 px-5 py-2.5 font-medium text-slate-200 hover:bg-slate-800">Cancel</button>
+          <button disabled={saving} className="rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60">{saving ? "Creating…" : "Create FFA project"}</button>
         </div>
       </form>
     </div>
@@ -276,8 +275,8 @@ function Overview({ details }) {
   ];
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-        <StatCard label="Animals" value={summary.animalCount} note="linked, not duplicated" />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <StatCard label="Linked animals" value={summary.animalCount} />
         <StatCard label="Project hours" value={summary.totalHours} note={`${summary.totalMinutes} minutes`} tone="blue" />
         <StatCard label="Income" value={money(summary.income)} tone="green" />
         <StatCard label="Expenses" value={money(summary.expenses)} tone="red" />
@@ -288,11 +287,11 @@ function Overview({ details }) {
       <section className={`${panelClass} p-5 sm:p-6`}>
         <div className="grid gap-6 lg:grid-cols-2">
           <div>
-            <h3 className="text-lg font-black text-white">Project plan</h3>
+            <h3 className="text-lg font-semibold text-white">Project plan</h3>
             <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-300">{project.description || "Add a project description in Setup."}</p>
           </div>
           <div>
-            <h3 className="text-lg font-black text-white">Goals</h3>
+            <h3 className="text-lg font-semibold text-white">Goals</h3>
             {project.goals?.length ? (
               <ul className="mt-3 space-y-2">
                 {project.goals.map((goal, index) => <li key={`${goal}-${index}`} className="flex gap-3 text-sm leading-6 text-slate-300"><span className="text-blue-300">✓</span>{goal}</li>)}
@@ -305,10 +304,10 @@ function Overview({ details }) {
       <section className={`${panelClass} p-5 sm:p-6`}>
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h3 className="text-lg font-black text-white">Linked BarnBuddy records</h3>
+            <h3 className="text-lg font-semibold text-white">Linked BarnBuddy records</h3>
             <p className="mt-1 text-sm text-slate-400">All existing and future records stay connected while the animal is linked.</p>
           </div>
-          <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">Live connection</span>
+          <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">Live connection</span>
         </div>
         <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {recordLabels.map(([key, label]) => (
@@ -322,7 +321,7 @@ function Overview({ details }) {
 
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-lg font-black text-white">Project animals</h3>
+          <h3 className="text-lg font-semibold text-white">Project animals</h3>
           <p className="text-xs text-slate-500">Starting snapshots stay unchanged unless you edit them.</p>
         </div>
         {animals.length ? (
@@ -331,16 +330,16 @@ function Overview({ details }) {
               <article key={animal.id} className={`${panelClass} min-w-0 overflow-hidden p-5`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <h4 className="truncate font-black text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</h4>
+                    <h4 className="truncate font-semibold text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</h4>
                     <p className="mt-1 truncate text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · Tag ${animal.tag_id}` : ""}</p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${animal.animal_id ? "bg-emerald-500/10 text-emerald-300" : "bg-slate-800 text-slate-400"}`}>{animal.animal_id ? "Linked" : "Snapshot only"}</span>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${animal.animal_id ? "bg-emerald-500/10 text-emerald-300" : "bg-slate-800 text-slate-400"}`}>{animal.animal_id ? "Linked" : "Snapshot only"}</span>
                 </div>
                 <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
-                  <div><dt className="text-slate-500">Starting weight</dt><dd className="mt-1 font-bold text-white">{animal.starting_weight ? `${Number(animal.starting_weight).toLocaleString()} lb` : "Not set"}</dd></div>
-                  <div><dt className="text-slate-500">Current weight</dt><dd className="mt-1 font-bold text-white">{animal.current_weight ? `${Number(animal.current_weight).toLocaleString()} lb` : "Not set"}</dd></div>
-                  <div><dt className="text-slate-500">Starting value</dt><dd className="mt-1 font-bold text-white">{money(animal.starting_value)}</dd></div>
-                  <div><dt className="text-slate-500">Ownership</dt><dd className="mt-1 font-bold text-white">{Number(animal.ownership_percentage)}%</dd></div>
+                  <div><dt className="text-slate-500">Starting weight</dt><dd className="mt-1 font-medium text-white">{animal.starting_weight ? `${Number(animal.starting_weight).toLocaleString()} lb` : "Not set"}</dd></div>
+                  <div><dt className="text-slate-500">Current weight</dt><dd className="mt-1 font-medium text-white">{animal.current_weight ? `${Number(animal.current_weight).toLocaleString()} lb` : "Not set"}</dd></div>
+                  <div><dt className="text-slate-500">Starting value</dt><dd className="mt-1 font-medium text-white">{money(animal.starting_value)}</dd></div>
+                  <div><dt className="text-slate-500">Ownership</dt><dd className="mt-1 font-medium text-white">{Number(animal.ownership_percentage)}%</dd></div>
                 </dl>
               </article>
             ))}
@@ -382,7 +381,7 @@ function Journal({ details, onChanged }) {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.25fr)]">
       <form onSubmit={submit} className={`${panelClass} h-fit p-5 sm:p-6`}>
-        <h3 className="text-lg font-black text-white">Add journal activity</h3>
+        <h3 className="text-lg font-semibold text-white">Add journal activity</h3>
         <p className="mt-1 text-sm text-slate-400">Record the work, time, skills, and reflection—not only the result.</p>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <label className={labelClass}>Date<input className={fieldClass} type="date" name="activity_date" min={String(details.project.start_date).slice(0, 10)} max={details.project.end_date ? String(details.project.end_date).slice(0, 10) : undefined} value={form.activity_date} onChange={change} required /></label>
@@ -394,12 +393,12 @@ function Journal({ details, onChanged }) {
           <label className={`${labelClass} sm:col-span-2`}>Skills learned or practiced<textarea className={fieldClass} name="skills_learned" value={form.skills_learned} onChange={change} rows="2" maxLength="1200" /></label>
           <label className={`${labelClass} sm:col-span-2`}>Reflection / next step<textarea className={fieldClass} name="reflection" value={form.reflection} onChange={change} rows="2" maxLength="2400" /></label>
         </div>
-        <button disabled={saving} className="mt-5 w-full rounded-xl bg-blue-600 px-4 py-3 font-black text-white hover:bg-blue-500 disabled:opacity-60">{saving ? "Saving…" : "Add to journal"}</button>
+        <button disabled={saving} className="mt-5 w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-500 disabled:opacity-60">{saving ? "Saving…" : "Add to journal"}</button>
       </form>
 
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <div><h3 className="text-lg font-black text-white">Activity history</h3><p className="mt-1 text-sm text-slate-400">{details.summary.totalHours} total project hours</p></div>
+          <div><h3 className="text-lg font-semibold text-white">Activity history</h3><p className="mt-1 text-sm text-slate-400">{details.summary.totalHours} total project hours</p></div>
         </div>
         {details.activities.length ? (
           <div className="space-y-3">
@@ -407,14 +406,14 @@ function Journal({ details, onChanged }) {
               <article key={activity.id} className={`${panelClass} p-5`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-bold text-blue-300">{activity.category}</span><span className="text-xs text-slate-500">{formatDate(activity.activity_date)} · {activity.duration_minutes} min</span></div>
-                    <h4 className="mt-3 font-black text-white">{activity.title}</h4>
-                    {activity.animal_id && <p className="mt-1 text-xs font-bold text-sky-300">Animal: {getAnimalDisplayName(activity, { prefixTag: true })}</p>}
+                    <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-300">{activity.category}</span><span className="text-xs text-slate-500">{formatDate(activity.activity_date)} · {activity.duration_minutes} min</span></div>
+                    <h4 className="mt-3 font-semibold text-white">{activity.title}</h4>
+                    {activity.animal_id && <p className="mt-1 text-xs font-medium text-sky-300">Animal: {getAnimalDisplayName(activity, { prefixTag: true })}</p>}
                   </div>
-                  <button type="button" onClick={() => remove(activity.id)} className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-500 hover:bg-rose-500/10 hover:text-rose-300">Delete</button>
+                  <button type="button" onClick={() => remove(activity.id)} className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:bg-rose-500/10 hover:text-rose-300">Delete</button>
                 </div>
                 {activity.description && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-300">{activity.description}</p>}
-                {(activity.skills_learned || activity.reflection) && <div className="mt-4 grid gap-3 border-t border-slate-800 pt-4 sm:grid-cols-2">{activity.skills_learned && <div><p className="text-xs font-bold uppercase tracking-wider text-slate-500">Skills</p><p className="mt-1 text-sm leading-6 text-slate-300">{activity.skills_learned}</p></div>}{activity.reflection && <div><p className="text-xs font-bold uppercase tracking-wider text-slate-500">Reflection</p><p className="mt-1 text-sm leading-6 text-slate-300">{activity.reflection}</p></div>}</div>}
+                {(activity.skills_learned || activity.reflection) && <div className="mt-4 grid gap-3 border-t border-slate-800 pt-4 sm:grid-cols-2">{activity.skills_learned && <div><p className="text-xs font-medium uppercase tracking-wider text-slate-500">Skills</p><p className="mt-1 text-sm leading-6 text-slate-300">{activity.skills_learned}</p></div>}{activity.reflection && <div><p className="text-xs font-medium uppercase tracking-wider text-slate-500">Reflection</p><p className="mt-1 text-sm leading-6 text-slate-300">{activity.reflection}</p></div>}</div>}
               </article>
             ))}
           </div>
@@ -460,7 +459,7 @@ function Finances({ details, onChanged }) {
       </div>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.35fr)]">
         <form onSubmit={submit} className={`${panelClass} h-fit p-5 sm:p-6`}>
-          <h3 className="text-lg font-black text-white">Add income or expense</h3>
+          <h3 className="text-lg font-semibold text-white">Add income or expense</h3>
           <p className="mt-1 text-sm text-slate-400">These entries belong to this FFA project and do not alter the animal’s regular finance history.</p>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <label className={labelClass}>Type<select className={fieldClass} name="transaction_type" value={form.transaction_type} onChange={change}><option value="expense">Expense</option><option value="income">Income</option></select></label>
@@ -471,24 +470,24 @@ function Finances({ details, onChanged }) {
             <label className={labelClass}>Animal <span className="font-normal text-slate-500">(optional)</span><select className={fieldClass} name="animal_id" value={form.animal_id} onChange={change}><option value="">Whole project</option>{details.animals.filter((animal) => animal.animal_id).map((animal) => <option key={animal.animal_id} value={animal.animal_id}>{getAnimalDisplayName(animal, { prefixTag: true })}</option>)}</select></label>
             <label className={`${labelClass} sm:col-span-2`}>Notes<textarea className={fieldClass} name="notes" value={form.notes} onChange={change} rows="2" maxLength="2400" /></label>
           </div>
-          <button disabled={saving} className="mt-5 w-full rounded-xl bg-blue-600 px-4 py-3 font-black text-white hover:bg-blue-500 disabled:opacity-60">{saving ? "Saving…" : "Add finance entry"}</button>
+          <button disabled={saving} className="mt-5 w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-500 disabled:opacity-60">{saving ? "Saving…" : "Add finance entry"}</button>
         </form>
 
         <section>
-          <h3 className="mb-3 text-lg font-black text-white">Project ledger</h3>
+          <h3 className="mb-3 text-lg font-semibold text-white">Project ledger</h3>
           {details.finances.length ? (
             <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[680px] text-left text-sm">
+                <table className="bb-stacked-table w-full min-w-[680px] text-left text-sm" role="table">
                   <thead className="border-b border-slate-800 bg-slate-950/60 text-xs uppercase tracking-wider text-slate-500"><tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Animal / party</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3"><span className="sr-only">Actions</span></th></tr></thead>
                   <tbody className="divide-y divide-slate-800">
                     {details.finances.map((entry) => (
-                      <tr key={entry.id} className="hover:bg-slate-800/40">
-                        <td className="px-4 py-4 text-slate-400">{formatDate(entry.transaction_date)}</td>
-                        <td className="px-4 py-4"><p className="font-bold text-white">{entry.category}</p>{entry.notes && <p className="mt-1 max-w-xs truncate text-xs text-slate-500">{entry.notes}</p>}</td>
-                        <td className="px-4 py-4 text-slate-400">{entry.animal_id ? getAnimalDisplayName(entry, { prefixTag: true }) : entry.vendor || "Whole project"}</td>
-                        <td className={`px-4 py-4 text-right font-black ${entry.transaction_type === "income" ? "text-emerald-300" : "text-rose-300"}`}>{entry.transaction_type === "income" ? "+" : "−"}{money(entry.amount)}</td>
-                        <td className="px-4 py-4 text-right"><button type="button" onClick={() => remove(entry.id)} className="rounded-lg px-2 py-1 text-xs font-bold text-slate-500 hover:bg-rose-500/10 hover:text-rose-300">Delete</button></td>
+                      <tr key={entry.id} role="row" className="hover:bg-slate-800/40">
+                        <td role="cell" className="px-4 py-4 text-slate-400">{formatDate(entry.transaction_date)}</td>
+                        <td role="cell" className="bb-ledger-category px-4 py-4"><p className="font-medium text-white">{entry.category}</p>{entry.notes && <p className="bb-ledger-notes mt-1 max-w-xs truncate text-xs text-slate-500">{entry.notes}</p>}</td>
+                        <td role="cell" className="px-4 py-4 text-slate-400">{entry.animal_id ? getAnimalDisplayName(entry, { prefixTag: true }) : entry.vendor || "Whole project"}</td>
+                        <td role="cell" className={`bb-ledger-amount px-4 py-4 text-right font-semibold ${entry.transaction_type === "income" ? "text-emerald-300" : "text-rose-300"}`}>{entry.transaction_type === "income" ? "+" : "−"}{money(entry.amount)}</td>
+                        <td role="cell" className="bb-cell-wide px-4 py-4 text-right"><button type="button" onClick={() => remove(entry.id)} className="rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-rose-500/10 hover:text-rose-300">Delete</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -529,13 +528,13 @@ function AnimalSetupCard({ projectId, animal, onChanged }) {
   }
   return (
     <article className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
-      <div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0 flex-1"><h4 className="truncate font-black text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</h4><p className="mt-1 truncate text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · Tag ${animal.tag_id}` : ""}</p></div><button type="button" onClick={remove} className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-slate-500 hover:bg-rose-500/10 hover:text-rose-300">Remove</button></div>
+      <div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0 flex-1"><h4 className="truncate font-semibold text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</h4><p className="mt-1 truncate text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · Tag ${animal.tag_id}` : ""}</p></div><button type="button" onClick={remove} className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-rose-500/10 hover:text-rose-300">Remove</button></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label className="text-xs font-bold text-slate-400">Starting weight<input className={fieldClass} type="number" name="starting_weight" min="0.01" step="0.01" value={form.starting_weight} onChange={change} /></label>
-        <label className="text-xs font-bold text-slate-400">Starting value<input className={fieldClass} type="number" name="starting_value" min="0" step="0.01" value={form.starting_value} onChange={change} /></label>
-        <label className="text-xs font-bold text-slate-400">Ownership %<input className={fieldClass} type="number" name="ownership_percentage" min="0.01" max="100" step="0.01" value={form.ownership_percentage} onChange={change} /></label>
+        <label className="text-xs font-medium text-slate-400">Starting weight<input className={fieldClass} type="number" name="starting_weight" min="0.01" step="0.01" value={form.starting_weight} onChange={change} /></label>
+        <label className="text-xs font-medium text-slate-400">Starting value<input className={fieldClass} type="number" name="starting_value" min="0" step="0.01" value={form.starting_value} onChange={change} /></label>
+        <label className="text-xs font-medium text-slate-400">Ownership %<input className={fieldClass} type="number" name="ownership_percentage" min="0.01" max="100" step="0.01" value={form.ownership_percentage} onChange={change} /></label>
       </div>
-      <button type="button" disabled={saving} onClick={save} className="mt-4 rounded-xl border border-blue-400/40 px-4 py-2 text-sm font-black text-blue-300 hover:bg-blue-500/10 disabled:opacity-60">{saving ? "Saving…" : "Save snapshot"}</button>
+      <button type="button" disabled={saving} onClick={save} className="mt-4 rounded-xl border border-blue-400/40 px-4 py-2 text-sm font-semibold text-blue-300 hover:bg-blue-500/10 disabled:opacity-60">{saving ? "Saving…" : "Save snapshot"}</button>
     </article>
   );
 }
@@ -601,7 +600,7 @@ function Setup({ details, allAnimals, onChanged, onDeleted }) {
   return (
     <div className="space-y-6">
       <form onSubmit={saveProject} className={`${panelClass} p-5 sm:p-6`}>
-        <div><h3 className="text-lg font-black text-white">Project details</h3><p className="mt-1 text-sm text-slate-400">Keep the dates, advisor, goals, and status ready for reporting.</p></div>
+        <h3 className="text-lg font-semibold text-white">Project details</h3>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <label className={`${labelClass} sm:col-span-2`}>Project name<input className={fieldClass} name="name" value={form.name} onChange={change} required /></label>
           <label className={labelClass}>School year<input className={fieldClass} name="school_year" value={form.school_year} onChange={change} required /></label>
@@ -615,24 +614,24 @@ function Setup({ details, allAnimals, onChanged, onDeleted }) {
           <label className={`${labelClass} sm:col-span-2`}>Description<textarea className={fieldClass} name="description" rows="3" value={form.description} onChange={change} /></label>
           <label className={`${labelClass} sm:col-span-2`}>Goals <span className="font-normal text-slate-500">(one per line)</span><textarea className={fieldClass} name="goals" rows="3" value={form.goals} onChange={change} /></label>
         </div>
-        <button disabled={saving} className="mt-5 rounded-xl bg-blue-600 px-5 py-2.5 font-black text-white hover:bg-blue-500 disabled:opacity-60">{saving ? "Saving…" : "Save project details"}</button>
+        <button disabled={saving} className="mt-5 rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white hover:bg-blue-500 disabled:opacity-60">{saving ? "Saving…" : "Save project details"}</button>
       </form>
 
       <FfaProjectSharingPanel details={details} onChanged={onChanged} />
 
       <section className={`${panelClass} p-5 sm:p-6`}>
-        <div><h3 className="text-lg font-black text-white">Animals and starting snapshots</h3><p className="mt-1 text-sm leading-6 text-slate-400">A snapshot captures where the project began. Removing a link never deletes the animal.</p></div>
+        <div><h3 className="text-lg font-semibold text-white">Animals and starting snapshots</h3><p className="mt-1 text-sm leading-6 text-slate-400">A snapshot captures where the project began. Removing a link never deletes the animal.</p></div>
         <div className="mt-5 grid gap-3 lg:grid-cols-2">{details.animals.map((animal) => <AnimalSetupCard key={animal.id} projectId={project.id} animal={animal} onChanged={onChanged} />)}</div>
         <div className="mt-6 border-t border-slate-800 pt-5">
-          <h4 className="font-black text-white">Add existing animals</h4>
-          {availableAnimals.length ? <><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{availableAnimals.map((animal) => <label key={animal.id} className={`flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-xl border p-3 ${selectedAnimals.includes(animal.id) ? "border-blue-400 bg-blue-500/10" : "border-slate-700 bg-slate-950"}`}><input type="checkbox" className="shrink-0 accent-blue-500" checked={selectedAnimals.includes(animal.id)} onChange={() => setSelectedAnimals((current) => current.includes(animal.id) ? current.filter((id) => id !== animal.id) : [...current, animal.id])} /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</span><span className="block truncate text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · ${animal.tag_id}` : ""}</span></span></label>)}</div><button type="button" onClick={addAnimals} disabled={!selectedAnimals.length || addingAnimals} className="mt-4 rounded-xl border border-blue-400/40 px-4 py-2.5 text-sm font-black text-blue-300 hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-40">{addingAnimals ? "Linking…" : `Link selected (${selectedAnimals.length})`}</button></> : <p className="mt-3 text-sm text-slate-500">All of your current animals are already linked to this project.</p>}
+          <h4 className="font-semibold text-white">Add existing animals</h4>
+          {availableAnimals.length ? <><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{availableAnimals.map((animal) => <label key={animal.id} className={`flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-xl border p-3 ${selectedAnimals.includes(animal.id) ? "border-blue-400 bg-blue-500/10" : "border-slate-700 bg-slate-950"}`}><input type="checkbox" className="shrink-0 accent-blue-500" checked={selectedAnimals.includes(animal.id)} onChange={() => setSelectedAnimals((current) => current.includes(animal.id) ? current.filter((id) => id !== animal.id) : [...current, animal.id])} /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-white">{getAnimalDisplayName(animal, { prefixTag: true })}</span><span className="block truncate text-xs text-slate-500">{animal.species || "Animal"}{animal.tag_id ? ` · ${animal.tag_id}` : ""}</span></span></label>)}</div><button type="button" onClick={addAnimals} disabled={!selectedAnimals.length || addingAnimals} className="mt-4 rounded-xl border border-blue-400/40 px-4 py-2.5 text-sm font-semibold text-blue-300 hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-40">{addingAnimals ? "Linking…" : `Link selected (${selectedAnimals.length})`}</button></> : <p className="mt-3 text-sm text-slate-500">All of your current animals are already linked to this project.</p>}
         </div>
       </section>
 
       <section className="rounded-2xl border border-rose-500/25 bg-rose-500/5 p-5 sm:p-6">
-        <h3 className="font-black text-white">Delete this project</h3>
+        <h3 className="font-semibold text-white">Delete this project</h3>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">This deletes only the project setup, project journal, and project ledger. Linked animals and all regular BarnBuddy animal records remain.</p>
-        <button type="button" onClick={deleteProjectNow} className="mt-4 rounded-xl border border-rose-500/40 px-4 py-2.5 text-sm font-black text-rose-300 hover:bg-rose-500/10">Delete FFA project</button>
+        <button type="button" onClick={deleteProjectNow} className="mt-4 rounded-xl border border-rose-500/40 px-4 py-2.5 text-sm font-semibold text-rose-300 hover:bg-rose-500/10">Delete FFA project</button>
       </section>
     </div>
   );
@@ -807,6 +806,7 @@ export default function FfaProjects() {
   const [loading, setLoading] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const newProjectButtonRef = useRef(null);
   const [activeTab, setActiveTab] = useState("Overview");
 
   const loadProjects = useCallback(async (preferredId) => {
@@ -878,29 +878,29 @@ export default function FfaProjects() {
     : null;
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 print:bg-white print:text-black">
-      <header className="border-b border-slate-800 bg-slate-900/90 px-4 py-4 shadow-xl shadow-black/15 backdrop-blur sm:px-6 print:hidden">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <button type="button" onClick={() => navigate("/dashboard")} className="rounded-xl border border-slate-700 px-3 py-2 text-sm font-bold text-slate-300 hover:bg-slate-800 hover:text-white print:hidden">← Dashboard</button>
-            <div><p className="text-xs font-black uppercase tracking-[0.2em] text-blue-300">BarnBuddy Premium</p><h1 className="mt-1 text-xl font-black text-white print:text-black">FFA Project Mode</h1></div>
+    <main className="bb-livestock bb-ffa min-h-screen print:bg-white print:text-black">
+      <header className="bb-workbar print:hidden">
+        <div className="bb-work-container bb-workbar-row">
+          <div className="bb-work-actions">
+            <button type="button" onClick={() => navigate("/dashboard")} className="bb-action">← Dashboard</button>
           </div>
-          <div className="flex gap-2 print:hidden">
-            {details && <button type="button" onClick={() => window.print()} className="rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-black text-slate-300 hover:bg-slate-800 hover:text-white">Print summary</button>}
-            <button type="button" onClick={() => setNewProjectOpen(true)} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white hover:bg-blue-500">+ New project</button>
+          <div className="bb-work-actions print:hidden">
+            {details && <button type="button" onClick={() => window.print()} className="bb-action">Print summary</button>}
+            <button ref={newProjectButtonRef} type="button" onClick={() => setNewProjectOpen(true)} className="bb-action bb-action-primary">New project</button>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1600px] gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[300px_minmax(0,1fr)] xl:gap-7 xl:py-7 print:block print:max-w-none print:p-0">
+      <header className="bb-work-container print:hidden"><div className="bb-view-header"><h1>FFA Project Mode</h1></div></header>
+      <div className="bb-work-container grid gap-5 pb-8 xl:grid-cols-[270px_minmax(0,1fr)] xl:gap-7 print:block print:max-w-none print:p-0">
         <aside className={`${panelClass} h-fit overflow-hidden print:hidden`}>
-          <div className="border-b border-slate-800 p-4"><h2 className="font-black text-white">Your projects</h2><p className="mt-1 text-xs text-slate-500">{projects.length} total</p></div>
+          <div className="border-b border-slate-800 p-4"><h2 className="font-semibold text-white">Your projects</h2><p className="mt-1 text-xs text-slate-500">{projects.length} total</p></div>
           {loading ? <div className="space-y-3 p-4">{[0, 1, 2].map((item) => <div key={item} className="h-20 animate-pulse rounded-xl bg-slate-800" />)}</div> : projects.length ? (
             <div className="max-h-[65vh] space-y-2 overflow-y-auto p-3">
               {projects.map((project) => {
                 const isSelected = Number(project.id) === Number(selectedId);
                 const profit = Number(project.income || 0) - Number(project.expenses || 0);
-                return <button key={project.id} type="button" onClick={() => { setSelectedId(project.id); setActiveTab("Overview"); }} className={`w-full rounded-xl border p-3 text-left transition ${isSelected ? "border-blue-400 bg-blue-500/10" : "border-transparent bg-slate-950 hover:border-slate-700"}`}><div className="flex items-start justify-between gap-2"><strong className="text-sm text-white">{project.name}</strong><span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${project.status === "active" ? "bg-emerald-500/10 text-emerald-300" : "bg-slate-800 text-slate-400"}`}>{project.status}</span></div><p className="mt-2 text-xs text-slate-500">{project.school_year} · {project.animal_count} animal{Number(project.animal_count) === 1 ? "" : "s"}</p><p className={`mt-1 text-xs font-bold ${profit >= 0 ? "text-emerald-300" : "text-rose-300"}`}>{money(profit)} net</p></button>;
+                return <button key={project.id} type="button" onClick={() => { setSelectedId(project.id); setActiveTab("Overview"); }} className={`w-full rounded-xl border p-3 text-left transition ${isSelected ? "border-blue-400 bg-blue-500/10" : "border-transparent bg-slate-950 hover:border-slate-700"}`}><div className="flex items-start justify-between gap-2"><strong className="text-sm font-semibold text-white">{project.name}</strong><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${project.status === "active" ? "bg-emerald-500/10 text-emerald-300" : "bg-slate-800 text-slate-400"}`}>{project.status}</span></div><p className="mt-2 text-xs text-slate-500">{project.school_year} · {project.animal_count} animal{Number(project.animal_count) === 1 ? "" : "s"}</p><p className={`mt-1 text-xs font-medium ${profit >= 0 ? "text-emerald-300" : "text-rose-300"}`}>{money(profit)} net</p></button>;
               })}
             </div>
           ) : <div className="p-5 text-sm leading-6 text-slate-400">Create your first project to begin a structured SAE record.</div>}
@@ -908,29 +908,29 @@ export default function FfaProjects() {
 
         <section className="min-w-0">
           {loading ? <div className="h-80 animate-pulse rounded-2xl bg-slate-900" /> : !projects.length ? (
-            <EmptyState title="Start your first FFA project" body="Use animals you already have, take a starting snapshot, and build an organized record of hours, skills, reflections, and finances." action={<button type="button" onClick={() => setNewProjectOpen(true)} className="mt-6 rounded-xl bg-blue-600 px-5 py-3 font-black text-white hover:bg-blue-500">Create first project</button>} />
+            <EmptyState title="Start your first FFA project" body="Use animals you already have, take a starting snapshot, and build an organized record of hours, skills, reflections, and finances." action={<button type="button" onClick={() => setNewProjectOpen(true)} className="mt-6 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-500">Create first project</button>} />
           ) : loadingDetails || !details || Number(details.project.id) !== Number(selectedId) ? (
             <div className="space-y-4"><div className="h-32 animate-pulse rounded-2xl bg-slate-900" /><div className="h-72 animate-pulse rounded-2xl bg-slate-900" /></div>
           ) : (
             <>
-              <section className="border-l-4 border-blue-400 bg-slate-900 p-5 sm:p-7 print:hidden">
+              <section className="bb-record-panel bb-panel-inset print:hidden">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="max-w-3xl">
-                    <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-blue-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white">{saeTypes.find((type) => type.value === details.project.sae_type)?.label || details.project.sae_type}</span><span className="text-xs font-bold uppercase tracking-wider text-slate-500">{details.project.school_year}</span></div>
-                    <h2 className="mt-3 text-2xl font-black text-white sm:text-3xl print:text-black">{details.project.name}</h2>
+                    <h2 className="font-semibold text-white print:text-black">{details.project.name}</h2>
+                    <p className="mt-1 text-sm text-slate-400">{saeTypes.find((type) => type.value === details.project.sae_type)?.label || details.project.sae_type} · {details.project.school_year}</p>
                     <p className="mt-2 text-sm text-slate-400 print:text-black">{formatDate(details.project.start_date)} → {formatDate(details.project.end_date)}{details.project.chapter_name ? ` · ${details.project.chapter_name}` : ""}{details.project.advisor_name ? ` · Advisor: ${details.project.advisor_name}` : ""}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-wider ${normalizeProjectSharing(details).effective ? "border-blue-400/25 bg-blue-500/10 text-blue-200" : "border-slate-700 bg-slate-950 text-slate-400"}`}>
+                    <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider ${normalizeProjectSharing(details).effective ? "border-blue-400/25 bg-blue-500/10 text-blue-200" : "border-slate-700 bg-slate-950 text-slate-400"}`}>
                       {normalizeProjectSharing(details).effective ? "Advisor shared" : "Private"}
                     </span>
-                    <span className={`rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-wider ${details.project.status === "active" ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-300" : "border-slate-700 bg-slate-800 text-slate-300"}`}>{details.project.status}</span>
+                    <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider ${details.project.status === "active" ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-300" : "border-slate-700 bg-slate-800 text-slate-300"}`}>{details.project.status}</span>
                   </div>
                 </div>
               </section>
 
-              <nav className="my-5 flex gap-1 overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 p-1.5 print:hidden" aria-label="FFA project sections">
-                {tabs.map((tab) => <button key={tab} type="button" onClick={() => setActiveTab(tab)} className={`min-w-max flex-1 rounded-lg px-4 py-2.5 text-sm font-black transition ${activeTab === tab ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}>{tab}</button>)}
+              <nav className="my-4 flex flex-wrap gap-1 border-b border-slate-800 print:hidden" aria-label="FFA project sections">
+                {tabs.map((tab) => <button key={tab} type="button" aria-pressed={activeTab === tab} onClick={() => setActiveTab(tab)} className="bb-work-tab">{tab}</button>)}
               </nav>
 
               <div className="print:hidden">
@@ -944,7 +944,7 @@ export default function FfaProjects() {
           )}
         </section>
       </div>
-      {newProjectOpen && <ProjectModal animals={animals} onClose={() => setNewProjectOpen(false)} onCreated={created} />}
+      {newProjectOpen && <ProjectModal animals={animals} onClose={() => setNewProjectOpen(false)} onCreated={created} returnFocusRef={newProjectButtonRef} />}
       {selectedProject && <span className="sr-only">Selected project: {selectedProject.name}</span>}
     </main>
   );

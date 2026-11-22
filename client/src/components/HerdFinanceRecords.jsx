@@ -170,7 +170,7 @@ function HerdFinanceSkeleton() {
     <div className="space-y-6" aria-busy="true">
       <SkeletonBlock className="h-8 w-56" />
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <section className="bb-mobile-totals grid grid-cols-1 gap-4 md:grid-cols-3">
         {[0, 1, 2].map((item) => (
           <div key={item} className={panelClass}>
             <SkeletonBlock className="h-3 w-28" />
@@ -495,11 +495,7 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
   const saveBadgeText = saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Auto-saves on blur";
   return (
     <div className="max-w-full space-y-6 overflow-x-hidden">
-      <div>
-        <h2 className="text-2xl font-semibold text-white">{selectedHerd?.name || "Herd"} finances</h2>
-      </div>
-
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <section className="bb-mobile-totals grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-gray-700 bg-gray-900 p-5">
           <p className="text-xs uppercase tracking-[0.14em] text-gray-500">Net</p>
           <p className={`mt-3 text-3xl font-bold ${totals.net < 0 ? "text-red-200" : "text-emerald-200"}`}>{money(totals.net)}</p>
@@ -516,7 +512,7 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
 
       <section className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="min-w-0 rounded-2xl border border-gray-700 bg-gray-800 p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="bb-finance-chart-heading mb-4 flex items-center justify-between gap-3">
             <h3 className="text-lg font-semibold text-white">Expense mix</h3>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-semibold text-gray-300">{expenseLedger.length} expenses</span>
@@ -671,8 +667,8 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
                 description="Ledger entries, feed costs, and vet costs will appear here automatically."
               />
             ) : (
-            <div className="max-h-[26rem] overflow-auto rounded-xl border border-gray-700">
-              <table className="w-full min-w-[680px] text-left text-sm">
+            <div className="bb-stacked-table-scroll max-h-[26rem] overflow-auto rounded-xl border border-gray-700">
+              <table className="bb-stacked-table w-full min-w-[680px] text-left text-sm" role="table">
                 <thead className="sticky top-0 bg-gray-900 text-xs uppercase tracking-[0.12em] text-gray-500">
                   <tr>
                     <th className="px-3 py-2">Date</th>
@@ -684,12 +680,12 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
                 </thead>
                 <tbody>
                   {ledger.map((item) => (
-                    <tr key={item.id} className="border-t border-gray-700">
-                      <td className="px-3 py-2 text-gray-300">{formatDate(item.date) || "No date"}</td>
-                      <td className="px-3 py-2 text-gray-300">{item.source}</td>
-                      <td className="px-3 py-2 text-white">{item.category}</td>
-                      <td className="px-3 py-2 text-gray-400">{item.vendor || item.animal || item.notes || "-"}</td>
-                      <td className={`px-3 py-2 text-right font-semibold ${item.signedAmount < 0 ? "text-red-200" : "text-emerald-200"}`}>{money(item.signedAmount)}</td>
+                    <tr key={item.id} role="row" className="bb-ledger-row border-t border-gray-700">
+                      <td role="cell" className="px-3 py-2 text-gray-300">{formatDate(item.date) || "No date"}</td>
+                      <td role="cell" className="px-3 py-2 text-gray-300">{item.source}</td>
+                      <td role="cell" className="bb-ledger-category px-3 py-2 text-white">{item.category}</td>
+                      <td role="cell" className="bb-cell-wide px-3 py-2 text-gray-400">{item.vendor || item.animal || item.notes || "-"}</td>
+                      <td role="cell" className={`bb-ledger-amount px-3 py-2 text-right font-semibold ${item.signedAmount < 0 ? "text-red-200" : "text-emerald-200"}`}>{money(item.signedAmount)}</td>
                     </tr>
                   ))}
                 </tbody>

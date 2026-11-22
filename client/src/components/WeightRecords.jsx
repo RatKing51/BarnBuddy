@@ -49,7 +49,7 @@ function WeightChart({ records }) {
 
   if (points.length === 0) {
     return (
-      <div className="grid min-h-72 place-items-center rounded-2xl border border-dashed border-gray-700 bg-gray-900/70 p-6 text-center">
+      <div className="bb-weight-chart-empty grid min-h-72 place-items-center rounded-2xl border border-dashed border-gray-700 bg-gray-900/70 p-6 text-center">
         <div>
           <p className="font-semibold text-gray-200">No weights yet</p>
           <p className="mt-1 text-sm text-gray-500">Add a record to start the trend line.</p>
@@ -92,7 +92,7 @@ function WeightChart({ records }) {
         </p>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="bb-weight-chart overflow-x-auto">
         <svg viewBox={`0 0 ${width} ${height}`} className="min-w-[620px]">
           <defs>
             <linearGradient id="weightArea" x1="0" x2="0" y1="0" y2="1">
@@ -135,7 +135,7 @@ function WeightRecordsSkeleton() {
 
   return (
     <div className="space-y-6" aria-busy="true">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="bb-mobile-totals grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[0, 1, 2].map((item) => (
           <div key={item} className={panelClass}>
             <SkeletonBlock className="h-4 w-20" />
@@ -144,7 +144,7 @@ function WeightRecordsSkeleton() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+      <div className="bb-weight-entry grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
         <div className="rounded-2xl border border-gray-700 bg-gray-900 p-3 sm:p-5">
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div className="space-y-2">
@@ -358,7 +358,7 @@ export default function WeightRecords({ animal, onAnimalSaved }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="bb-mobile-totals grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4">
           <p className="text-sm text-blue-100">Current</p>
           <p className="mt-2 text-3xl font-bold text-white">
@@ -379,16 +379,16 @@ export default function WeightRecords({ animal, onAnimalSaved }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+      <div className="bb-weight-entry grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
         <WeightChart records={sortedRecords} />
 
-        <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5">
+        <div className="bb-weight-form rounded-2xl border border-gray-700 bg-gray-800 p-5">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-gray-100">Add Weigh-In</h2>
-              <p className="text-sm text-gray-500">
-                {totalChange === null ? "Track this animal over time." : `Total change: ${totalChange >= 0 ? "+" : ""}${formatNumber(totalChange)} ${unit}`}
-              </p>
+              {totalChange !== null && <p className="text-sm text-gray-500">
+                Total change: {totalChange >= 0 ? "+" : ""}{formatNumber(totalChange)} {unit}
+              </p>}
             </div>
             <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-semibold text-emerald-200">
               Free
@@ -397,8 +397,9 @@ export default function WeightRecords({ animal, onAnimalSaved }) {
 
           <div className="space-y-4">
             <div>
-              <label className="text-xs text-gray-400">Date</label>
+              <label htmlFor="weigh-in-date" className="text-xs text-gray-400">Date</label>
               <input
+                id="weigh-in-date"
                 type="date"
                 value={draft.recorded_date}
                 onChange={(e) => setDraft((current) => ({ ...current, recorded_date: e.target.value }))}
@@ -408,9 +409,11 @@ export default function WeightRecords({ animal, onAnimalSaved }) {
 
             <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-3">
               <div>
-                <label className="text-xs text-gray-400">Weight</label>
+                <label htmlFor="weigh-in-weight" className="text-xs text-gray-400">Weight</label>
                 <input
+                  id="weigh-in-weight"
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="0.01"
                   value={draft.weight}
@@ -419,8 +422,9 @@ export default function WeightRecords({ animal, onAnimalSaved }) {
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-400">Unit</label>
+                <label htmlFor="weigh-in-unit" className="text-xs text-gray-400">Unit</label>
                 <select
+                  id="weigh-in-unit"
                   value={draft.unit}
                   onChange={(e) => setDraft((current) => ({ ...current, unit: e.target.value }))}
                   className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-gray-100"
@@ -432,8 +436,9 @@ export default function WeightRecords({ animal, onAnimalSaved }) {
             </div>
 
             <div>
-              <label className="text-xs text-gray-400">Notes</label>
+              <label htmlFor="weigh-in-notes" className="text-xs text-gray-400">Notes</label>
               <textarea
+                id="weigh-in-notes"
                 rows="3"
                 value={draft.notes}
                 onChange={(e) => setDraft((current) => ({ ...current, notes: e.target.value }))}
@@ -470,7 +475,7 @@ export default function WeightRecords({ animal, onAnimalSaved }) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
+            <table className="bb-stacked-table w-full min-w-[760px] text-left text-sm" role="table">
               <thead className="bg-gray-900 text-xs uppercase tracking-[0.08em] text-gray-500">
                 <tr>
                   <th className="px-3 py-3">Date</th>
@@ -483,8 +488,10 @@ export default function WeightRecords({ animal, onAnimalSaved }) {
               <tbody className="divide-y divide-gray-700">
                 {[...sortedRecords].reverse().map((record) => (
                   <tr key={record.id} className="hover:bg-gray-700/40">
-                    <td className="px-3 py-3">
+                    <td className="bb-cell-wide px-3 py-3">
+                      <span className="bb-cell-label" aria-hidden="true">Date</span>
                       <input
+                        aria-label="Recorded date"
                         type="date"
                         value={record.recorded_date}
                         onChange={(e) => updateRecord(record.id, "recorded_date", e.target.value)}
@@ -493,8 +500,11 @@ export default function WeightRecords({ animal, onAnimalSaved }) {
                       />
                     </td>
                     <td className="px-3 py-3">
+                      <span className="bb-cell-label" aria-hidden="true">Weight</span>
                       <input
+                        aria-label="Recorded weight"
                         type="number"
+                        inputMode="decimal"
                         min="0"
                         step="0.01"
                         value={record.weight}
@@ -504,7 +514,9 @@ export default function WeightRecords({ animal, onAnimalSaved }) {
                       />
                     </td>
                     <td className="px-3 py-3">
+                      <span className="bb-cell-label" aria-hidden="true">Unit</span>
                       <select
+                        aria-label="Recorded weight unit"
                         value={record.unit}
                         onChange={(e) => {
                           const nextRecord = { ...record, unit: e.target.value };
@@ -517,15 +529,17 @@ export default function WeightRecords({ animal, onAnimalSaved }) {
                         <option value="kg">kg</option>
                       </select>
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="bb-cell-wide px-3 py-3">
+                      <span className="bb-cell-label" aria-hidden="true">Notes</span>
                       <input
+                        aria-label="Recorded weight notes"
                         value={record.notes}
                         onChange={(e) => updateRecord(record.id, "notes", e.target.value)}
                         onBlur={() => saveRecord(record)}
                         className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-gray-100"
                       />
                     </td>
-                    <td className="px-3 py-3 text-right">
+                    <td className="bb-cell-wide px-3 py-3 text-right">
                       <button
                         type="button"
                         onClick={() => deleteRecord(record.id)}

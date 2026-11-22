@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { BrowserRouter as Router, Link, Navigate, Routes, Route, useLocation } from "react-router";
 import Navbar from "./components/Navbar";
 import PrivateRoute from "./routes/PrivateRoute";
@@ -103,6 +103,7 @@ function AppContent() {
   const [pageLoading, setPageLoading] = useState(false);
   const [announcement, setAnnouncement] = useState(defaultSiteContent.announcement);
   const [maintenance, setMaintenance] = useState(defaultSiteContent.maintenance);
+  const mainContentRef = useRef(null);
   const hiddenPaths = ["/dashboard", "/admin", "/advisor", "/settings/herd", "/settings/account", "/settings/import-assistant"];
   const showShell = !hiddenPaths.some(
     (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
@@ -126,6 +127,37 @@ function AppContent() {
     (announcementAudience === "admins" && isAdmin);
   const showAnnouncement = showShell && announcement?.enabled && announcementMatchesAudience && (announcement.title || announcement.message);
   const announcementStyle = announcementStyles[announcement?.tone] || announcementStyles.blue;
+
+  useEffect(() => {
+    const workspace = mainContentRef.current;
+    const viewport = window.visualViewport;
+    if (showShell || showMaintenance || !workspace || !viewport) return undefined;
+
+    const clearViewport = () => {
+      workspace.removeAttribute("data-keyboard-open");
+      workspace.style.removeProperty("--bb-visible-height");
+      workspace.style.removeProperty("--bb-visible-top");
+    };
+    const updateViewport = () => {
+      // Mobile keyboards may resize the visual viewport while leaving the layout viewport intact.
+      if (viewport.scale !== 1 || document.documentElement.clientHeight - viewport.height < 120) {
+        clearViewport();
+        return;
+      }
+      workspace.setAttribute("data-keyboard-open", "");
+      workspace.style.setProperty("--bb-visible-height", `${viewport.height}px`);
+      workspace.style.setProperty("--bb-visible-top", `${viewport.offsetTop}px`);
+    };
+
+    updateViewport();
+    viewport.addEventListener("resize", updateViewport);
+    viewport.addEventListener("scroll", updateViewport);
+    return () => {
+      viewport.removeEventListener("resize", updateViewport);
+      viewport.removeEventListener("scroll", updateViewport);
+      clearViewport();
+    };
+  }, [showMaintenance, showShell]);
 
   useEffect(() => {
     const target = location.hash ? document.getElementById(location.hash.slice(1)) : null;
@@ -256,7 +288,7 @@ function AppContent() {
           </div>
         </section>
       )}
-      <div id="main-content" className={showShell ? "bb-public" : "bb-workspace"} tabIndex="-1">
+      <div ref={mainContentRef} id="main-content" className={showShell ? "bb-public" : "bb-workspace"} tabIndex="-1">
       <Suspense fallback={(
         <main className="grid min-h-[70vh] place-items-center bg-[#0b1730] text-white">
           <LoadingSpinner label="Loading page..." />
@@ -288,6 +320,7 @@ function AppContent() {
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/animals" element={<Dashboard />} />
           <Route path="/dashboard/animal/:animalId" element={<Dashboard />} />
           <Route element={<PremiumRoute />}>
             <Route path="/dashboard/ffa-projects" element={<FfaProjects />} />

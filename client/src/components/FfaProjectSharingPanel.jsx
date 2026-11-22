@@ -68,31 +68,31 @@ export default function FfaProjectSharingPanel({ details, onChanged }) {
       };
 
   return (
-    <section className="rounded-2xl border border-blue-400/20 bg-blue-500/5 p-5 sm:p-6">
+    <section className="bb-record-panel p-5 sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-300">Advisor sharing</p>
-          <h3 className="mt-2 text-lg font-black text-white">You choose which projects your advisor can see</h3>
+          <p className="text-sm font-medium text-blue-300">Advisor sharing</p>
+          <h3 className="mt-1 text-lg font-semibold text-white">You choose which projects your advisor can see</h3>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
             Sharing applies only to this FFA project. Your chapter&apos;s current verified advisor can see its plan,
             goals, starting animal snapshots, project journal, and project finances while sharing is active.
           </p>
         </div>
-        <span className={`w-fit shrink-0 rounded-full border px-3 py-1.5 text-xs font-black ${state.classes}`}>
+        <span className={`w-fit shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium ${state.classes}`}>
           {state.label}
         </span>
       </div>
 
       <div className="mt-5 grid gap-3 lg:grid-cols-2">
         <div className="rounded-xl border border-emerald-400/15 bg-emerald-500/5 p-4">
-          <p className="text-sm font-black text-emerald-200">Included when you share</p>
+          <p className="text-sm font-medium text-emerald-200">Included when you share</p>
           <p className="mt-2 text-sm leading-6 text-slate-400">
             Project details and goals, saved starting snapshots, journal activities and reflections, and this
             project&apos;s income, expenses, vendors, and notes.
           </p>
         </div>
         <div className="rounded-xl border border-slate-700 bg-slate-950 p-4">
-          <p className="text-sm font-black text-white">Always stays private</p>
+          <p className="text-sm font-medium text-white">Always stays private</p>
           <p className="mt-2 text-sm leading-6 text-slate-400">
             Your regular animal profiles, live weights, health and vet records, feed records, general finances,
             account details, and every FFA project you have not separately shared.
@@ -102,7 +102,7 @@ export default function FfaProjectSharingPanel({ details, onChanged }) {
 
       <div className="mt-5 flex flex-col gap-3 rounded-xl border border-slate-700 bg-slate-950 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-bold text-white">
+          <p className="font-medium text-white">
             {sharing.chapterName || "Your FFA chapter"}
           </p>
           <p className="mt-1 text-sm text-slate-400">
@@ -120,9 +120,9 @@ export default function FfaProjectSharingPanel({ details, onChanged }) {
           onClick={updateSharing}
           disabled={saving || (!canEnable && !canDisable)}
           aria-pressed={sharing.optedIn}
-          className={`min-h-11 shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${
+          className={`min-h-11 shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
             sharing.optedIn
-              ? "border border-rose-400/30 text-rose-200 hover:bg-rose-500/10"
+              ? "border border-rose-400/30 text-rose-300 hover:bg-rose-500/10"
               : "bg-blue-600 text-white hover:bg-blue-500"
           }`}
         >

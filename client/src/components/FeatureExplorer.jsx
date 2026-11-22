@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getSiteAssetUrl } from '../config/siteImages';
+import { resolveProductPreviewUrl } from '../config/siteImages';
 
 const features = [
   { title: 'Animal profiles', copy: 'Look up an animal by name or tag and check its weights, vaccinations, and notes.', image: 'generaldata.png', alt: 'BarnBuddy animal profile with identification and general details' },
@@ -11,6 +11,7 @@ const features = [
 export default function FeatureExplorer() {
   const [active, setActive] = useState(0);
   const selected = features[active];
+  const previewImage = resolveProductPreviewUrl(selected.image);
   return (
     <div className="bb-explorer" data-reveal>
       <div>
@@ -20,7 +21,7 @@ export default function FeatureExplorer() {
           {features.map((feature, index) => (
             <button key={feature.image} type="button" aria-pressed={index === active}
               aria-controls="record-view" onClick={() => setActive(index)}>
-              <img className="bb-record-thumb" src={getSiteAssetUrl(feature.image)} alt="" loading="lazy" />
+              <img className="bb-record-thumb" src={resolveProductPreviewUrl(feature.image)} alt="" loading="lazy" />
               <span>{feature.title}</span>
               <span className="bb-record-arrow" aria-hidden="true">→</span>
             </button>
@@ -28,11 +29,11 @@ export default function FeatureExplorer() {
         </div>
       </div>
       <figure id="record-view" className="bb-explorer-image">
-        <img key={selected.image} src={getSiteAssetUrl(selected.image)} alt={selected.alt}
-          loading="lazy" width="1400" height="900" />
+        <img key={previewImage} src={previewImage} alt={selected.alt}
+          loading="lazy" width="1440" height="1000" />
         <figcaption>
           <span aria-live="polite">{selected.copy}</span>
-          <a href={getSiteAssetUrl(selected.image)} target="_blank" rel="noreferrer">
+          <a href={previewImage} target="_blank" rel="noreferrer">
             View full screenshot<span className="sr-only"> (opens in a new tab)</span>
           </a>
         </figcaption>

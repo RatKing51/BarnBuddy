@@ -157,13 +157,6 @@ export default function BulkEntry({
 
   return (
     <div className="space-y-3 sm:space-y-5">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-300 sm:text-sm sm:normal-case sm:tracking-normal">
-          {selectedHerd?.name || "Current herd"}
-        </p>
-        <h2 className="mt-1 text-xl font-semibold text-white sm:text-2xl">Bulk entry</h2>
-      </div>
-
       <form onSubmit={submit} className="grid grid-cols-1 gap-3 sm:gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
         <section className="rounded-2xl border border-gray-700 bg-gray-800 p-3 sm:p-4">
           <div className="flex items-center justify-between gap-3">

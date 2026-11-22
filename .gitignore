@@ -29,6 +29,8 @@ build/
 coverage/
 test-results/
 playwright-report/
+/client/playwright/.clerk/
+output/playwright/
 .cache/
 .vite/
 

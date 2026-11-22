@@ -134,7 +134,7 @@ export default function FfaProjectSharingPrivacyCard() {
   }
 
   return (
-    <section className="rounded-2xl border border-blue-400/20 bg-gray-800 p-6">
+    <section className="bb-record-panel p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">Privacy</p>

@@ -1,16 +1,37 @@
 import { test, expect } from '@playwright/test';
+import { landingCarouselSlides } from '../../src/data/carouselSlides.js';
 
 test('homepage preview, chapter navigation, and mobile menu work', async ({ page }, testInfo) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const publishedContent = testInfo.project.name === 'firefox-desktop';
+  if (publishedContent) {
+    await page.route('**/api/site-content', route => route.fulfill({
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      json: { carouselSlides: landingCarouselSlides.map(slide => ({ ...slide, title: `Published ${slide.eyebrow} preview` })) },
+    }));
+  }
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  if (publishedContent) await expect(page.getByText('Published Dashboard preview')).toBeVisible();
+  await expect(page.locator('.bb-news img[alt="BarnBuddy animal weight trend chart"]')).toHaveAttribute('src', '/product-previews/weight-history.png');
   const screenshots = page.getByRole('group', { name: 'Product screenshots' });
-  await screenshots.getByRole('button').nth(1).click();
-  await expect(screenshots.getByRole('button').nth(1)).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('.bb-product-preview img')).toBeVisible();
+  for (const [label, file] of [['Dashboard', 'farm-overview'], ['Animal Profiles', 'animal-profile'], ['Vet Visits', 'vet-visits']]) {
+    const button = screenshots.getByRole('button', { name: label, exact: true });
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    const image = page.locator('.bb-product-preview img');
+    const path = `/product-previews/${file}.png`;
+    await expect(image).toHaveAttribute('src', path);
+    await expect.poll(() => image.evaluate(element => element.naturalWidth)).toBe(1440);
+    await expect(page.locator('.bb-product-preview figure a')).toHaveAttribute('href', path);
+  }
+  await page.locator('.bb-explorer').getByRole('button', { name: 'Weight history', exact: true }).click();
+  await expect(page.locator('.bb-explorer-image img')).toHaveAttribute('src', '/product-previews/weight-history.png');
+  await expect.poll(() => page.locator('.bb-explorer-image img').evaluate(element => element.naturalWidth)).toBe(1440);
   await page.locator('.bb-explorer').getByRole('button', { name: 'Herd overview', exact: true }).click();
-  await expect(page.locator('.bb-explorer-image img')).toHaveAttribute('src', /dashboard.png/);
+  await expect(page.locator('.bb-explorer-image img')).toHaveAttribute('src', '/product-previews/farm-overview.png');
   await expect(page.locator('.bb-explorer').getByRole('button', { name: 'Herd overview', exact: true })).toHaveAttribute('aria-pressed', 'true');
   if (testInfo.project.name === 'firefox-narrow') {
     const menu = page.getByRole('button', { name: 'Open navigation menu' });

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import AnimalGeneralData from "../components/AnimalGeneralData";
 import BulkEntry from "../components/BulkEntry";
 import DashboardOverview from "../components/DashboardOverview";
+import AnimalDirectory from "../components/AnimalDirectory";
+import AnimalShortcuts from "../components/AnimalShortcuts";
 import HealthRecords from "../components/HealthRecords";
 import HerdFeedRecords from "../components/HerdFeedRecords";
 import HerdFinanceRecords from "../components/HerdFinanceRecords";
@@ -9,10 +11,9 @@ import HerdInventory from "../components/HerdInventory";
 import PremiumRecords from "../components/PremiumRecords";
 import VetVisits from "../components/VetVisits";
 import WeightRecords from "../components/WeightRecords";
-import { SkeletonBlock } from "../components/LoadingSpinner";
-import EmptyState from "../components/EmptyState";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import PremiumExpiryBadge from "../components/PremiumExpiryBadge";
-import { useLocation, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useNavigationType, useParams } from "react-router";
 import {
   createAnimal,
   getAnimalByID,
@@ -46,7 +47,33 @@ const isInactiveAnimalStatus = (status) => ["archived", "deceased"].includes(sta
 const getCareSummaryKey = (herd, items, careWindow, refreshKey) =>
   `${herd?.id || "none"}:${careWindow}:${refreshKey}:${getAnimalCareSignature(items)}`;
 
+const noAnimals = [];
+const noCare = {};
+const unassignedHerd = { id: "unassigned", name: "Unassigned" };
+const herdViews = [
+  { key: "general", label: "Farm Overview", mobileLabel: "Home" },
+  { key: "animals", label: "Animals" },
+  { key: "feed", label: "Feed" },
+  { key: "herd-finance", label: "Money" },
+  { key: "bulk-entry", label: "Bulk Entry" },
+  { key: "inventory", label: "Inventory" },
+];
+const animalRecordTabs = [
+  { key: "general", label: "General" },
+  { key: "weight", label: "Weight" },
+  { key: "health", label: "Health" },
+  { key: "vet", label: "Vet" },
+  { key: "reproduction", label: "Reproduction" },
+  { key: "finance", label: "Money" },
+];
+
+function withQuery(path, params) {
+  const search = params.toString();
+  return search ? `${path}?${search}` : path;
+}
+
 function getVisibleTourTarget(target) {
+  if (!target) return null;
   const matches = Array.from(document.querySelectorAll(`[data-tour="${target}"]`));
   return matches.find((element) => {
     const rect = element.getBoundingClientRect();
@@ -64,23 +91,20 @@ function DashboardTour({ open, steps, onClose, onStepAction }) {
 
   const updateTarget = React.useCallback(() => {
     if (!open || !activeStep) return;
-    const element = getVisibleTourTarget(activeStep.target);
+    const element = getVisibleTourTarget(activeStep.target) || getVisibleTourTarget(activeStep.fallbackTarget);
 
     if (!element) {
       setTargetRect(null);
       return;
     }
 
-    element.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
-    window.setTimeout(() => {
-      const rect = element.getBoundingClientRect();
-      setTargetRect({
-        top: Math.max(12, rect.top - 8),
-        left: Math.max(12, rect.left - 8),
-        width: rect.width + 16,
-        height: rect.height + 16,
-      });
-    }, 220);
+    const rect = element.getBoundingClientRect();
+    setTargetRect({
+      top: Math.max(4, rect.top - 4),
+      left: Math.max(4, rect.left - 4),
+      width: rect.width + 8,
+      height: rect.height + 8,
+    });
   }, [activeStep, open]);
 
   useEffect(() => {
@@ -91,6 +115,12 @@ function DashboardTour({ open, steps, onClose, onStepAction }) {
   }, [open]);
 
   useEffect(() => {
+    if (!open || !activeStep) return undefined;
+    const target = (getVisibleTourTarget(activeStep.target) || getVisibleTourTarget(activeStep.fallbackTarget))?.getBoundingClientRect();
+    if (target && (target.top < 0 || target.bottom > window.innerHeight)) {
+      const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth";
+      window.scrollTo({ top: Math.max(0, window.scrollY + target.top - window.innerHeight / 3), behavior });
+    }
     updateTarget();
     window.addEventListener("resize", updateTarget);
     window.addEventListener("scroll", updateTarget, true);
@@ -98,22 +128,22 @@ function DashboardTour({ open, steps, onClose, onStepAction }) {
       window.removeEventListener("resize", updateTarget);
       window.removeEventListener("scroll", updateTarget, true);
     };
-  }, [updateTarget]);
+  }, [activeStep, open, updateTarget]);
 
   if (!open || !activeStep) return null;
 
   const isLastStep = activeIndex === steps.length - 1;
   const actionComplete = completedSteps[activeStep.key] === true || !activeStep.requiresAction;
-  const tooltipClass = targetRect && targetRect.top < window.innerHeight / 2
-    ? "top-[calc(100%-14rem)] sm:top-auto sm:bottom-8"
-    : "bottom-8";
+  const tooltipClass = targetRect && targetRect.top > window.innerHeight / 2
+    ? "top-4 sm:top-auto sm:bottom-8"
+    : "bottom-4 sm:bottom-8";
 
   const runStepAction = async () => {
     if (!activeStep || runningAction) return;
 
     try {
       setRunningAction(true);
-      await onStepAction(activeStep);
+      if (await onStepAction(activeStep) === false) return;
       setCompletedSteps((current) => ({ ...current, [activeStep.key]: true }));
       window.setTimeout(updateTarget, 250);
     } finally {
@@ -126,7 +156,7 @@ function DashboardTour({ open, steps, onClose, onStepAction }) {
       <div className="absolute inset-0 bg-black/65" />
       {targetRect && (
         <div
-          className="absolute rounded-2xl border-2 border-[#5170FF] bg-[#5170FF]/10 shadow-[0_0_0_9999px_rgba(0,0,0,0.55),0_0_32px_rgba(81,112,255,0.45)] transition-all"
+          className="absolute rounded-lg border-2 border-blue-400 bg-blue-500/10"
           style={{
             top: targetRect.top,
             left: targetRect.left,
@@ -136,15 +166,15 @@ function DashboardTour({ open, steps, onClose, onStepAction }) {
         />
       )}
 
-      <section className={`pointer-events-auto absolute left-4 right-4 mx-auto max-w-md rounded-2xl border border-white/10 bg-[#101D42] p-5 text-white shadow-2xl shadow-black/40 sm:left-auto sm:right-8 ${tooltipClass}`}>
+      <section aria-label="Dashboard tour" className={`pointer-events-auto absolute left-4 right-4 mx-auto max-h-[85dvh] max-w-md overflow-y-auto bb-record-panel p-5 shadow-2xl sm:left-auto sm:right-8 ${tooltipClass}`}>
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8da0ff]">
+          <p className="text-sm font-semibold bb-work-muted">
             Dashboard tour {activeIndex + 1} of {steps.length}
           </p>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-slate-300 hover:bg-white/10"
+            className="bb-action"
           >
             Skip
           </button>
@@ -152,18 +182,17 @@ function DashboardTour({ open, steps, onClose, onStepAction }) {
         <h2 className="mt-3 text-xl font-semibold">{activeStep.title}</h2>
         <p className="mt-2 text-sm leading-relaxed text-slate-300">{activeStep.body}</p>
         {activeStep.action && (
-          <p className="mt-3 rounded-lg border border-[#5170FF]/25 bg-[#5170FF]/10 px-3 py-2 text-sm text-blue-100">
+          <p className="mt-3 text-sm bb-work-muted">
             {activeStep.action}
           </p>
         )}
         {activeStep.requiresAction && (
-          <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Try it</p>
+          <div className="mt-4">
             <button
               type="button"
               onClick={runStepAction}
               disabled={runningAction || actionComplete}
-              className="mt-2 w-full rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-gray-950 hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
+              className="bb-action bb-action-primary mt-2 w-full"
             >
               {runningAction ? "Working..." : actionComplete ? "Done" : activeStep.actionLabel}
             </button>
@@ -178,7 +207,7 @@ function DashboardTour({ open, steps, onClose, onStepAction }) {
             type="button"
             onClick={() => setActiveIndex((current) => Math.max(0, current - 1))}
             disabled={activeIndex === 0}
-            className="rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="bb-action"
           >
             Back
           </button>
@@ -192,7 +221,7 @@ function DashboardTour({ open, steps, onClose, onStepAction }) {
               setActiveIndex((current) => current + 1);
             }}
             disabled={!actionComplete}
-            className="rounded-lg bg-[#5170FF] px-5 py-2 text-sm font-semibold text-white hover:bg-[#6f86ff] disabled:cursor-not-allowed disabled:opacity-60"
+            className="bb-action bb-action-primary"
           >
             {isLastStep ? "Finish tour" : "Next"}
           </button>
@@ -204,62 +233,96 @@ function DashboardTour({ open, steps, onClose, onStepAction }) {
 
 export default function Dashboard() {
   const { animalId: linkedAnimalId } = useParams();
+  const isProfile = Boolean(linkedAnimalId);
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState("general");
+  const navigate = useNavigate();
+  const navigationType = useNavigationType();
+  const params = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const isDirectory = /^\/dashboard\/animals\/?$/i.test(location.pathname);
+  const requestedTab = params.get(linkedAnimalId ? "record" : "view");
+  const availableTabs = linkedAnimalId ? animalRecordTabs : herdViews.slice(2);
+  const activeTab = isDirectory ? "animals" : availableTabs.some(tab => tab.key === requestedTab) ? requestedTab : "general";
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
-  const [dateTime, setDateTime] = useState("");
-  const [selectedHerd, setSelectedHerd] = useState(null);
+  const moreButtonRef = React.useRef(null);
+  const toolbarRef = React.useRef(null);
+  const [greeting] = useState(() => {
+    const hour = new Date().getHours();
+    return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  });
   const [herds, setHerds] = useState([]);
-  const [animals, setAnimals] = useState([]);
-  const [, setHasUnassignedAnimals] = useState(false);
-  const [selectedAnimal, setSelectedAnimal] = useState(null);
-  const [vaccinationsDue, setVaccinationsDue] = useState(0);
-  const [vaccinationsDueSoon, setVaccinationsDueSoon] = useState(0);
+  const [defaultHerd, setDefaultHerd] = useState(null);
+  const [herdRecords, setHerdRecords] = useState(null);
+  const [openedAnimal, setSelectedAnimal] = useState(null);
   const [vaccinationRefresh, setVaccinationRefresh] = useState(0);
-  const [animalUrgencies, setAnimalUrgencies] = useState({});
-  const [upcomingVetVisits, setUpcomingVetVisits] = useState(0);
+  const [care, setCare] = useState(null);
   const [loadingHerds, setLoadingHerds] = useState(true);
-  const [loadingAnimals, setLoadingAnimals] = useState(false);
+  const [bootstrapError, setBootstrapError] = useState(false);
   const [addingAnimal, setAddingAnimal] = useState(false);
   const [exportMode, setExportMode] = useState("farm");
   const [exportLoading, setExportLoading] = useState(false);
   const [animalExportData, setAnimalExportData] = useState(null);
   const [herdFinanceExportData, setHerdFinanceExportData] = useState(null);
-  const [dashboardTourOpen, setDashboardTourOpen] = useState(false);
-
-  const handleFarmOverviewClick = () => {
-    setMobileMoreOpen(false);
-    setActiveTab("general");
-    setSelectedAnimal(null);
-  };
-
-  const handleHerdFeedClick = () => {
-    setMobileMoreOpen(false);
-    setActiveTab("feed");
-    setSelectedAnimal(null);
-  };
-
-  const handleHerdFinanceClick = () => {
-    setMobileMoreOpen(false);
-    setActiveTab("herd-finance");
-    setSelectedAnimal(null);
-  };
-
-  const handleBulkEntryClick = () => {
-    setMobileMoreOpen(false);
-    setActiveTab("bulk-entry");
-    setSelectedAnimal(null);
-  };
-
-  const handleInventoryClick = () => {
-    setMobileMoreOpen(false);
-    setActiveTab("inventory");
-    setSelectedAnimal(null);
-  };
 
   const { user } = useUser();
-  const { preferences } = usePreferences();
+  const { preferences, loadingPreferences } = usePreferences();
   const { subscription, authFetch, refreshBackendUser, backendUser } = useBarnBuddyAuth();
+  const selectedAnimal = linkedAnimalId && String(openedAnimal?.id) === linkedAnimalId ? openedAnimal : null;
+  const herdParam = params.get("herd");
+  const requestedHerdId = selectedAnimal ? String(selectedAnimal.herd_id ?? "unassigned") : herdParam;
+  const selectedHerd = requestedHerdId === "unassigned"
+    ? unassignedHerd
+    : herds.find(herd => String(herd.id) === requestedHerdId) || defaultHerd;
+  const selectedHerdId = selectedHerd?.id ?? null;
+  const matchingHerdRecords = herdRecords?.herdId === selectedHerdId ? herdRecords : null;
+  const animals = matchingHerdRecords?.animals || noAnimals;
+  const loadingAnimals = Boolean(selectedHerdId && !matchingHerdRecords);
+  const animalsError = bootstrapError || Boolean(matchingHerdRecords?.error);
+
+  const setAnimals = React.useCallback(update => {
+    setHerdRecords(current => current?.herdId === selectedHerdId
+      ? { ...current, animals: update(current.animals) }
+      : current);
+  }, [selectedHerdId]);
+
+  const returnTo = location.pathname + location.search;
+  const tour = params.get("tour");
+  const viewPath = React.useCallback(view => {
+    const next = new URLSearchParams();
+    if (herdParam || selectedHerdId && selectedHerdId !== defaultHerd?.id) next.set("herd", selectedHerdId || herdParam);
+    if (tour) next.set("tour", tour);
+    if (view !== "general" && view !== "animals") next.set("view", view);
+    return withQuery(view === "animals" ? "/dashboard/animals" : "/dashboard", next);
+  }, [defaultHerd?.id, herdParam, selectedHerdId, tour]);
+  const profilePath = React.useCallback((animal, record = "general") => {
+    const next = new URLSearchParams();
+    if (record !== "general") next.set("record", record);
+    if (tour) next.set("tour", tour);
+    return withQuery("/dashboard/animal/" + animal.id, next);
+  }, [tour]);
+  const profileCameFrom = /^\/dashboard(?:\/animals)?(?:\?|$)/.test(location.state?.returnTo || "")
+    ? location.state.returnTo : "";
+  const directoryPath = isDirectory ? returnTo : profileCameFrom.startsWith("/dashboard/animals") ? profileCameFrom : viewPath("animals");
+  const canGoBackToDirectory = Boolean(profileCameFrom && location.state?.canGoBack !== false);
+  const returnFromAnimal = React.useCallback(() => {
+    setMobileMoreOpen(false);
+    if (canGoBackToDirectory && !tour) navigate(-1);
+    else navigate(directoryPath, { replace: true });
+  }, [canGoBackToDirectory, directoryPath, navigate, tour]);
+
+  useEffect(() => {
+    if (navigationType !== "POP") window.scrollTo({ top: 0, behavior: "instant" });
+  }, [activeTab, location.pathname, navigationType]);
+
+  useEffect(() => {
+    const toolbar = toolbarRef.current;
+    const main = toolbar.parentElement;
+    const observer = new ResizeObserver(() => {
+      main.style.setProperty("--dashboard-toolbar-desktop", `${toolbar.offsetHeight}px`);
+    });
+    observer.observe(toolbar);
+    return () => observer.disconnect();
+  }, []);
+
   const backendAdvisorDashboardAvailable = Boolean(
     backendUser?.ffa?.isAdvisor === true ||
     backendUser?.ffa?.hasAdvisorMembership === true
@@ -267,11 +330,7 @@ export default function Dashboard() {
   const [advisorDashboardAvailable, setAdvisorDashboardAvailable] = useState(
     backendAdvisorDashboardAvailable
   );
-  const loadedHerdIdRef = React.useRef(null);
-  const loadedCareSummaryKeyRef = React.useRef("");
-  const loadedLinkedAnimalRef = React.useRef(null);
   const handledOnboardingStartRef = React.useRef(false);
-  const navigate = useNavigate();
   const handleFfaProjectsClick = () => {
     setMobileMoreOpen(false);
     navigate("/dashboard/ffa-projects");
@@ -335,204 +394,96 @@ export default function Dashboard() {
     const match = animals.find((animal) => String(animal.id) === String(animalId));
     return match ? getAnimalPrimaryLabel(match) : "";
   };
-  // Update clock every second
+  const careWindow = Number(preferences.careWindow) || 7;
   useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setDateTime(
-        now.toLocaleString("en-US", {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      );
-    };
-    updateTime();
-    const timer = setInterval(updateTime, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const applyCareSummary = (careSummary = {}) => {
-    setAnimalUrgencies(careSummary.animalUrgencies || {});
-    setVaccinationsDue(Number(careSummary.vaccinationsDue) || 0);
-    setVaccinationsDueSoon(Number(careSummary.vaccinationsDueSoon) || 0);
-    setUpcomingVetVisits(Number(careSummary.upcomingVetVisits) || 0);
-  };
-
-  // Load dashboard startup data in one API call.
-  useEffect(() => {
+    if (loadingPreferences) return undefined;
     let cancelled = false;
 
     async function loadDashboardBootstrap() {
+      setLoadingHerds(true);
+      setBootstrapError(false);
       try {
-        setLoadingHerds(true);
-        setLoadingAnimals(true);
-        const res = await getDashboardBootstrap(Number(preferences.careWindow) || 7);
+        const { data } = await getDashboardBootstrap(careWindow);
         if (cancelled) return;
-
-        const loadedHerds = Array.isArray(res.data?.herds) ? res.data.herds : [];
-        const loadedAnimals = Array.isArray(res.data?.animals) ? res.data.animals : [];
-        const nextSelectedHerd = res.data?.selectedHerd || null;
-
-        loadedHerdIdRef.current = nextSelectedHerd?.id || null;
-        loadedCareSummaryKeyRef.current = getCareSummaryKey(
-          nextSelectedHerd,
-          loadedAnimals,
-          preferences.careWindow,
-          0
-        );
-        setHerds(loadedHerds);
-        setAnimals(loadedAnimals);
-        setHasUnassignedAnimals(Boolean(res.data?.hasUnassignedAnimals));
-        setSelectedHerd(nextSelectedHerd);
-        applyCareSummary(res.data?.careSummary);
-      } catch (err) {
-        console.error(err);
-        toast.error("Failed to load dashboard data");
-      } finally {
-        if (!cancelled) {
-          setLoadingHerds(false);
-          setLoadingAnimals(false);
+        const nextHerd = data.selectedHerd || null;
+        const items = Array.isArray(data.animals) ? data.animals : [];
+        setHerds(Array.isArray(data.herds) ? data.herds : []);
+        setDefaultHerd(nextHerd);
+        setHerdRecords({ herdId: nextHerd?.id ?? null, animals: items });
+        if (data.careSummary) {
+          setCare({ key: getCareSummaryKey(nextHerd, items, careWindow, 0), summary: data.careSummary });
         }
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Dashboard data failed to load:", error);
+          setBootstrapError(true);
+        }
+      } finally {
+        if (!cancelled) setLoadingHerds(false);
       }
     }
 
     loadDashboardBootstrap();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [preferences.careWindow]);
-
-  // Load animals when the herd changes. Individual edits patch local state below.
-  useEffect(() => {
-    async function loadAnimals() {
-      if (!selectedHerd) return;
-      if (loadedHerdIdRef.current === selectedHerd.id) return;
-
-      try {
-        setLoadingAnimals(true);
-        let animalsData = [];
-        if (selectedHerd.id === "unassigned") {
-          const res = await getAnimalsUnassigned(); // always use dedicated unassigned endpoint
-          animalsData = Array.isArray(res.data) ? res.data : [];
-          setHasUnassignedAnimals(animalsData.length > 0);
-        } else {
-          const res = await getAnimalsForHerd(selectedHerd.id);
-          animalsData = Array.isArray(res.data) ? res.data : [];
-        }
-        loadedHerdIdRef.current = selectedHerd.id;
-        setAnimals(animalsData);
-      } catch (err) {
-        console.error(err.response?.data || err.message);
-        toast.error("Animals failed to load");
-      } finally {
-        setLoadingAnimals(false);
-      }
-    }
-
-    loadAnimals();
-  }, [selectedHerd]);
+    return () => { cancelled = true; };
+  }, [careWindow, loadingPreferences]);
 
   useEffect(() => {
-    if (!linkedAnimalId) setSelectedAnimal(null);
-  }, [selectedHerd, linkedAnimalId]);
-
-  useEffect(() => {
-    if (!linkedAnimalId || loadingHerds || loadedLinkedAnimalRef.current === linkedAnimalId) return;
-
+    if (!selectedHerdId || loadingHerds || matchingHerdRecords) return undefined;
     let cancelled = false;
-    async function openLinkedAnimal() {
-      try {
-        const response = await getAnimalByID(linkedAnimalId);
-        if (cancelled) return;
-        const linkedAnimal = response.data;
-        const linkedHerd = linkedAnimal.herd_id
-          ? herds.find((herd) => String(herd.id) === String(linkedAnimal.herd_id))
-          : { id: "unassigned", name: "Unassigned" };
-
-        if (!linkedHerd) {
-          toast.error("This animal's herd is no longer available.");
-          navigate("/dashboard", { replace: true });
-          return;
-        }
-
-        loadedLinkedAnimalRef.current = linkedAnimalId;
-        loadedHerdIdRef.current = null;
-        setSelectedHerd(linkedHerd);
-        setSelectedAnimal(linkedAnimal);
-        setActiveTab("general");
-      } catch (err) {
-        console.error(err);
-        toast.error(err.response?.status === 404 ? "Animal not found or unavailable." : "Failed to open animal profile.");
-        navigate("/dashboard", { replace: true });
+    const request = selectedHerdId === "unassigned" ? getAnimalsUnassigned() : getAnimalsForHerd(selectedHerdId);
+    request.then(({ data }) => {
+      if (!cancelled) setHerdRecords({ herdId: selectedHerdId, animals: Array.isArray(data) ? data : [] });
+    }).catch(error => {
+      if (!cancelled) {
+        console.error("Animal records failed to load:", error);
+        setHerdRecords({ herdId: selectedHerdId, animals: [], error: true });
       }
-    }
-
-    openLinkedAnimal();
-    return () => {
-      cancelled = true;
-    };
-  }, [herds, linkedAnimalId, loadingHerds, navigate]);
-
-  const animalCareSignature = getAnimalCareSignature(animals);
-
-  // Load herd-wide care status in one request instead of per-animal vaccination/vet calls.
-  useEffect(() => {
-    const computeHerdStatus = async () => {
-      const herdAnimals = Array.isArray(animals) ? animals : [];
-      if (!selectedHerd || herdAnimals.length === 0) {
-        setVaccinationsDue(0);
-        setVaccinationsDueSoon(0);
-        setAnimalUrgencies({});
-        setUpcomingVetVisits(0);
-        return;
-      }
-
-      try {
-        const careWindowDays = Number(preferences.careWindow) || 7;
-        const careSummaryKey = getCareSummaryKey(selectedHerd, herdAnimals, preferences.careWindow, vaccinationRefresh);
-        if (loadedCareSummaryKeyRef.current === careSummaryKey) return;
-
-        const res = await getHerdCareSummary(selectedHerd.id, careWindowDays);
-        loadedCareSummaryKeyRef.current = careSummaryKey;
-        applyCareSummary(res.data || {});
-      } catch (err) {
-        console.error("Error fetching herd care summary:", err);
-        setAnimalUrgencies(
-          Object.fromEntries(herdAnimals.map((animal) => [animal.id, isInactiveAnimalStatus(animal.status) ? animal.status : "green"]))
-        );
-        setVaccinationsDue(0);
-        setVaccinationsDueSoon(0);
-        setUpcomingVetVisits(0);
-      }
-    };
-
-    computeHerdStatus();
-  }, [animalCareSignature, selectedHerd, vaccinationRefresh, preferences.careWindow, animals]);
-
-  const totalAnimals = animals.length;
-  const activeAnimals = animals.filter((animal) => !isInactiveAnimalStatus(animal.status));
-  const deceasedAnimals = animals.filter((animal) => animal.status === "deceased");
-  const archivedAnimals = animals.filter((animal) => animal.status === "archived");
-  const totalActiveAnimals = activeAnimals.length;
-  const deceasedCount = deceasedAnimals.length;
-  const archivedCount = archivedAnimals.length;
-  const careDueCount = vaccinationsDueSoon + upcomingVetVisits;
-  const attentionAnimalsAll = animals
-    .filter((animal) => !isInactiveAnimalStatus(animal.status) && animalUrgencies[animal.id] !== "green")
-    .sort((a, b) => {
-      const priority = { red: 0, yellow: 1, green: 2 };
-      return (
-        priority[animalUrgencies[a.id] || "green"] -
-        priority[animalUrgencies[b.id] || "green"]
-      );
     });
-  const attentionAnimals = attentionAnimalsAll.slice(0, 3);
-  const issueCount = attentionAnimalsAll.length;
-  const animalsStable = Math.max(0, totalActiveAnimals - issueCount);
+    return () => { cancelled = true; };
+  }, [loadingHerds, matchingHerdRecords, selectedHerdId]);
+
+  useEffect(() => {
+    if (!linkedAnimalId) return undefined;
+    let cancelled = false;
+    getAnimalByID(linkedAnimalId).then(({ data }) => {
+      if (!cancelled) setSelectedAnimal(data);
+    }).catch(error => {
+      if (cancelled) return;
+      toast.error(error.response?.status === 404 ? "Animal not found or unavailable." : "Failed to open animal profile.");
+      navigate("/dashboard", { replace: true });
+    });
+    return () => { cancelled = true; };
+  }, [linkedAnimalId, navigate]);
+
+  const careKey = getCareSummaryKey(selectedHerd, animals, careWindow, vaccinationRefresh);
+  const careIsCurrent = care?.key === careKey;
+  useEffect(() => {
+    if (loadingHerds || loadingAnimals || animalsError || !animals.length || careIsCurrent) return undefined;
+    let cancelled = false;
+    getHerdCareSummary(selectedHerdId, careWindow).then(({ data }) => {
+      if (!cancelled) setCare({ key: careKey, summary: data });
+    }).catch(error => {
+      if (cancelled) return;
+      console.error("Herd care summary failed to load:", error);
+      setCare({ key: careKey, error: true });
+    });
+    return () => { cancelled = true; };
+  }, [animals.length, animalsError, careIsCurrent, careKey, careWindow, loadingAnimals, loadingHerds, selectedHerdId]);
+
+  const careSummary = careIsCurrent ? care.summary : null;
+  const careState = animalsError || careIsCurrent && care.error
+    ? "error" : loadingHerds || loadingAnimals || !careSummary && animals.length ? "loading" : "ready";
+  const animalUrgencies = careSummary?.animalUrgencies || noCare;
+  const animalCare = careSummary?.animalCare || noCare;
+  const vaccinationsDue = Number(careSummary?.vaccinationsDue) || 0;
+  const vaccinationsDueSoon = Number(careSummary?.vaccinationsDueSoon) || 0;
+  const upcomingVetVisits = Number(careSummary?.upcomingVetVisits) || 0;
+  const totalAnimals = animals.length;
+  const totalActiveAnimals = animals.filter(animal => !isInactiveAnimalStatus(animal.status)).length;
+  const deceasedCount = animals.filter(animal => animal.status === "deceased").length;
+  const archivedCount = animals.filter(animal => animal.status === "archived").length;
+  const overdueAnimals = animals.filter(animal => animalUrgencies[animal.id] === "red");
+  const attentionAnimals = [...overdueAnimals, ...animals.filter(animal => animalUrgencies[animal.id] === "yellow")].slice(0, 3);
   const careStatusCounts = animals.reduce(
     (counts, animal) => {
       if (animal.status === "deceased") {
@@ -723,15 +674,16 @@ export default function Dashboard() {
 
     setSelectedAnimal((current) => {
       if (current?.id !== updatedAnimal.id) return current;
-      return animalBelongsToCurrentHerd(updatedAnimal) ? updatedAnimal : null;
+      return updatedAnimal;
     });
+    if (selectedAnimal?.id === updatedAnimal.id && !animalBelongsToCurrentHerd(updatedAnimal)) returnFromAnimal();
   };
 
   const handleAnimalDeleted = (animalId) => {
     setAnimals((current) => current.filter((animal) => animal.id !== animalId));
     setSelectedAnimal((current) => (current?.id === animalId ? null : current));
     if (linkedAnimalId && String(linkedAnimalId) === String(animalId)) {
-      navigate("/dashboard", { replace: true });
+      returnFromAnimal();
     }
   };
 
@@ -760,8 +712,6 @@ export default function Dashboard() {
       const res = await createAnimal(filler);
       if (res.data) {
         setAnimals((current) => [res.data, ...current]);
-        setSelectedAnimal(res.data);
-        setActiveTab("general");
         try {
           const onboardingRes = await authFetch(`${API_URL}/auth/onboarding`, {
             method: "PATCH",
@@ -782,60 +732,55 @@ export default function Dashboard() {
     } finally {
       setAddingAnimal(false);
     }
-  }, [authFetch, onboardingDefaultSpecies, refreshBackendUser, selectedHerd]);
+  }, [authFetch, onboardingDefaultSpecies, refreshBackendUser, selectedHerd, setAnimals]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get("start") !== "add-animal") return;
-    if (handledOnboardingStartRef.current || !selectedHerd || addingAnimal) return;
-
-    handledOnboardingStartRef.current = true;
-    handleAddAnimal().finally(() => {
-      params.delete("start");
-      const nextSearch = params.toString();
-      navigate(`/dashboard${nextSearch ? `?${nextSearch}` : ""}`, { replace: true });
+  const openAnimal = React.useCallback((animal, record = "general", replace = false) => {
+    setMobileMoreOpen(false);
+    setSelectedAnimal(animal);
+    navigate(profilePath(animal, record), {
+      replace: replace || Boolean(linkedAnimalId),
+      state: linkedAnimalId
+        ? { returnTo: profileCameFrom || directoryPath, canGoBack: canGoBackToDirectory }
+        : { returnTo, canGoBack: !replace },
     });
-  }, [addingAnimal, handleAddAnimal, location.search, navigate, selectedHerd]);
+  }, [canGoBackToDirectory, directoryPath, linkedAnimalId, navigate, profileCameFrom, profilePath, returnTo]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get("tour") === "1") {
-      setSelectedAnimal(null);
-      setActiveTab("general");
-      setDashboardTourOpen(true);
-    }
-  }, [location.search]);
-
-  const handleSelectAnimal = (animal) => {
-    setMobileMoreOpen(false);
-    if (["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab)) setActiveTab("general");
-    if (selectedAnimal?.id === animal.id && linkedAnimalId) {
-      navigate("/dashboard", { replace: true });
-    }
-    setSelectedAnimal((current) =>
-      current?.id === animal.id ? null : animal
-    );
+  const addAndOpenAnimal = async () => {
+    const animal = await handleAddAnimal();
+    if (animal) openAnimal(animal);
   };
 
-  const handleCloseAnimal = () => {
-    setMobileMoreOpen(false);
-    setSelectedAnimal(null);
-    if (linkedAnimalId) navigate("/dashboard", { replace: true });
-  };
+  const onboardingStart = params.get("start");
+  useEffect(() => {
+    if (onboardingStart !== "add-animal" || handledOnboardingStartRef.current ||
+        !selectedHerd || loadingHerds || loadingAnimals) return;
+    handledOnboardingStartRef.current = true;
+    handleAddAnimal().then(animal => {
+      if (animal) openAnimal(animal, "general", true);
+      else navigate(viewPath("animals"), { replace: true });
+    });
+  }, [handleAddAnimal, loadingAnimals, loadingHerds, navigate, onboardingStart, openAnimal, selectedHerd, viewPath]);
 
   useEffect(() => {
+    if (!mobileMoreOpen) return undefined;
     const handleEsc = (e) => {
       if (e.key === "Escape") {
         setMobileMoreOpen(false);
+        moreButtonRef.current?.focus();
       }
+    };
+    const handleOutside = event => {
+      if (!moreButtonRef.current?.parentElement?.contains(event.target)) setMobileMoreOpen(false);
     };
 
     window.addEventListener("keydown", handleEsc);
+    window.addEventListener("pointerdown", handleOutside);
 
     return () => {
       window.removeEventListener("keydown", handleEsc);
+      window.removeEventListener("pointerdown", handleOutside);
     };
-  }, []);
+  }, [mobileMoreOpen]);
 
   const exportHealthEvents = animalExportData?.healthEvents || [];
   const exportVaccinations = animalExportData?.vaccinations || [];
@@ -875,52 +820,61 @@ export default function Dashboard() {
     </tr>
   ));
 
-  const animalRecordTabs = [
-    { key: "general", label: "General", mobileLabel: "General" },
-    { key: "weight", label: "Weight", mobileLabel: "Weight" },
-    { key: "health", label: "Health", mobileLabel: "Health" },
-    { key: "vet", label: "Vet", mobileLabel: "Vet" },
-    { key: "reproduction", label: "Reproduction", mobileLabel: "Repro", compact: true },
-    { key: "finance", label: "Money", mobileLabel: "Money" },
-  ];
-  const animalPrimaryMobileTabs = animalRecordTabs.filter((tab) =>
-    ["general", "weight", "health", "vet"].includes(tab.key)
-  );
-  const animalMoreMobileTabs = animalRecordTabs.filter((tab) =>
-    ["reproduction", "finance"].includes(tab.key)
-  );
-  const herdMoreActive = ["bulk-entry", "inventory"].includes(activeTab);
-  const animalMoreActive = animalMoreMobileTabs.some((tab) => activeTab === tab.key);
-  const handleAnimalTabClick = (tabKey) => {
+  const handleAnimalTabClick = tabKey => {
+    if (mobileMoreOpen) moreButtonRef.current?.focus({ preventScroll: true });
     setMobileMoreOpen(false);
-    setActiveTab(tabKey);
+    if (!selectedAnimal || tabKey === activeTab) return;
+    navigate(profilePath(selectedAnimal, tabKey), { replace: true, state: location.state });
   };
 
-  const setHerdFromValue = (value) => {
-    if (value === "unassigned") {
-      setSelectedHerd({ id: "unassigned", name: "Unassigned" });
-      return;
-    }
+  function setHerdFromValue(value) {
+    const next = new URLSearchParams(params);
+    next.set("herd", value);
+    if (linkedAnimalId) next.delete("record");
+    navigate(withQuery(linkedAnimalId ? "/dashboard" : location.pathname, next), { replace: !linkedAnimalId });
+  }
 
-    const herd = herds.find((h) => String(h.id) === value);
-    setSelectedHerd(herd);
-  };
+  const isOverview = !linkedAnimalId && activeTab === "general";
+  const Greeting = isOverview ? "h1" : "p";
+  const dayRange = careWindow === 1 ? "the next day" : `the next ${careWindow} days`;
+  const firstName = user?.firstName?.trim();
+  let careMessage;
+  let careLink;
+  let careAnimal;
+  if (animalsError) {
+    careMessage = "Animal records couldn’t load.";
+  } else if (careState === "loading") {
+    careMessage = "Checking herd records…";
+  } else if (careState === "error") {
+    careMessage = "Care records couldn’t load.";
+  } else if (!selectedHerd) {
+    careMessage = "Choose a herd to get started.";
+  } else if (!animals.length) {
+    careMessage = selectedHerd.id === "unassigned" ? "There are no unassigned animals." : `${selectedHerd.name} has no animals yet.`;
+  } else if (overdueAnimals.length) {
+    careMessage = `${overdueAnimals.length} ${overdueAnimals.length === 1 ? "animal needs" : "animals need"} overdue care in ${selectedHerd.name}.`;
+    careLink = "#herd-care";
+  } else if (vaccinationsDueSoon) {
+    careMessage = `${vaccinationsDueSoon} ${vaccinationsDueSoon === 1 ? "vaccination is" : "vaccinations are"} due in ${dayRange} in ${selectedHerd.name}.`;
+    const matches = animals.filter(animal => animalCare[animal.id]?.vaccinations);
+    if (matches.length === 1) careAnimal = { animal: matches[0], record: "health" };
+    else careLink = "#herd-care";
+  } else if (upcomingVetVisits) {
+    careMessage = `${upcomingVetVisits} vet ${upcomingVetVisits === 1 ? "appointment or follow-up" : "appointments or follow-ups"} in the next 30 days in ${selectedHerd.name}.`;
+    const matches = animals.filter(animal => animalCare[animal.id]?.upcomingVet);
+    if (matches.length === 1) careAnimal = { animal: matches[0], record: "vet" };
+    else if (attentionAnimals.length) careLink = "#herd-care";
+  } else {
+    careMessage = `No upcoming or overdue care in ${selectedHerd.name}.`;
+  }
+  const pageTitle = linkedAnimalId
+    ? selectedAnimal ? getAnimalPrimaryLabel(selectedAnimal) : "Animal profile"
+    : herdViews.find(view => view.key === activeTab)?.label || "Farm Overview";
+  const primaryAnimalTabs = animalRecordTabs.slice(0, 4);
+  const moreAnimalTabs = animalRecordTabs.slice(4);
+  const primaryHerdViews = herdViews.slice(0, 4);
+  const moreHerdViews = herdViews.slice(4);
 
-  const currentViewTitle = selectedAnimal
-    ? getAnimalPrimaryLabel(selectedAnimal)
-    : activeTab === "feed"
-    ? "Herd Feed"
-    : activeTab === "herd-finance"
-    ? "Herd Finances"
-    : activeTab === "bulk-entry"
-    ? "Bulk Entry"
-    : activeTab === "inventory"
-    ? "Inventory"
-    : "Farm Overview";
-
-  const currentViewSubtitle = selectedAnimal
-    ? `${selectedAnimal.species || "Animal"} - ${getAnimalSecondaryLabel(selectedAnimal)}`
-    : selectedHerd?.name || "Select a herd";
   const dashboardTourSteps = React.useMemo(() => [
     {
       key: "overview",
@@ -954,12 +908,12 @@ export default function Dashboard() {
     },
     {
       key: "list",
-      target: "animal-list",
-      title: "Use the animal list to switch records",
-      body: "Your animals show up here. Click one anytime to move from farm-wide tools into that animal's tabs.",
-      action: "The colored dot helps you spot animals that may need attention.",
-      actionLabel: "Show animal list",
-      completionText: "That list is your quick switcher between animals.",
+      target: "animals-navigation",
+      title: "Find records in Animals",
+      body: "Search by name, tag ID, or species, or filter by status.",
+      action: "Open Animals to see the directory for this herd.",
+      actionLabel: "Show Animals",
+      completionText: "Select any animal to open its records.",
       requiresAction: true,
     },
     {
@@ -975,11 +929,11 @@ export default function Dashboard() {
     {
       key: "stats",
       target: "quick-stats",
-      title: "Watch the farm overview numbers",
-      body: "These cards summarize animals, active records, vaccine care, and upcoming vet care.",
-      action: "If something looks off, open the overview below or click an animal to investigate.",
-      actionLabel: "Return to overview stats",
-      completionText: "Back on the farm overview. These numbers update as records grow.",
+      fallbackTarget: "herd-attention",
+      title: "Check your herd on Farm Overview",
+      body: "See which animals need care and open their records.",
+      actionLabel: "Return to Farm Overview",
+      completionText: "Pick an animal from Needs attention to check its care records.",
       requiresAction: true,
     },
     {
@@ -1004,781 +958,256 @@ export default function Dashboard() {
     },
   ], [animals.length]);
 
-  const openFirstAnimalForTour = React.useCallback(async () => {
-    const firstAnimal = animals.find((animal) => !isInactiveAnimalStatus(animal.status)) || animals[0];
-    if (firstAnimal) {
-      setSelectedAnimal(firstAnimal);
-      setActiveTab("general");
-      return firstAnimal;
-    }
-
-    return handleAddAnimal();
-  }, [animals, handleAddAnimal]);
-
-  const handleDashboardTourAction = React.useCallback(async (step) => {
-    if (step.key === "overview") {
-      setSelectedAnimal(null);
-      setActiveTab("general");
-      setMobileMoreOpen(false);
+  const handleDashboardTourAction = React.useCallback(async step => {
+    setMobileMoreOpen(false);
+    if (step.key === "herd") return;
+    if (step.key === "animal" || step.key === "health") {
+      const animal = selectedAnimal || animals.find(item => !isInactiveAnimalStatus(item.status)) || animals[0] || await handleAddAnimal();
+      if (!animal) return false;
+      openAnimal(animal, step.key === "health" ? "health" : "general", true);
       return;
     }
-
-    if (step.key === "herd") {
-      setMobileMoreOpen(false);
-      return;
-    }
-
-    if (step.key === "animal") {
-      await openFirstAnimalForTour();
-      return;
-    }
-
-    if (step.key === "list") {
-      setSelectedAnimal(null);
-      setActiveTab("general");
-      setMobileMoreOpen(false);
-      return;
-    }
-
-    if (step.key === "health") {
-      const animal = selectedAnimal || await openFirstAnimalForTour();
-      if (animal) {
-        setSelectedAnimal(animal);
-        setActiveTab("health");
-      }
-      return;
-    }
-
-    if (step.key === "stats") {
-      setSelectedAnimal(null);
-      setActiveTab("general");
-      return;
-    }
-
-    if (step.key === "workspace") {
-      setSelectedAnimal(null);
-      setActiveTab("feed");
-      return;
-    }
-
-    if (step.key === "settings") {
-      setSelectedAnimal(null);
-      setActiveTab("general");
-    }
-  }, [openFirstAnimalForTour, selectedAnimal]);
+    const view = step.key === "list" ? "animals" : step.key === "workspace" ? "feed" : "general";
+    navigate(viewPath(view), { replace: true });
+  }, [animals, handleAddAnimal, navigate, openAnimal, selectedAnimal, viewPath]);
 
   const closeDashboardTour = React.useCallback(() => {
-    setDashboardTourOpen(false);
-    const params = new URLSearchParams(location.search);
-    params.delete("tour");
-    const nextSearch = params.toString();
-    navigate(`/dashboard${nextSearch ? `?${nextSearch}` : ""}`, { replace: true });
-  }, [location.search, navigate]);
+    const next = new URLSearchParams(location.search);
+    next.delete("tour");
+    navigate(withQuery(location.pathname, next), { replace: true, state: location.state });
+  }, [location.pathname, location.search, location.state, navigate]);
 
+  const listLoading = loadingHerds || loadingAnimals;
+  const profileLoading = Boolean(linkedAnimalId && !selectedAnimal);
+  const shortcutsReady = !listLoading && !profileLoading;
+  const switchableAnimals = selectedAnimal && !animals.some(animal => animal.id === selectedAnimal.id)
+    ? [selectedAnimal, ...animals] : animals;
+  const shortcutProps = {
+    animals, careState, urgencies: animalUrgencies, primaryIdentifier: primaryAnimalIdentifier,
+    profilePath, directoryPath, selectedAnimalId: linkedAnimalId,
+    returnTo: linkedAnimalId ? profileCameFrom || directoryPath : returnTo,
+    canGoBack: !linkedAnimalId || canGoBackToDirectory,
+    showDirectoryLink: !isDirectory,
+  };
+  const stats = [
+    { label: "Animals", value: animalsError || listLoading ? null : totalAnimals },
+    { label: "Active", value: animalsError || listLoading ? null : totalActiveAnimals },
+    { label: "Vaccine Care", value: careState === "ready" ? vaccinationsDue : null },
+    { label: "Vet Care Upcoming", value: careState === "ready" ? upcomingVetVisits : null },
+  ];
+
+  const renderHerdLink = (view, mobile = false, inMenu = false) => (
+    <Link
+      key={view.key}
+      to={view.key === "animals" ? directoryPath : viewPath(view.key)}
+      aria-current={!linkedAnimalId && activeTab === view.key ? "page" : undefined}
+      aria-label={view.mobileLabel && mobile ? view.label : undefined}
+      onClick={() => setMobileMoreOpen(false)}
+      data-tour={view.key === "general" ? "farm-overview" : view.key === "animals" ? "animals-navigation" : undefined}
+      className={inMenu ? "bb-more-item" : "bb-work-tab"}
+    >
+      {mobile ? view.mobileLabel || view.label : view.label}
+    </Link>
+  );
+
+  const renderRecordButton = (tab, className = "bb-work-tab") => (
+    <button
+      key={tab.key}
+      type="button"
+      onClick={() => handleAnimalTabClick(tab.key)}
+      aria-pressed={activeTab === tab.key}
+      className={className}
+    >
+      {tab.label}
+    </button>
+  );
+
+  const herdPicker = (
+    <label className="bb-herd-picker">
+      <span>Herd</span>
+      <select className="bb-field" data-tour="herd-switcher" value={selectedHerdId ?? ""} disabled={loadingHerds}
+        onChange={event => setHerdFromValue(event.target.value)}>
+        <option value="" disabled>{loadingHerds ? "Loading herds…" : "Select a herd"}</option>
+        {herds.map(herd => <option key={herd.id} value={herd.id}>{herd.name}</option>)}
+        <option value="unassigned">Unassigned Animals</option>
+      </select>
+    </label>
+  );
+  const backLabel = canGoBackToDirectory && !profileCameFrom.startsWith("/dashboard/animals") ? "Back to farm" : "Back to animals";
+  const moreRecord = linkedAnimalId && moreAnimalTabs.find(tab => tab.key === activeTab);
+  const moreMenu = (
+    <div className="bb-more">
+      <button type="button" ref={moreButtonRef} className="bb-work-tab" onClick={() => setMobileMoreOpen(open => !open)}
+        aria-expanded={mobileMoreOpen} aria-controls={mobileMoreOpen ? "dashboard-more" : undefined}
+        data-current={moreRecord ? true : undefined} aria-description={moreRecord ? `${moreRecord.label} is selected` : undefined}>
+        More
+      </button>
+      {mobileMoreOpen && (
+        <div id="dashboard-more" role="group" aria-label={linkedAnimalId ? "More animal records" : "More farm tools"} className="bb-more-menu">
+          {linkedAnimalId ? moreAnimalTabs.map(tab => renderRecordButton(tab, "bb-more-item")) : moreHerdViews.map(view => renderHerdLink(view, true, true))}
+          <button type="button" onClick={handleFfaProjectsClick} className="bb-more-item">FFA Projects</button>
+          {advisorDashboardAvailable && <button type="button" onClick={handleAdvisorDashboardClick} className="bb-more-item">Advisor Dashboard</button>}
+        </div>
+      )}
+    </div>
+  );
   return (
-    <div className={`dashboard-page flex min-h-screen flex-col bg-gray-950 text-gray-100 xl:h-screen xl:flex-row xl:overflow-hidden ${isCompact ? "dashboard-compact" : "dashboard-comfortable"}`}>
-      {/* SIDEBAR */}
-      <aside className="hidden w-full flex-shrink-0 flex-col border-b border-gray-700 bg-gray-800 xl:flex xl:h-screen xl:w-72 xl:border-b-0 xl:border-r">
-        <div className="px-6 py-6 border-b border-gray-700">
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="text-left text-2xl font-bold tracking-tight cursor-pointer hover:opacity-85 transition"
-            aria-label="Go to BarnBuddy home"
-          >
-            <span className="text-blue-500">Barn</span>Buddy.
-          </button>
-          <p className="text-sm text-gray-400 mt-1">Dashboard</p>
-        </div>
-
-
-        <div className="px-4 py-3 border-b border-gray-700">
-          <select
-            data-tour="herd-switcher"
-            value={selectedHerd ? selectedHerd.id : ""}
-            disabled={loadingHerds}
-            onChange={(e) => setHerdFromValue(e.target.value)}
-            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-gray-100 outline-none cursor-pointer disabled:cursor-wait disabled:opacity-70"
-          >
-            <option value="" disabled>
-              {loadingHerds ? "Loading herds..." : "Select Herd"}
-            </option>
-            <option value="unassigned">Unassigned Animals</option>
-            {herds.map((herd) => (
-              <option key={herd.id} value={String(herd.id)}>
-                {herd.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <nav className="flex-1 px-4 py-6 space-y-3 overflow-y-auto">
-          <button
-            type="button"
-            onClick={handleFarmOverviewClick}
-            data-tour="farm-overview"
-            className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition border cursor-pointer ${
-              !selectedAnimal && !["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab)
-                ? "bg-blue-600 border-blue-500 text-white shadow"
-                : "border-gray-600 hover:bg-gray-700 text-gray-200"
-            }`}
-          >
-            Farm Overview
-          </button>
-
-          <button
-            type="button"
-            onClick={handleHerdFeedClick}
-            className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition border cursor-pointer ${
-              !selectedAnimal && activeTab === "feed"
-                ? "bg-blue-600 border-blue-500 text-white shadow"
-                : "border-gray-600 hover:bg-gray-700 text-gray-200"
-            }`}
-          >
-            Herd Feed
-          </button>
-
-          <button
-            type="button"
-            onClick={handleHerdFinanceClick}
-            className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition border cursor-pointer ${
-              !selectedAnimal && activeTab === "herd-finance"
-                ? "bg-blue-600 border-blue-500 text-white shadow"
-                : "border-gray-600 hover:bg-gray-700 text-gray-200"
-            }`}
-          >
-            Herd Finances
-          </button>
-
-          <button
-            type="button"
-            onClick={handleBulkEntryClick}
-            className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition border cursor-pointer ${
-              !selectedAnimal && activeTab === "bulk-entry"
-                ? "bg-blue-600 border-blue-500 text-white shadow"
-                : "border-gray-600 hover:bg-gray-700 text-gray-200"
-            }`}
-          >
-            Bulk Entry
-          </button>
-
-          <button
-            type="button"
-            onClick={handleInventoryClick}
-            className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition border cursor-pointer ${
-              !selectedAnimal && activeTab === "inventory"
-                ? "bg-blue-600 border-blue-500 text-white shadow"
-                : "border-gray-600 hover:bg-gray-700 text-gray-200"
-            }`}
-          >
-            Inventory
-          </button>
-
-          <button
-            type="button"
-            onClick={handleFfaProjectsClick}
-            className="w-full cursor-pointer rounded-xl border border-gray-600 px-4 py-3 text-left font-semibold text-gray-200 transition hover:bg-gray-700"
-          >
-            FFA Projects
-          </button>
-
-          {advisorDashboardAvailable && (
-            <button
-              type="button"
-              onClick={handleAdvisorDashboardClick}
-              className="w-full cursor-pointer rounded-xl border border-blue-400/35 bg-blue-500/10 px-4 py-3 text-left font-semibold text-blue-100 transition hover:bg-blue-500/20"
-            >
-              Advisor Dashboard
-            </button>
-          )}
-
-          <div className="mt-4 px-4 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
-            Animals
-          </div>
-
-        <div data-tour="animal-list" className="mt-2 space-y-2">
-            {loadingAnimals ? (
-              <div className="space-y-2">
-                {[0, 1, 2, 3, 4].map((item) => (
-                  <SkeletonBlock key={item} className="h-10 w-full border border-gray-700" />
-                ))}
-              </div>
-            ) : animals.map((animal) => {
-              const urgency = getAnimalStatus(animal);
-              return (
-                <button
-                  key={animal.id}
-                  onClick={() => handleSelectAnimal(animal)}
-                  className={`w-full overflow-hidden text-left px-4 py-2 rounded-lg transition border cursor-pointer ${
-                    selectedAnimal?.id === animal.id
-                      ? "bg-blue-600 border-blue-500 text-white shadow"
-                      : "border-gray-600 hover:bg-gray-700 text-gray-200"
-                  }`}
-                >
-                  <span className="flex w-full min-w-0 items-center gap-2">
-                    <span
-                      className={`inline-block h-2 w-2 shrink-0 rounded-full ${
-                        urgency === "red"
-                          ? "bg-red-400"
-                          : urgency === "yellow"
-                          ? "bg-yellow-400"
-                          : urgency === "deceased"
-                          ? "bg-gray-500"
-                          : urgency === "archived"
-                          ? "bg-gray-500"
-                          : "bg-emerald-400"
-                      }`}
-                    ></span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate">{getAnimalPrimaryLabel(animal)}</span>
-                      <span className="block truncate text-xs text-gray-400">{getAnimalSecondaryLabel(animal)}</span>
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-4 flex flex-col gap-2 px-4">
-            <button
-              data-tour="add-animal"
-              onClick={handleAddAnimal}
-              disabled={!selectedHerd || addingAnimal}
-              className="w-full px-3 py-2 bg-blue-600 rounded-lg text-white font-semibold hover:bg-blue-500 disabled:cursor-wait disabled:opacity-70"
-            >
-              {addingAnimal ? "Adding..." : "Add"}
-            </button>
-            <a
-              href="/contact?topic=Bug%20report"
-              className="text-center text-xs text-gray-500 underline-offset-4 transition hover:text-gray-300 hover:underline"
-            >
-              Report a bug
-            </a>
-          </div>
+    <div className={`dashboard-page bb-livestock bb-dashboard ${isCompact ? "dashboard-compact" : "dashboard-comfortable"}`}>
+      <aside className="bb-farm-sidebar">
+        <Link className="bb-work-brand" to="/" aria-label="BarnBuddy home"><span>Barn</span>Buddy.</Link>
+        {herdPicker}
+        <nav aria-label="Farm navigation" className="bb-farm-nav">
+          {herdViews.map(view => renderHerdLink(view))}
+          <Link className="bb-work-tab" to="/dashboard/ffa-projects">FFA Projects</Link>
+          {advisorDashboardAvailable && <Link className="bb-work-tab" to="/advisor">Advisor Dashboard</Link>}
         </nav>
+        {shortcutsReady && <AnimalShortcuts {...shortcutProps} compact />}
       </aside>
-
-      {/* MAIN AREA */}
-      <main className={`dashboard-main min-h-screen flex-1 overflow-y-auto bg-gray-950 pb-24 xl:min-h-0 xl:pb-0 ${isCompact ? "xl:p-5" : "xl:p-8"}`}>
-        {/* MOBILE + TABLET APP HEADER */}
-        <section className="dashboard-app-header sticky top-0 z-30 border-b border-gray-800 bg-gray-950/95 px-3 pb-3 pt-3 backdrop-blur md:px-6 md:pb-4 md:pt-4 xl:hidden">
-          <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="text-left text-xl font-bold tracking-tight"
-              aria-label="Go to BarnBuddy home"
-            >
-              <span className="text-blue-400">Barn</span>Buddy.
-            </button>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleExportDashboardPdf}
-                disabled={exportLoading}
-                className="rounded-full border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
-              >
-                {exportLoading ? "..." : "Export"}
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/settings/account")}
-                data-tour="settings"
-                className="rounded-full border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white"
-              >
-                Settings
-              </button>
-              <PremiumExpiryBadge subscription={subscription} />
-              <div className="rounded-full border border-gray-700 bg-gray-900 p-1">
-                <UserButton afterSignOutUrl="/" />
+      <main className="dashboard-main">
+        <header ref={toolbarRef} className="bb-dashboard-toolbar" aria-label="Dashboard controls">
+          <div className="bb-work-container">
+            <div className="bb-dashboard-toolbar-row">
+              <div className="bb-dashboard-toolbar-title">
+                <Greeting className="bb-dashboard-greeting">{[greeting, firstName].filter(Boolean).join(", ")}</Greeting>
+                <Link className="bb-work-brand bb-dashboard-mobile-brand" to="/" aria-label="BarnBuddy home"><span>Barn</span>Buddy.</Link>
               </div>
-            </div>
-          </div>
-
-          <div className="mt-3 md:grid md:grid-cols-[minmax(0,1fr)_minmax(240px,340px)] md:items-end md:gap-5">
-            <div className="mb-2 flex items-end justify-between gap-3">
-              <div className="min-w-0">
-                <h1 className="truncate text-lg font-semibold text-white">{currentViewTitle}</h1>
-                <p className="truncate text-xs text-gray-400">{currentViewSubtitle}</p>
-              </div>
-              {selectedAnimal ? (
-                <button
-                  type="button"
-                  onClick={handleCloseAnimal}
-                  className="shrink-0 rounded-full bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-200"
-                >
-                  Close
+              <div className="bb-work-actions">
+                <PremiumExpiryBadge subscription={subscription} />
+                <button className="bb-action" type="button" onClick={handleExportDashboardPdf} disabled={exportLoading || profileLoading}
+                  title={!subscription.isPremium ? "PDF export requires Premium" : undefined}>
+                  {exportLoading ? "Preparing…" : "Export"}
                 </button>
-              ) : !subscription.isPremium ? (
-                <span className="shrink-0 rounded-full bg-blue-500/15 px-2.5 py-1 text-[11px] font-semibold text-blue-100">
-                  {subscription.planName}
-                </span>
-              ) : null}
+                <Link to="/settings/account" className="bb-action" data-tour="settings">Settings</Link>
+                <button className="bb-action bb-action-primary" type="button" data-tour="add-animal" onClick={addAndOpenAnimal}
+                  disabled={!selectedHerd || !shortcutsReady || addingAnimal || animalsError}>
+                  {addingAnimal ? "Adding…" : "Add animal"}
+                </button>
+                <div className="bb-dashboard-account"><UserButton afterSignOutUrl="/" /></div>
+              </div>
             </div>
-            {selectedAnimal ? (
-              <select
-                aria-label="Select animal"
-                value={String(selectedAnimal.id)}
-                disabled={loadingAnimals}
-                onChange={(e) => {
-                  const animal = animals.find((item) => String(item.id) === e.target.value);
-                  if (animal) handleSelectAnimal(animal);
-                }}
-                className="w-full rounded-xl border border-gray-700 bg-gray-900 px-3 py-2.5 text-base text-gray-100 outline-none disabled:opacity-70 md:self-end"
-              >
-                {animals.map((animal) => (
-                  <option key={animal.id} value={String(animal.id)}>
-                    {getAnimalPrimaryLabel(animal)}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <select
-                data-tour="herd-switcher"
-                aria-label="Select herd"
-                value={selectedHerd ? selectedHerd.id : ""}
-                disabled={loadingHerds}
-                onChange={(e) => setHerdFromValue(e.target.value)}
-                className="w-full rounded-xl border border-gray-700 bg-gray-900 px-3 py-2.5 text-base text-gray-100 outline-none disabled:opacity-70 md:self-end"
-              >
-                <option value="" disabled>
-                  {loadingHerds ? "Loading herds..." : "Select Herd"}
-                </option>
-                <option value="unassigned">Unassigned Animals</option>
-                {herds.map((herd) => (
-                  <option key={herd.id} value={String(herd.id)}>
-                    {herd.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-        </section>
-
-        {!selectedAnimal && (
-        <section className="dashboard-animal-strip border-b border-gray-800 bg-gray-950 px-3 py-2.5 md:px-6 md:py-4 xl:hidden">
-          <div>
-            <button
-              type="button"
-              onClick={handleAddAnimal}
-              data-tour="add-animal"
-              disabled={!selectedHerd || addingAnimal}
-              className="w-full rounded-xl bg-emerald-500 px-3 py-2 text-sm font-semibold text-gray-950 disabled:opacity-60"
-            >
-              {addingAnimal ? "Adding animal" : "Add animal"}
-            </button>
-          </div>
-
-          {!["bulk-entry", "inventory"].includes(activeTab) && (
-          <>
-          <div data-tour="animal-list" className="mt-2.5 flex gap-2 overflow-x-auto pb-1 md:gap-3">
-            {loadingAnimals ? (
-              [0, 1, 2].map((item) => (
-                <SkeletonBlock key={item} className="h-14 w-32 shrink-0 rounded-xl" />
-              ))
-            ) : animals.length === 0 ? (
-              <EmptyState
-                title="This herd is ready for its first animal"
-                description="Use Add animal above to start building the herd's records."
-                className="w-full shrink-0"
-              />
-            ) : animals.map((animal) => {
-              const urgency = getAnimalStatus(animal);
-              return (
-                <button
-                  key={animal.id}
-                  type="button"
-                  onClick={() => handleSelectAnimal(animal)}
-                  className={`min-w-32 max-w-40 shrink-0 overflow-hidden rounded-xl border p-2.5 text-left md:min-w-44 md:max-w-52 md:p-3 ${
-                    selectedAnimal?.id === animal.id
-                      ? "border-blue-400 bg-blue-600/25"
-                      : "border-gray-800 bg-gray-900"
-                  }`}
-                >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span
-                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                        urgency === "red"
-                          ? "bg-red-400"
-                          : urgency === "yellow"
-                          ? "bg-yellow-300"
-                          : urgency === "deceased"
-                          ? "bg-gray-500"
-                          : urgency === "archived"
-                          ? "bg-gray-500"
-                          : "bg-emerald-400"
-                      }`}
-                    />
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{getAnimalPrimaryLabel(animal)}</span>
+            <section className="bb-quick-facts" aria-label="Herd quick facts" data-tour="quick-stats">
+              <dl>
+                {stats.map(({ label, value }) => (
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd aria-label={profileLoading || value === null ? "Unavailable" : undefined}>{profileLoading ? "—" : value ?? "—"}</dd>
                   </div>
-                  <p className="mt-1 truncate text-xs text-gray-400">{animal.species || "Unknown"} - {getAnimalSecondaryLabel(animal)}</p>
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-2 text-center">
-            <a
-              href="/contact?topic=Bug%20report"
-              className="text-xs text-gray-500 underline-offset-4 transition hover:text-gray-300 hover:underline"
-            >
-              Report a bug
-            </a>
-          </div>
-          </>
-          )}
-        </section>
-        )}
-
-        {/* HEADER */}
-        <header className={`hidden flex-col sm:flex-row items-start sm:items-center justify-between xl:flex ${isCompact ? "mb-4" : "mb-6"}`}>
-          <div className="mb-4 sm:mb-0">
-            <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-2xl font-semibold">Welcome back</h2>
-              {!subscription.isPremium && (
-                <span className="rounded-full bg-gray-800 px-3 py-1 text-xs font-semibold text-gray-300 ring-1 ring-gray-700">
-                  {subscription.planName}
-                </span>
-              )}
-            </div>
-            <p className="text-gray-400">{dateTime}</p>
-          </div>
-          <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:justify-end">
-            <div className="hidden sm:flex flex-col items-end">
-              <span className="text-sm font-semibold text-gray-100">
-                {user?.firstName || user?.primaryEmailAddress?.emailAddress || "Profile"}
-              </span>
-              <span className="text-xs text-gray-400">Farm account</span>
-            </div>
-            <div className="rounded-full border border-gray-700 bg-gray-800 p-1">
-              <UserButton afterSignOutUrl="/" />
-            </div>
-            <PremiumExpiryBadge subscription={subscription} />
-            <button
-              type="button"
-              onClick={handleExportDashboardPdf}
-              disabled={exportLoading}
-              className="rounded-xl border border-gray-700 bg-gray-800 px-4 py-2 text-white shadow transition hover:bg-gray-700"
-            >
-              {exportLoading ? "Preparing..." : subscription.isPremium && selectedAnimal ? "Export Animal" : subscription.isPremium ? "Export Farm" : "Export PDF - Premium"}
-            </button>
-            <button
-              data-tour="settings"
-              className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-500 transition"
-              onClick={() => navigate("/settings/account")}
-            >
-              Settings
-            </button>
+                ))}
+              </dl>
+            </section>
+            {isProfile && (
+              <div className="bb-profile-heading">
+                <div className="bb-profile-identity">
+                  <button type="button" className="bb-action bb-profile-back" onClick={returnFromAnimal} aria-label={backLabel} title={backLabel}>
+                    <span aria-hidden="true">←</span>
+                    <span className="bb-profile-back-label">{backLabel}</span>
+                  </button>
+                  <div className="bb-profile-title">
+                    <h1>{pageTitle}</h1>
+                    {selectedAnimal && (
+                      <p className="bb-work-muted">{[selectedAnimal.species || "Animal", getAnimalSecondaryLabel(selectedAnimal), selectedHerd?.name].filter(Boolean).join(" · ")}</p>
+                    )}
+                  </div>
+                  {shortcutsReady && switchableAnimals.length > 1 && (
+                    <label className="bb-profile-switcher">
+                      <span className="sr-only">Switch animal</span>
+                      <select className="bb-field" value={linkedAnimalId} onChange={event => {
+                        const animal = switchableAnimals.find(item => String(item.id) === event.target.value);
+                        if (animal) openAnimal(animal);
+                      }}>
+                        {switchableAnimals.map(animal => <option key={animal.id} value={animal.id}>{getAnimalPrimaryLabel(animal)}</option>)}
+                      </select>
+                    </label>
+                  )}
+                </div>
+                {selectedAnimal && (
+                  <nav className="bb-animal-nav" aria-label="Animal records">
+                    {primaryAnimalTabs.map(tab => renderRecordButton(tab))}
+                    {moreAnimalTabs.map(tab => renderRecordButton(tab, "bb-work-tab bb-profile-desktop-tab"))}
+                    {moreMenu}
+                  </nav>
+                )}
+              </div>
+            )}
           </div>
         </header>
 
-        {/* QUICK STATS */}
-        <section data-tour="quick-stats" className={`hidden grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 xl:grid ${isCompact ? "gap-3 mb-4" : "gap-4 mb-6"}`}>
-          {[
-            { title: "Animals", value: animals.length },
-            { title: "Active", value: totalActiveAnimals },
-            { title: "Vaccine Care", value: vaccinationsDue },
-            { title: "Vet Care Upcoming", value: upcomingVetVisits },
-          ].map((stat) => (
-            <div
-              key={stat.title}
-              className={`bg-gray-900 shadow-md border border-gray-800 rounded-2xl flex flex-col items-start justify-between ${isCompact ? "min-h-20 p-4" : "min-h-28 p-4 sm:p-6"}`}
-            >
-              {loadingHerds || loadingAnimals ? (
-                <>
-                  <SkeletonBlock className="h-4 w-28 rounded" />
-                  <SkeletonBlock className="mt-3 h-8 w-16 rounded" />
-                </>
-              ) : (
-                <>
-                  <p className="text-gray-400 text-sm">{stat.title}</p>
-                  <h3 className="text-2xl sm:text-3xl font-bold mt-1">{stat.value}</h3>
-                </>
-              )}
-            </div>
-          ))}
-        </section>
-
-        {/* ANIMAL DATA */}
-        <div data-tour="records-area" className="dashboard-content-card bg-gray-950 md:rounded-2xl md:border md:border-gray-800 md:bg-gray-900 md:shadow-md">
-          {!selectedAnimal && activeTab === "feed" ? (
-            <div className="p-3 sm:p-6">
-              <HerdFeedRecords
-                selectedHerd={selectedHerd}
-                isPremium={subscription.isPremium}
-                automaticReminders={Boolean(preferences.automaticReminders)}
-              />
-            </div>
-          ) : !selectedAnimal && activeTab === "herd-finance" ? (
-            <div className="p-3 sm:p-6">
-              <HerdFinanceRecords
-                selectedHerd={selectedHerd}
-                animals={animals}
-                isPremium={subscription.isPremium}
-                onExportFinanceReport={handleExportHerdFinancePdf}
-                onAnimalSaved={handleAnimalSaved}
-              />
-            </div>
-          ) : !selectedAnimal && activeTab === "bulk-entry" ? (
-            <div className="p-3 sm:p-6">
-              <BulkEntry
-                animals={animals}
-                selectedHerd={selectedHerd}
-                primaryAnimalIdentifier={primaryAnimalIdentifier}
-                isPremium={subscription.isPremium}
-                onSaved={() => setVaccinationRefresh((current) => current + 1)}
-              />
-            </div>
-          ) : !selectedAnimal && activeTab === "inventory" ? (
-            <div className="p-3 sm:p-6">
-              <HerdInventory
-                selectedHerd={selectedHerd}
-                isPremium={subscription.isPremium}
-              />
-            </div>
-          ) : !selectedAnimal ? (
-            <DashboardOverview
-              loading={loadingHerds || loadingAnimals}
-              animals={animals}
-              selectedHerd={selectedHerd}
-              totalAnimals={totalAnimals}
-              totalActiveAnimals={totalActiveAnimals}
-              deceasedCount={deceasedCount}
-              archivedCount={archivedCount}
-              vaccinationsDue={vaccinationsDue}
-              upcomingVetVisits={upcomingVetVisits}
-              careDueCount={careDueCount}
-              attentionAnimals={attentionAnimals}
-              issueCount={issueCount}
-              animalsStable={animalsStable}
-              animalUrgencies={animalUrgencies}
-              primaryAnimalIdentifier={primaryAnimalIdentifier}
-              isPremium={subscription.isPremium}
-              handleSelectAnimal={handleSelectAnimal}
-            />
-          ) : (
-            <>
-              {/* TABS */}
-              <div className="hidden border-b border-gray-700 xl:flex xl:flex-wrap">
-                {animalRecordTabs.map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`flex-1 py-3 font-medium transition rounded-t-2xl ${
-                      activeTab === tab.key
-                        ? "bg-blue-600 text-white shadow-inner"
-                        : "text-gray-400 hover:bg-gray-700"
-                    } ${tab.compact ? "text-xs" : "text-sm"}`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* TAB CONTENT */}
-              <div className="p-3 text-gray-300 sm:p-6 md:overflow-auto">
-                {activeTab === "general" && (
-                  <AnimalGeneralData
-                    animal={selectedAnimal}
-                    setSelectedAnimal={setSelectedAnimal}
-                    setActiveTab={setActiveTab}
-                    onAnimalSaved={handleAnimalSaved}
-                    onAnimalDeleted={handleAnimalDeleted}
-                    herds={herds}
-                    selectedHerd={selectedHerd}
-                  />
-                )}
-                {activeTab === "health" && (
-                  <HealthRecords
-                    animal={selectedAnimal}
-                    selectedHerd={selectedHerd}
-                    isPremium={subscription.isPremium}
-                    onVaccinationUpdate={() => setVaccinationRefresh(prev => prev + 1)}
-                  />
-                )}
-                {activeTab === "weight" && (
-                  <WeightRecords
-                    animal={selectedAnimal}
-                    onAnimalSaved={handleAnimalSaved}
-                  />
-                )}
-                {activeTab === "vet" && (
-                  <VetVisits
-                    key={selectedAnimal.id}
-                    animal={selectedAnimal}
-                    onVetVisitUpdate={() => setVaccinationRefresh(prev => prev + 1)}
-                  />
-                )}
-                {activeTab === "reproduction" && (
-                  <PremiumRecords
-                    animal={selectedAnimal}
-                    animals={animals}
-                    isPremium={subscription.isPremium}
-                    onExportAnimal={handleExportAnimalPdf}
-                    exportLoading={exportLoading}
-                    onAnimalSaved={handleAnimalSaved}
-                    onAnimalDeleted={handleAnimalDeleted}
-                    view="reproduction"
-                  />
-                )}
-                {activeTab === "finance" && (
-                  <PremiumRecords
-                    animal={selectedAnimal}
-                    animals={animals}
-                    isPremium={subscription.isPremium}
-                    onExportAnimal={handleExportAnimalPdf}
-                    exportLoading={exportLoading}
-                    onAnimalSaved={handleAnimalSaved}
-                    view="finance"
-                  />
-                )}
-              </div>
-            </>
+        <div className="bb-work-container bb-dashboard-content">
+          {!linkedAnimalId && (
+            <header className="bb-view-header bb-herd-heading">
+              {isOverview ? (
+                <p className="bb-herd-message" aria-live="polite">
+                  {careAnimal ? <Link className="bb-text-link" to={profilePath(careAnimal.animal, careAnimal.record)} state={{ returnTo }}>{careMessage}</Link>
+                    : careLink ? <a className="bb-text-link" href={careLink}>{careMessage}</a> : careMessage}
+                </p>
+              ) : <h1>{pageTitle}</h1>}
+              <div className="bb-dashboard-mobile-picker">{herdPicker}</div>
+            </header>
           )}
+
+          {(isOverview || isDirectory) && shortcutsReady && (
+            <div className="bb-dashboard-mobile-shortcuts"><AnimalShortcuts {...shortcutProps} /></div>
+          )}
+
+          <div data-tour="records-area" key={linkedAnimalId ? "profile" : activeTab}
+            className={linkedAnimalId ? "bb-records-area" : "bb-records-area bb-view-enter"}>
+            {linkedAnimalId && !selectedAnimal ? <LoadingSpinner label="Opening animal profile…" />
+              : linkedAnimalId ? (
+              <section className="bb-record-panel bb-profile-panel">
+                <div className="bb-record-content bb-view-enter" key={`${selectedAnimal.id}:${activeTab}`}>
+                  {activeTab === "general" && (
+                    <AnimalGeneralData animal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} setActiveTab={handleAnimalTabClick}
+                      onAnimalSaved={handleAnimalSaved} onAnimalDeleted={handleAnimalDeleted} herds={herds} selectedHerd={selectedHerd} />
+                  )}
+                  {activeTab === "health" && (
+                    <HealthRecords animal={selectedAnimal} selectedHerd={selectedHerd} isPremium={subscription.isPremium}
+                      onVaccinationUpdate={() => setVaccinationRefresh(current => current + 1)} />
+                  )}
+                  {activeTab === "weight" && <WeightRecords animal={selectedAnimal} onAnimalSaved={handleAnimalSaved} />}
+                  {activeTab === "vet" && <VetVisits animal={selectedAnimal} onVetVisitUpdate={() => setVaccinationRefresh(current => current + 1)} />}
+                  {["reproduction", "finance"].includes(activeTab) && (
+                    <PremiumRecords animal={selectedAnimal} animals={animals} isPremium={subscription.isPremium}
+                      onExportAnimal={handleExportAnimalPdf} exportLoading={exportLoading} onAnimalSaved={handleAnimalSaved}
+                      onAnimalDeleted={handleAnimalDeleted} view={activeTab} />
+                  )}
+                </div>
+              </section>
+            ) : isDirectory ? (
+              <AnimalDirectory animals={animals} careState={careState} urgencies={animalUrgencies}
+                primaryIdentifier={primaryAnimalIdentifier} profilePath={profilePath} returnTo={returnTo} loading={listLoading} error={animalsError} />
+            ) : isOverview ? (
+              <DashboardOverview animals={animals} loading={listLoading} error={animalsError} careState={careState}
+                attentionAnimals={attentionAnimals} urgencies={animalUrgencies} animalCare={animalCare} primaryIdentifier={primaryAnimalIdentifier}
+                profilePath={profilePath} directoryPath={directoryPath} returnTo={returnTo} />
+            ) : (
+              <section className="bb-record-panel bb-record-content">
+                {activeTab === "feed" && <HerdFeedRecords selectedHerd={selectedHerd} isPremium={subscription.isPremium} automaticReminders={Boolean(preferences.automaticReminders)} />}
+                {activeTab === "herd-finance" && (
+                  <HerdFinanceRecords selectedHerd={selectedHerd} animals={animals} isPremium={subscription.isPremium}
+                    onExportFinanceReport={handleExportHerdFinancePdf} onAnimalSaved={handleAnimalSaved} />
+                )}
+                {activeTab === "bulk-entry" && (
+                  <BulkEntry animals={animals} selectedHerd={selectedHerd} primaryAnimalIdentifier={primaryAnimalIdentifier}
+                    isPremium={subscription.isPremium} onSaved={() => setVaccinationRefresh(current => current + 1)} />
+                )}
+                {activeTab === "inventory" && <HerdInventory key={selectedHerdId} selectedHerd={selectedHerd} isPremium={subscription.isPremium} />}
+              </section>
+            )}
+          </div>
+          <footer className="bb-work-footer"><a href="/contact?topic=Bug%20report">Report a bug</a></footer>
         </div>
-        <nav className="dashboard-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-gray-800/90 bg-gray-950/96 px-3 pt-2 shadow-[0_-12px_28px_rgba(0,0,0,0.32)] backdrop-blur xl:hidden">
-          {selectedAnimal ? (
-            <div className="relative mx-auto grid max-w-md grid-cols-5 gap-1.5">
-              {animalPrimaryMobileTabs.map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => handleAnimalTabClick(tab.key)}
-                  aria-label={tab.label}
-                  aria-pressed={activeTab === tab.key}
-                  className={`dashboard-mobile-tab ${
-                    activeTab === tab.key ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"
-                  }`}
-                >
-                  {tab.mobileLabel}
-                </button>
-              ))}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setMobileMoreOpen((current) => !current)}
-                  aria-expanded={mobileMoreOpen}
-                  aria-controls="animal-mobile-more-options"
-                  className={`dashboard-mobile-tab w-full ${animalMoreActive || mobileMoreOpen ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"}`}
-                >
-                  More
-                </button>
-                {mobileMoreOpen && (
-                  <div id="animal-mobile-more-options" className="dashboard-mobile-more-menu right-0" role="group" aria-label="More animal record sections">
-                    {animalMoreMobileTabs.map((tab) => (
-                      <button
-                        key={tab.key}
-                        type="button"
-                        onClick={() => handleAnimalTabClick(tab.key)}
-                        className={`dashboard-mobile-more-item ${
-                          activeTab === tab.key ? "dashboard-mobile-more-item-active" : ""
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={handleFfaProjectsClick}
-                      className="dashboard-mobile-more-item"
-                    >
-                      FFA Projects
-                    </button>
-                    {advisorDashboardAvailable && (
-                      <button
-                        type="button"
-                        onClick={handleAdvisorDashboardClick}
-                        className="dashboard-mobile-more-item"
-                      >
-                        Advisor Dashboard
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+
+        {!linkedAnimalId && (
+          <nav aria-label="Farm navigation" className="bb-bottom-nav">
+            <div className="bb-mobile-tabs">
+              {primaryHerdViews.map(view => renderHerdLink(view, true))}
+              {moreMenu}
             </div>
-          ) : (
-            <div className="relative mx-auto grid max-w-md grid-cols-4 gap-1.5">
-              <button
-                type="button"
-                onClick={handleFarmOverviewClick}
-                aria-pressed={!['feed', 'herd-finance', 'bulk-entry', 'inventory'].includes(activeTab)}
-                className={`dashboard-mobile-tab ${
-                  !["feed", "herd-finance", "bulk-entry", "inventory"].includes(activeTab) ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"
-                }`}
-              >
-                Home
-              </button>
-              <button
-                type="button"
-                onClick={handleHerdFeedClick}
-                aria-pressed={activeTab === "feed"}
-                className={`dashboard-mobile-tab ${
-                  activeTab === "feed" ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"
-                }`}
-              >
-                Feed
-              </button>
-              <button
-                type="button"
-                onClick={handleHerdFinanceClick}
-                aria-pressed={activeTab === "herd-finance"}
-                className={`dashboard-mobile-tab ${
-                  activeTab === "herd-finance" ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"
-                }`}
-              >
-                Money
-              </button>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setMobileMoreOpen((current) => !current)}
-                  aria-expanded={mobileMoreOpen}
-                  aria-controls="herd-mobile-more-options"
-                  className={`dashboard-mobile-tab w-full ${herdMoreActive || mobileMoreOpen ? "dashboard-mobile-tab-active" : "dashboard-mobile-tab-idle"}`}
-                >
-                  More
-                </button>
-                {mobileMoreOpen && (
-                  <div id="herd-mobile-more-options" className="dashboard-mobile-more-menu right-0" role="group" aria-label="More herd sections">
-                    <button
-                      type="button"
-                      onClick={handleBulkEntryClick}
-                      className={`dashboard-mobile-more-item ${activeTab === "bulk-entry" ? "dashboard-mobile-more-item-active" : ""}`}
-                    >
-                      Bulk Entry
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleInventoryClick}
-                      className={`dashboard-mobile-more-item ${activeTab === "inventory" ? "dashboard-mobile-more-item-active" : ""}`}
-                    >
-                      Inventory
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleFfaProjectsClick}
-                      className="dashboard-mobile-more-item"
-                    >
-                      FFA Projects
-                    </button>
-                    {advisorDashboardAvailable && (
-                      <button
-                        type="button"
-                        onClick={handleAdvisorDashboardClick}
-                        className="dashboard-mobile-more-item"
-                      >
-                        Advisor Dashboard
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </nav>
+          </nav>
+        )}
       </main>
       <DashboardTour
-        open={dashboardTourOpen}
+        open={tour === "1"}
         steps={dashboardTourSteps}
         onClose={closeDashboardTour}
         onStepAction={handleDashboardTourAction}

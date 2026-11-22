@@ -42,10 +42,10 @@ export default function SettingsImportAssistant() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div className="bb-livestock bb-settings min-h-screen">
       <SettingsHeader />
 
-      <main className="mx-auto max-w-[90rem] px-4 py-8 sm:px-6 lg:px-8">
+      <main className="bb-work-container pb-8">
         {loading ? (
           <div className="rounded-2xl border border-gray-700 bg-gray-800 p-8 text-gray-300">
             Loading import tools…
@@ -53,9 +53,8 @@ export default function SettingsImportAssistant() {
         ) : (
           <ImportAssistant
             animals={animals}
-            onAddCurrentAnimal={() => navigate("/dashboard")}
             onImported={handleImported}
-            onViewAnimals={() => navigate("/dashboard")}
+            onViewAnimals={() => navigate("/dashboard/animals")}
           />
         )}
       </main>

@@ -1,7 +1,4 @@
-@import '@fontsource-variable/inter';
-
-.bb-marketing { background: #101e34; color: #f2f5fa; font-family: 'Inter Variable', Inter, sans-serif; }
-.bb-marketing main :is(h1, h2) { font-family: var(--bb-heading-font); }
+.bb-marketing { background: #101e34; color: #f2f5fa; }
 .bb-marketing ::selection { background: #2563eb; color: white; }
 .bb-marketing :is(a, button, input):focus-visible, .bb-public-header :is(a, button):focus-visible { outline: 2px solid #93c5fd; outline-offset: 5px; }
 .bb-container { width: calc(100% - 2 * var(--bb-page-gutter)); margin-inline: auto; }
@@ -76,7 +73,7 @@
 .bb-closing h2 { font-size: 34px; }
 .bb-closing p { margin-top: 16px; color: #b7c5d9; }
 .bb-closing .bb-actions { margin: 0; flex-shrink: 0; }
-.bb-public-header { background: #0b1730; box-shadow: none; backdrop-filter: none; font-family: 'Inter Variable', Inter, sans-serif; }
+.bb-public-header { background: #0b1730; box-shadow: none; backdrop-filter: none; }
 .bb-public-header .shadow-lg { box-shadow: none; }
 .bb-public-header .rounded-xl { border-radius: 8px; }
 .bb-marketing > footer { background: #07102a; }
@@ -277,6 +274,7 @@
 }
 .bb-product-preview figure { min-height: 0; display: grid; grid-template-rows: auto auto; }
 .bb-product-preview figure img { width: 100%; height: auto; aspect-ratio: 1.986; object-fit: contain; }
+.bb-product-preview figure img[src^="/product-previews/"], .bb-explorer-image img[src^="/product-previews/"] { aspect-ratio: 1440 / 1000; }
 .bb-product-preview figure figcaption { flex-direction: column; align-items: start; gap: 6px; }
 .bb-product-preview figure figcaption > span { font-size: clamp(17px, 2vw, 24px); max-width: none; line-height: 1.25; }
 .bb-explorer-options button { display: flex; align-items: center; gap: 12px; min-width: 0; padding-block: 10px; }

@@ -5,6 +5,12 @@ const publicR2BaseUrl = (import.meta.env.VITE_R2_PUBLIC_BASE_URL || "").replace(
 const bundledFilenameOverrides = {
   "img_5761.jpeg": "IMG_5761.JPEG",
 };
+const productPreviews = new Map([
+  ["dashboard.png", "/product-previews/farm-overview.png"],
+  ["generaldata.png", "/product-previews/animal-profile.png"],
+  ["vetvisits.png", "/product-previews/vet-visits.png"],
+  ["weight-graph.png", "/product-previews/weight-history.png"],
+]);
 
 function sanitizeFilename(filename) {
   return String(filename || "image")
@@ -34,6 +40,19 @@ export function resolveSiteImageUrl(value, fallbackFilename = "bblogo.png") {
   }
   if (source.startsWith("/api/")) return `${API_URL}${source}`;
   return getSiteAssetUrl(source.split("/").pop());
+}
+
+export function resolveProductPreviewUrl(value) {
+  const source = String(value || "").trim();
+  const filename = source.split("/").pop();
+  const replacement = productPreviews.get(filename);
+  if (replacement) {
+    const apiPath = `/api/site-content/assets/${filename}`;
+    if ([filename, `/${filename}`, apiPath, `${API_URL}${apiPath}`, getSiteAssetUrl(filename)].includes(source)) {
+      return replacement;
+    }
+  }
+  return resolveSiteImageUrl(source);
 }
 
 export function normalizeSiteContentImages(content) {

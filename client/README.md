@@ -1,5 +1,20 @@
 # React + Vite
 
+## Signed-in dashboard browser tests
+
+Install both `client` and `server` dependencies and install the Playwright Firefox browser with `npx playwright install firefox` from `client`. Keep local PostgreSQL running and let Playwright start the development API and Vite.
+
+Use the existing `client/.env` with `VITE_API_URL` pointing at the loopback API and `VITE_CLERK_PUBLISHABLE_KEY` from a Clerk development instance. In `server/.env`, use `NODE_ENV=development`, the matching Clerk publishable key and `CLERK_SECRET_KEY`, and your local `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD` settings. Fixture setup creates dedicated Free and Premium Clerk test accounts. It seeds fictional records through the development API and applies BarnBuddy’s manual Premium grant to the dedicated test account in local PostgreSQL.
+
+From `client` in PowerShell:
+
+```powershell
+$env:BARNBUDDY_SIGNED_IN = '1'
+npm.cmd run test:browser -- dashboard.spec.mjs
+```
+
+Omit `dashboard.spec.mjs` to run the public-site tests as well. Screenshots are in `output/playwright/dashboard` at the repository root. Playwright keeps reusable sessions in the ignored `client/playwright/.clerk` directory.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
