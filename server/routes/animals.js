@@ -20,7 +20,14 @@ const animalResponseColumns = `
   weight, behavior, tag_id, image_url, birth_weight, birth_notes,
   tracking_years, dam_id, sire_id, status, deceased_date, deceased_notes,
   created_at, image_mime_type,
-  (image_key IS NOT NULL OR image_data IS NOT NULL) AS has_image
+  (image_key IS NOT NULL OR image_data IS NOT NULL) AS has_image,
+  (
+    SELECT CASE WHEN wr.weight = animals.weight THEN wr.unit END
+    FROM weight_records wr
+    WHERE wr.animal_id = animals.id AND wr.user_id = animals.user_id
+    ORDER BY wr.recorded_date DESC, wr.created_at DESC, wr.id DESC
+    LIMIT 1
+  ) AS weight_unit
 `;
 
 const normalizeAnimalStatus = (status) => {
@@ -53,11 +60,12 @@ async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
             upcomingVetVisits: 0,
             animalUrgencies: {},
             animalCare: {},
+            careEvents: [],
         };
     }
 
     const vaccinationResult = await pool.query(
-        `SELECT v.animal_id, v.next_due_date
+        `SELECT v.id, v.animal_id, v.next_due_date
          FROM vaccinations v
          JOIN animals a ON v.animal_id = a.id
          WHERE a.user_id = $1
@@ -67,7 +75,7 @@ async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
     );
 
     const vetVisitResult = await pool.query(
-        `SELECT vv.animal_id,
+        `SELECT vv.id, vv.animal_id,
                 vv.visit_date,
                 vv.follow_up_date,
                 COALESCE(vv.completed, false) AS completed,
@@ -100,6 +108,12 @@ async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
     let vaccinationsDue = 0;
     let vaccinationsDueSoon = 0;
     let upcomingVetVisits = 0;
+    const careEvents = [];
+
+    const addCareEvent = (record, date, type) => {
+        const status = date < today ? "overdue" : date.getTime() === today.getTime() ? "today" : "upcoming";
+        careEvents.push({ id: record.id, animalId: record.animal_id, type, date: date.toLocaleDateString("sv-SE"), status });
+    };
 
     const parseDate = (value) => {
         if (!value) return null;
@@ -114,6 +128,7 @@ async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
         const dueDate = parseDate(vaccination.next_due_date);
         if (!dueDate) return;
 
+        if (dueDate <= soonThreshold) addCareEvent(vaccination, dueDate, "vaccination");
         if (dueDate < today) {
             state.hasOverdue = true;
             state.vaccinations += 1;
@@ -134,6 +149,9 @@ async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
         const followUpDate = parseDate(visit.follow_up_date);
         const visitDone = visit.completed || visit.visit_completed;
         const followUpDone = visit.completed || visit.follow_up_completed;
+
+        if (!visitDone && visitDate && visitDate <= vetUpcomingThreshold) addCareEvent(visit, visitDate, "visit");
+        if (!followUpDone && followUpDate && followUpDate <= vetUpcomingThreshold) addCareEvent(visit, followUpDate, "follow-up");
 
         if (visitDate && visitDate < today && !visitDone) {
             state.hasOverdue = true;
@@ -180,6 +198,7 @@ async function getHerdCareSummaryData(userId, herdId, careWindowDays = 7) {
         upcomingVetVisits,
         animalUrgencies,
         animalCare,
+        careEvents,
     };
 }
 
@@ -314,6 +333,7 @@ router.get("/dashboard/bootstrap", authMiddleware, async (req, res) => {
                     upcomingVetVisits: 0,
                     animalUrgencies: {},
                     animalCare: {},
+                    careEvents: [],
                 },
             });
         }

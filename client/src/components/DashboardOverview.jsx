@@ -24,7 +24,7 @@ function HerdSummary({ animals }) {
     const age = getAgeYears(animal.birthdate) ?? recordedAge;
     const range = !Number.isFinite(age) ? "Unknown" : age < 1 ? "Under 1 year" : age < 4 ? "1–3 years" : age < 8 ? "4–7 years" : "8+ years";
     ages[range] += 1;
-    if (Number(animal.weight) > 0) weights.push(Number(animal.weight));
+    if (Number(animal.weight) > 0) weights.push(Number(animal.weight) / (animal.weight_unit === "kg" ? 0.45359237 : 1));
   });
   const averageWeight = weights.length && Math.round(weights.reduce((sum, weight) => sum + weight, 0) / weights.length);
 
@@ -74,7 +74,7 @@ export default function DashboardOverview({
   if (loading) return <DashboardOverviewSkeleton />;
 
   return (
-    <>
+    <div id="herd-snapshot">
       <div className="bb-overview-grid">
         {!!animals.length && careState === "ready" && <CareStatus animals={animals} urgencies={urgencies} />}
         <section id="herd-care" aria-labelledby="attention-heading" className="bb-record-panel bb-panel-inset" data-tour="herd-attention">
@@ -108,6 +108,6 @@ export default function DashboardOverview({
 
       </div>
       {!!animals.length && <HerdSummary animals={animals} />}
-    </>
+    </div>
   );
 }

@@ -194,7 +194,7 @@ function VetVisitsSkeleton() {
   );
 }
 
-export default function VetVisits({ animal, onVetVisitUpdate }) {
+export default function VetVisits({ animal, onVetVisitUpdate, quickEntry, entryRecordId }) {
   const animalId = animal?.id;
   const [visits, setVisits] = useState([]);
   const [selectedVisit, setSelectedVisit] = useState(null);
@@ -205,6 +205,11 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
   const [saveStatus, setSaveStatus] = useState("idle");
   const lastVisitSignatures = useRef(new Map());
   const saveStatusTimer = useRef(null);
+  const entryTarget = useRef(null);
+
+  useEffect(() => {
+    if (!loading && (quickEntry || entryRecordId != null)) entryTarget.current?.focus();
+  }, [loading, quickEntry, entryRecordId]);
 
   useEffect(() => () => {
     if (saveStatusTimer.current) clearTimeout(saveStatusTimer.current);
@@ -229,7 +234,8 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
       });
 
       setVisits(sorted);
-      setSelectedVisit(sorted[0] || null);
+      setSelectedVisit(quickEntry ? emptyVisit(animalId) :
+        sorted.find(visit => String(visit.id) === String(entryRecordId)) || sorted[0] || null);
       lastVisitSignatures.current = new Map(sorted.map((visit) => [visit.id, JSON.stringify(getVisitPayload(visit))]));
     } catch (error) {
       console.error("Error fetching vet visits:", error);
@@ -237,7 +243,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
     } finally {
       setLoading(false);
     }
-  }, [animalId]);
+  }, [animalId, quickEntry, entryRecordId]);
 
   useEffect(() => {
     if (animalId) fetchVisits();
@@ -479,7 +485,7 @@ export default function VetVisits({ animal, onVetVisitUpdate }) {
                 <p className="text-sm font-semibold uppercase tracking-[0.14em] text-blue-300">
                   {selectedVisit.id ? "Edit visit" : "New visit"}
                 </p>
-                <h3 className="mt-1 text-2xl font-semibold text-white">
+                <h3 className="mt-1 text-2xl font-semibold text-white" ref={entryTarget} tabIndex={-1}>
                   {selectedVisit.reason || "Vet visit details"}
                 </h3>
                 <p className="mt-1 text-sm text-gray-400">

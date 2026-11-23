@@ -1,0 +1,33 @@
+route_pattern,screen_ids,atlas_pages,dark_atlas_pages
+/,landing | public-menu,27 | 27,65 | 65
+/switch-to-barnbuddy,switch,28,66
+/ffa-livestock-records,ffa-marketing,28,66
+/login/*,sign-in,17,55
+/signup/*,sign-up | verify-email,17 | 17,55 | 55
+/aboutus,about,27,65
+/pricing,pricing,28,66
+/terms,legal-terms,31,69
+/privacy,legal-privacy,31,69
+/refunds,legal-refunds,31,69
+/cancellation,legal-cancellation,31,69
+/cookies,legal-cookies,32,70
+/data-retention,legal-data-retention,32,70
+/accessibility,legal-accessibility,32,70
+/security,legal-security,32,70
+/termsofserviceandprivacypolicy,legal-legacy,33,71
+/news/:postId?,news | news-detail,28 | 29,66 | 67
+/contact,contact,29,67
+/help,help,29,67
+/status,status,30,68
+/docs,docs,30,68
+/dashboard/onboarding,onboarding-type | onboarding-species | onboarding-size | onboarding-goal | onboarding-start,17 | 18 | 18 | 18 | 18,55 | 56 | 56 | 56 | 56
+/dashboard,home | home-snapshot | herd-picker | add-menu | care | more | exports | export-report,2 | 2 | 2 | 2 | 3 | 3 | 16 | 16,40 | 40 | 40 | 40 | 41 | 41 | 54 | 54
+/dashboard/animals,record-animal-picker | system-loading | system-empty | system-error | animals | animals-filters,3 | 4 | 4 | 4 | 6 | 6,41 | 42 | 42 | 42 | 44 | 44
+/dashboard/animal/:animalId,animal | animal-edit | animal-more | animal-photo | animal-qr | animal-delete | animal-status,6 | 7 | 7 | 7 | 7 | 8 | 9,44 | 45 | 45 | 45 | 45 | 46 | 47
+/dashboard/ffa-projects,ffa-list | ffa-setup | ffa-overview | ffa-journal | ffa-journal-form | ffa-finance | ffa-project-settings | ffa-link-animal | ffa-share | ffa-print,23 | 23 | 23 | 23 | 24 | 24 | 24 | 24 | 25 | 25,61 | 61 | 61 | 61 | 62 | 62 | 62 | 62 | 63 | 63
+/admin,admin-overview | admin-nav | admin-announcement | admin-maintenance | admin-branding | admin-carousel | admin-news | admin-news-edit | admin-reviews | admin-status | admin-media | admin-chapters | admin-chapter-editor | admin-support | admin-support-detail | admin-accounts | admin-account-detail | admin-user-activity | admin-activity | admin-links | admin-denied,34 | 34 | 34 | 34 | 35 | 35 | 35 | 35 | 36 | 36 | 36 | 37 | 37 | 37 | 37 | 38 | 38 | 38 | 38 | 39 | 39,72 | 72 | 72 | 72 | 73 | 73 | 73 | 73 | 74 | 74 | 74 | 75 | 75 | 75 | 75 | 76 | 76 | 76 | 76 | 77 | 77
+/advisor,advisor | advisor-roster | advisor-shared | advisor-project | advisor-invite,25 | 25 | 26 | 26 | 26,63 | 63 | 64 | 64 | 64
+/settings/account,account | account-profile | preferences | reminders | billing | chapter-membership | chapter-confirm | project-privacy | delete-account,19 | 19 | 19 | 19 | 20 | 20 | 20 | 20 | 21,57 | 57 | 57 | 57 | 58 | 58 | 58 | 58 | 59
+/settings/import-assistant,import | import-upload | import-ai | import-review | import-confirm | import-result | transfer-help,21 | 21 | 21 | 22 | 22 | 22 | 22,59 | 59 | 59 | 60 | 60 | 60 | 60
+/settings/herd,herd-list | herd-edit | herd-delete,8 | 8 | 8,46 | 46 | 46
+*,not-found,30,68

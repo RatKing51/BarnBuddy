@@ -6,6 +6,7 @@ const visible = locator => locator.filter({ visible: true });
 const facts = page => page.getByRole('region', { name: 'Herd quick facts' });
 const toolbar = page => page.locator('.bb-dashboard-toolbar');
 const phoneWidth = page => page.viewportSize().width < 768;
+const mobileDashboard = page => page.viewportSize().width < 1024;
 const herd = page => page.getByRole('combobox', { name: 'Herd', exact: true });
 const headings = page => page.getByRole('heading', { level: 1 });
 const fonts = page => headings(page).evaluate(heading => ({
@@ -25,8 +26,16 @@ async function openFarmTool(page, name) {
   const nav = visible(page.getByRole('navigation', { name: 'Farm navigation' }));
   await expect(nav).toBeVisible();
   const link = nav.getByRole('link', { name, exact: true });
-  if (!await link.isVisible()) await nav.getByRole('button', { name: 'More' }).click();
-  await link.or(nav.getByRole('button', { name, exact: true })).click();
+  if (await link.isVisible()) await link.click();
+  else {
+    await nav.getByRole('button', { name: 'More' }).click();
+    await page.getByRole('dialog', { name: 'More' }).getByRole('link', { name, exact: true }).click();
+  }
+}
+
+async function openSettings(page) {
+  if (mobileDashboard(page)) await openFarmTool(page, 'Settings');
+  else await page.getByRole('link', { name: 'Settings', exact: true }).click();
 }
 
 async function openAnimalTab(page, name) {
@@ -153,6 +162,7 @@ async function checkScrolledLayout(page, testInfo, name, greeting, menuName = 'M
 }
 
 test('signed-in farm walkthrough', async ({ page }, testInfo) => {
+  test.skip(mobileDashboard(page), 'The mobile redesign has its own signed-in walkthrough.');
   test.setTimeout(90_000);
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -513,15 +523,18 @@ test('free access, theme preferences, onboarding, and adding an animal', async (
     await expect(headings(page)).toHaveText('FFA Project Mode is a Premium feature');
     await screenshot(page, testInfo, 'ffa-free');
     await page.getByRole('link', { name: 'Back to dashboard' }).click();
-    await expect(headings(page)).toHaveText(/Robin/);
-    await expect(page.getByText('Default Herd has no animals yet.')).toBeVisible();
+    await expect(headings(page)).toHaveText(mobileDashboard(page) ? 'Today' : /Robin/);
+    await expect(page.getByText(mobileDashboard(page) ? 'No upcoming or overdue care in this herd.' : 'Default Herd has no animals yet.')).toBeVisible();
     await openFarmTool(page, 'Feed');
     await expect(page.getByRole('heading', { name: 'Herd feed is a Premium feature' })).toBeVisible();
-    await toolbar(page).getByRole('button', { name: 'Export', exact: true }).click();
+    if (mobileDashboard(page)) {
+      await page.getByRole('navigation', { name: 'Farm navigation' }).getByRole('button', { name: 'More' }).click();
+      await page.getByRole('dialog', { name: 'More' }).getByRole('button', { name: 'Export', exact: true }).click();
+    } else await toolbar(page).getByRole('button', { name: 'Export', exact: true }).click();
     await expect(page).toHaveURL(/\/pricing$/);
     await page.goBack();
     await expect(headings(page)).toHaveText('Feed');
-    await page.getByRole('link', { name: 'Settings', exact: true }).click();
+    await openSettings(page);
     const theme = page.getByRole('combobox', { name: 'Theme', exact: true });
     const saveTheme = async value => {
       const saving = page.waitForResponse(response => response.url().endsWith('/auth/preferences') && response.request().method() === 'PATCH');
@@ -534,10 +547,10 @@ test('free access, theme preferences, onboarding, and adding an animal', async (
     await expect(page.locator('html')).toHaveClass(/bb-light/);
     await screenshot(page, testInfo, 'account-light');
     await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
-    await expect(headings(page)).toHaveText(/Robin/);
+    await expect(headings(page)).toHaveText(mobileDashboard(page) ? 'Today' : /Robin/);
     await expect(page.locator('html')).toHaveClass(/bb-light/);
     await screenshot(page, testInfo, 'farm-overview-light');
-    await page.getByRole('link', { name: 'Settings', exact: true }).click();
+    await openSettings(page);
     await saveTheme('dark');
     await page.getByRole('button', { name: 'Restart onboarding' }).click();
     await expect(headings(page)).toHaveText('What best describes you?');
@@ -550,7 +563,7 @@ test('free access, theme preferences, onboarding, and adding an animal', async (
     await expect(page).toHaveURL(/\/dashboard\?tour=1$/);
     await expect(page.getByRole('region', { name: 'Dashboard tour' })).toBeVisible();
     await page.getByRole('region', { name: 'Dashboard tour' }).getByRole('button', { name: 'Skip', exact: true }).click();
-    await expect(headings(page)).toHaveText(/Robin/);
+    await expect(headings(page)).toHaveText(mobileDashboard(page) ? 'Today' : /Robin/);
     await openFarmTool(page, 'Animals');
     await page.getByRole('button', { name: 'Add animal', exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard\/animal\/\d+$/);
@@ -561,6 +574,7 @@ test('free access, theme preferences, onboarding, and adding an animal', async (
       await page.getByPlaceholder('Animal name').press('Tab');
       await expect(headings(page)).toHaveText(longName);
       await checkPageWidth(page);
+      await headings(page).scrollIntoViewIfNeeded();
       await expect(headings(page)).toBeInViewport({ ratio: 1 });
       await screenshot(page, testInfo, 'animal-profile-long-name');
     }
@@ -578,7 +592,163 @@ test('failed care requests do not report an all-clear', async ({ page }) => {
   await expect(herd(page)).toBeEnabled();
   await page.route('**/api/animals/herd/*/care-summary?*', route => route.abort());
   await herd(page).selectOption({ label: sampleFarm.south });
-  await expect(page.locator('.bb-herd-message')).toHaveText('Care records couldn’t load.');
+  await expect(mobileDashboard(page) ? page.getByRole('region', { name: 'Needs attention' }).getByRole('status') :
+    page.locator('.bb-herd-message')).toContainText('Care records couldn’t load.');
   if (phoneWidth(page)) await expect(facts(page)).toBeHidden();
   else await expect(facts(page).locator('dd')).toHaveText(['2', '2', '—', '—']);
+});
+
+test('mobile redesign uses signed-in herd data and saves weigh-ins', async ({ page }, testInfo) => {
+  test.skip(!mobileDashboard(page), 'The desktop dashboard has its own signed-in walkthrough.');
+  test.setTimeout(120_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/dashboard');
+  const nav = page.getByRole('navigation', { name: 'Farm navigation' });
+  const screen = async (theme, name) => {
+    await checkPageWidth(page);
+    if (testInfo.project.name === 'dashboard-firefox-narrow' ||
+       (testInfo.project.name === 'dashboard-firefox-430' && name === 'today')) {
+      const width = page.viewportSize().width;
+      await expect(page.locator('.bb-loading-bar')).toHaveCount(0);
+      await page.screenshot({ path: dashboardScreenshot('mobile-redesign', `${theme}-${name}${width === 390 ? '' : `-${width}`}`), animations: 'disabled' });
+    }
+  };
+
+  const setTheme = async value => {
+    await openSettings(page);
+    const theme = page.getByRole('combobox', { name: 'Theme', exact: true });
+    await expect(theme).toBeEnabled();
+    if (await theme.inputValue() !== value) {
+      const saved = page.waitForResponse(response => response.url().endsWith('/auth/preferences') && response.request().method() === 'PATCH');
+      await theme.selectOption(value);
+      expect((await saved).ok()).toBe(true);
+    }
+    await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+    await expect(page.locator('html')).toHaveClass(new RegExp(`bb-${value}`));
+  };
+
+  for (const theme of ['light', 'dark']) {
+    await setTheme(theme);
+    await herd(page).selectOption({ label: sampleFarm.north });
+    const homeUrl = page.url();
+    await expect(headings(page)).toHaveText('Today');
+    const attention = page.getByRole('region', { name: 'Needs attention' });
+    await expect(attention.getByRole('link', { name: /Vaccination due.*Clover/ })).toBeVisible();
+    await screen(theme, 'today');
+
+    await nav.getByRole('button', { name: 'Care', exact: true }).click();
+    await expect(headings(page)).toHaveText('Care');
+    expect(page.url()).toBe(homeUrl);
+    await expect(page.getByRole('link', { name: /Vet visit.*Juniper/ })).toBeVisible();
+    await screen(theme, 'care');
+    await page.getByRole('button', { name: 'Overdue', exact: true }).click();
+    await expect(page.getByText('No care reminders match this filter.')).toBeVisible();
+    await page.getByRole('button', { name: 'All', exact: true }).click();
+    await page.getByRole('link', { name: /Vaccination due.*Clover/ }).click();
+    await expect(page).toHaveURL(/record=health$/);
+    await expect(page.getByRole('heading', { name: 'Vaccinations', exact: true })).toBeFocused();
+    await page.getByRole('button', { name: 'Back to farm' }).click();
+    await expect(headings(page)).toHaveText('Care');
+
+    await nav.getByRole('link', { name: 'Animals', exact: true }).click();
+    const directory = page.getByRole('region', { name: 'Animal directory' });
+    const clover = directory.getByRole('link', { name: /Clover/ });
+    await expect(clover).toBeVisible();
+    await screen(theme, 'animals');
+    await page.getByRole('button', { name: 'Filters', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Species', exact: true }).selectOption('Cattle');
+    await page.getByRole('combobox', { name: 'Status', exact: true }).selectOption('yellow');
+    await page.getByRole('searchbox', { name: 'Search animals' }).fill('NP-014');
+    const directoryUrl = page.url();
+    await clover.click();
+    await expect(headings(page)).toHaveText('Clover');
+    await expect(page.getByRole('heading', { name: 'Quick dates' })).toBeVisible();
+    await screen(theme, 'profile');
+    await page.getByRole('button', { name: 'Animal actions' }).click();
+    await page.getByRole('dialog', { name: 'Animal actions' }).getByRole('button', { name: /QR tag/ }).click();
+    await expect(page.getByRole('dialog', { name: 'QR tag for Clover' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Back to animals' }).click();
+    await expect(page).toHaveURL(directoryUrl);
+    await expect(page.getByRole('searchbox', { name: 'Search animals' })).toHaveValue('NP-014');
+
+    await nav.getByRole('link', { name: 'Home', exact: true }).click();
+    const add = nav.getByRole('button', { name: 'Add', exact: true });
+    await add.click();
+    const menu = page.getByRole('dialog', { name: 'Quick log' });
+    await expect(menu).toBeVisible();
+    await screen(theme, 'quick-add');
+    await page.keyboard.press('Escape');
+    await expect(add).toBeFocused();
+    await add.click();
+    await menu.getByRole('button', { name: /Weight/ }).click();
+    const picker = page.getByRole('dialog', { name: 'Choose an animal' });
+    await expect(picker.getByRole('button', { name: 'Continue to weight' })).toBeDisabled();
+    await picker.getByRole('button', { name: /Milo/ }).click();
+    await screen(theme, 'animal-picker');
+    await picker.getByRole('button', { name: 'Continue to weight' }).click();
+    await expect(page).toHaveURL(/record=weight$/);
+    const editor = page.getByRole('dialog', { name: 'Log weight' });
+    await expect(editor.getByText('Milo', { exact: true })).toBeVisible();
+    const currentUrl = page.url();
+    const value = editor.getByRole('spinbutton', { name: 'Weight' });
+    const save = editor.getByRole('button', { name: 'Save weight' });
+    await save.click();
+    await expect(editor.getByRole('alert')).toHaveText('Enter a weight of at least 0.01.');
+    await expect(value).toBeFocused();
+    await value.fill('401.25');
+    await editor.getByRole('combobox', { name: 'Unit' }).selectOption('kg');
+    const notes = editor.getByRole('textbox', { name: 'Notes' });
+    await notes.fill('Morning weigh-in');
+    await expect(editor.getByRole('alert')).toHaveCount(0);
+    await editor.getByRole('heading', { name: 'Log weight' }).click();
+    await screen(theme, 'log-weight');
+    if (theme === 'light') {
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('button', { name: 'Log weight' })).toBeFocused();
+      await page.getByRole('button', { name: 'Log weight' }).click();
+      await expect(value).toHaveValue('401.25');
+      await expect(notes).toHaveValue('Morning weigh-in');
+      await page.keyboard.press('Escape');
+    } else {
+      const endpoint = '**/api/animals/*/weight-records';
+      await page.route(endpoint, route => route.request().method() === 'POST'
+        ? route.fulfill({ status: 400, json: { error: 'Could not save this weigh-in.' } }) : route.continue());
+      await save.click();
+      await expect(editor.getByRole('alert')).toHaveText('Could not save this weigh-in.');
+      await expect(notes).toHaveValue('Morning weigh-in');
+      await page.unroute(endpoint);
+      const testNotes = `Mobile redesign check (${testInfo.project.name} ${Date.now()})`;
+      await notes.fill(testNotes);
+      await createRecord(page, save, '/weight-records');
+      await expect(editor).toHaveCount(0);
+      await expect(page).toHaveURL(currentUrl);
+      await expect(page.getByRole('heading', { name: 'Weight history' })).toBeVisible();
+      await expect(page.locator('.bb-weight-metrics').getByText('401.3 kg', { exact: true })).toBeVisible();
+      await screen(theme, 'weight-history');
+      await openAnimalTab(page, 'General');
+      await expect(headings(page)).toHaveText('Milo');
+      await expect(page.locator('.bb-mobile-metrics').getByText('401.25 kg', { exact: true })).toBeVisible();
+      await openAnimalTab(page, 'Weight');
+      const savedRow = page.getByRole('button', { name: /401.25 kg/ }).filter({ hasText: testNotes });
+      await savedRow.click();
+      page.once('dialog', dialog => dialog.accept());
+      await page.getByRole('button', { name: 'Delete', exact: true }).click();
+      await expect(savedRow).toHaveCount(0);
+    }
+    if (theme === 'light') await screen(theme, 'weight-history');
+    await nav.getByRole('link', { name: 'Home', exact: true }).click();
+  }
+
+  if (testInfo.project.name === 'dashboard-firefox-narrow') {
+    for (const width of [320, 820]) {
+      await page.setViewportSize({ width, height: 844 });
+      await expect(headings(page)).toHaveText('Today');
+      await screen('dark', 'today');
+      await nav.getByRole('link', { name: 'Animals', exact: true }).click();
+      await expect(page.getByRole('region', { name: 'Animal directory' })).toBeVisible();
+      await screen('dark', 'animals');
+      await nav.getByRole('link', { name: 'Home', exact: true }).click();
+    }
+  }
 });
