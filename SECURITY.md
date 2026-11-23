@@ -6,7 +6,7 @@ Security updates are applied to the latest deployed BarnBuddy release and the cu
 
 ## Report a Vulnerability
 
-Email `barnbuddyapp@gmail.com` with the subject `Security report`. Include:
+Email `support@barnbuddy.pro` with the subject `Security report`. Include:
 
 - the affected URL or feature;
 - steps to reproduce the issue;

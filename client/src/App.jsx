@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { BrowserRouter as Router, Link, Navigate, Routes, Route, useLocation } from "react-router";
 import Navbar from "./components/Navbar";
+import Contact from "./pages/Contact";
+import HelpCenter from "./pages/HelpCenter";
 import PrivateRoute from "./routes/PrivateRoute";
 import PremiumRoute from "./routes/PremiumRoute";
 import AdvisorRoute from "./routes/AdvisorRoute";
@@ -31,8 +33,6 @@ const AccountSettings = lazy(() => import("./pages/AccountSettings"));
 const SettingsImportAssistant = lazy(() => import("./pages/SettingsImportAssistant"));
 const TOSandPP = lazy(() => import("./pages/TOSandPP"));
 const News = lazy(() => import("./pages/News"));
-const Contact = lazy(() => import("./pages/Contact"));
-const HelpCenter = lazy(() => import("./pages/HelpCenter"));
 const Status = lazy(() => import("./pages/Status"));
 const AdminContent = lazy(() => import("./pages/AdminContent"));
 const AdvisorDashboard = lazy(() => import("./pages/AdvisorDashboard"));

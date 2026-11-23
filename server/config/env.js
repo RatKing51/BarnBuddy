@@ -59,7 +59,7 @@ const env = {
       process.env.RESEND_FROM_EMAIL ||
       "BarnBuddy Notifications <notifications@barnbuddy.pro>",
     newsletterAudienceId: process.env.RESEND_NEWSLETTER_AUDIENCE_ID || "",
-    contactTo: process.env.CONTACT_TO_EMAIL || process.env.RESEND_TO_EMAIL || "barnbuddyapp@gmail.com",
+    contactTo: process.env.CONTACT_TO_EMAIL || process.env.RESEND_TO_EMAIL || "support@barnbuddy.pro",
     testAllowedEmails: (process.env.EMAIL_TEST_ALLOWED_EMAILS || "")
       .split(",")
       .map((email) => email.trim().toLowerCase())

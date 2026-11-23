@@ -74,6 +74,13 @@
     letter-spacing: -0.025em;
     text-wrap: balance;
   }
+  .bb-dashboard-clock {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--work-muted);
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+  }
 
   .bb-dashboard-toolbar {
     position: sticky;

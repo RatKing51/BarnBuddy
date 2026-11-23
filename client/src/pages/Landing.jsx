@@ -8,7 +8,6 @@ import FeatureExplorer from '../components/FeatureExplorer';
 import { getSiteContent } from '../api/siteContent';
 import { defaultSiteContent } from '../data/siteContent';
 import { getSiteAssetUrl, resolveProductPreviewUrl } from '../config/siteImages';
-import '../styles/marketing.css';
 
 export default function Landing() {
   const [content, setContent] = useState(defaultSiteContent);

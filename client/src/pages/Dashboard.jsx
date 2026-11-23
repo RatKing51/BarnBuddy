@@ -231,6 +231,36 @@ function DashboardTour({ open, steps, onClose, onStepAction }) {
   );
 }
 
+function DashboardGreeting({ as: Heading, firstName }) {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    let timer;
+    function updateClock() {
+      const current = new Date();
+      setNow(current);
+      timer = window.setTimeout(updateClock, 60_000 - (current.getTime() % 60_000));
+    }
+
+    updateClock();
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const localTime = now.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const timeValue = [hour, now.getMinutes()].map(value => String(value).padStart(2, "0")).join(":");
+
+  return (
+    <div>
+      <Heading className="bb-dashboard-greeting">{[greeting, firstName].filter(Boolean).join(", ")}</Heading>
+      <time className="bb-dashboard-clock" dateTime={timeValue}>
+        <span className="sr-only">Local time </span>{localTime}
+      </time>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { animalId: linkedAnimalId } = useParams();
   const isProfile = Boolean(linkedAnimalId);
@@ -245,10 +275,6 @@ export default function Dashboard() {
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const moreButtonRef = React.useRef(null);
   const toolbarRef = React.useRef(null);
-  const [greeting] = useState(() => {
-    const hour = new Date().getHours();
-    return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  });
   const [herds, setHerds] = useState([]);
   const [defaultHerd, setDefaultHerd] = useState(null);
   const [herdRecords, setHerdRecords] = useState(null);
@@ -1068,7 +1094,7 @@ export default function Dashboard() {
           <div className="bb-work-container">
             <div className="bb-dashboard-toolbar-row">
               <div className="bb-dashboard-toolbar-title">
-                <Greeting className="bb-dashboard-greeting">{[greeting, firstName].filter(Boolean).join(", ")}</Greeting>
+                <DashboardGreeting as={Greeting} firstName={firstName} />
                 <Link className="bb-work-brand bb-dashboard-mobile-brand" to="/" aria-label="BarnBuddy home"><span>Barn</span>Buddy.</Link>
               </div>
               <div className="bb-work-actions">

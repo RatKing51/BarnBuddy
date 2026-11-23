@@ -1,7 +1,6 @@
 import { Link } from 'react-router'
 import Footer from '../components/Footer'
-
-const supportEmail = 'barnbuddyapp@gmail.com'
+import { SUPPORT_EMAIL as supportEmail } from '../config/env'
 
 const documents = {
   terms: {

@@ -4,7 +4,7 @@ title: Contact Support
 
 # Contact Support
 
-For now, use the Contact page on the main BarnBuddy website.
+Email [support@barnbuddy.pro](mailto:support@barnbuddy.pro) or use the Contact page on the main BarnBuddy website.
 
 ## Include This Information
 

@@ -2,6 +2,8 @@ import React from 'react'
 import { Link } from 'react-router'
 import Footer from '../components/Footer'
 
+const docsUrl = 'https://doc.barnbuddy.pro'
+
 const guides = [
   ["Add your first animal", "Start with a name or ear tag, then enter the details you know.", "getting-started/add-first-animal"],
   ["Update an animal profile", "Find an animal and change its identification or notes.", "records/animals"],
@@ -28,12 +30,12 @@ export default function HelpCenter() {
             <div className="bb-help-layout">
               <div>
                 {guides.map(([title, copy, path]) => (
-                  <a key={path} href={`https://doc.barnbuddy.pro/${path}`} className="bb-guide-row">
+                  <a key={path} href={`${docsUrl}/${path}`} className="bb-guide-row">
                     <div><h2>{title}</h2><p>{copy}</p></div>
                     <span aria-hidden="true">→</span>
                   </a>
                 ))}
-                <Link to="/docs" className="bb-text-link">Browse all guides</Link>
+                <a href={docsUrl} className="bb-text-link">Browse all guides</a>
               </div>
               <aside className="bb-help-aside">
                 <h2>Quick answers</h2>

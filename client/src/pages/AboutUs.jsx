@@ -1,7 +1,6 @@
 import { Link } from "react-router";
 import Footer from "../components/Footer";
 import { getSiteAssetUrl } from "../config/siteImages";
-import "../styles/marketing.css";
 
 export default function About() {
   return (

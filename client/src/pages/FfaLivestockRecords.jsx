@@ -1,7 +1,6 @@
 import { Link } from "react-router";
 import Footer from "../components/Footer";
 import { PAGE_FAQS } from "../seo/siteMetadata";
-import "../styles/marketing.css";
 
 const projectRecords = [
   ["Animal profile", "Keep the animal’s name, tag, species, and project details together."],

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import Footer from '../components/Footer'
-import { API_URL } from '../config/env'
+import { API_URL, SUPPORT_EMAIL } from '../config/env'
 
 const topicPrompts = {
   'General question': 'What would you like to know about BarnBuddy?',
@@ -15,15 +15,22 @@ const contactTopicOptions = Object.keys(topicPrompts)
 const CONTACT_COOLDOWN_KEY = 'barnbuddy_contact_last_sent_at'
 const CONTACT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
 
+let lastSentInSession = 0
+
 function getContactCooldown() {
-  const lastSentAt = Number(window.localStorage.getItem(CONTACT_COOLDOWN_KEY) || 0)
+  let lastSentAt = lastSentInSession
+  try {
+    const storedTimestamp = Number(window.localStorage.getItem(CONTACT_COOLDOWN_KEY)) || 0
+    lastSentAt = Math.max(lastSentAt, storedTimestamp)
+  } catch {
+    // Keep the form usable when the browser blocks storage.
+  }
 
   if (!lastSentAt) return { active: false, remainingDays: 0 }
 
   const remainingMs = CONTACT_COOLDOWN_MS - (Date.now() - lastSentAt)
 
   if (remainingMs <= 0) {
-    window.localStorage.removeItem(CONTACT_COOLDOWN_KEY)
     return { active: false, remainingDays: 0 }
   }
 
@@ -88,7 +95,12 @@ export default function Contact() {
         topic: 'General question',
         message: '',
       })
-      window.localStorage.setItem(CONTACT_COOLDOWN_KEY, String(Date.now()))
+      lastSentInSession = Date.now()
+      try {
+        window.localStorage.setItem(CONTACT_COOLDOWN_KEY, String(lastSentInSession))
+      } catch {
+        // The in-memory cooldown still applies for this visit.
+      }
       setCooldown(getContactCooldown())
       setStatus({ type: 'success', message: `Message sent. Look for a reply at ${form.email}.` })
     } catch (err) {
@@ -186,7 +198,7 @@ export default function Contact() {
           </form>
           <aside className="bb-contact-links" aria-label="Other ways to get help">
             <h2>Prefer email?</h2>
-            <a className="bb-text-link" href="mailto:barnbuddyapp@gmail.com">barnbuddyapp@gmail.com</a>
+            <a className="bb-text-link" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
             <div className="mt-5 border-t border-white/15 pt-4">
               <h2>Looking for instructions?</h2>
               <Link className="bb-text-link" to="/help">Browse the help guides</Link>
