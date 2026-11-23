@@ -13,6 +13,7 @@ import VetVisits from "../components/VetVisits";
 import WeightRecords from "../components/WeightRecords";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import PremiumExpiryBadge from "../components/PremiumExpiryBadge";
+import { MobileCare, MobileIcon, MobileNav, MobileRow, MobileSheet, QuickAdd } from "../components/MobileDashboard";
 import { Link, useLocation, useNavigate, useNavigationType, useParams } from "react-router";
 import {
   createAnimal,
@@ -34,6 +35,7 @@ import { useAuth as useBarnBuddyAuth } from "../context/AuthContext";
 import { API_URL } from "../config/env";
 import { formatAnimalAge } from "../utils/age";
 import { getAnimalDisplayName } from "../utils/animalLabel";
+import { getAnimalIdentifiers } from "../utils/animalCare";
 import { getOnboardingDefaultSpecies } from "../config/onboardingSpecies";
 import { getMyFfaChapter } from "../api/ffaChapters";
 
@@ -49,9 +51,10 @@ const getCareSummaryKey = (herd, items, careWindow, refreshKey) =>
 
 const noAnimals = [];
 const noCare = {};
+const noCareEvents = [];
 const unassignedHerd = { id: "unassigned", name: "Unassigned" };
 const herdViews = [
-  { key: "general", label: "Farm Overview", mobileLabel: "Home" },
+  { key: "general", label: "Farm Overview" },
   { key: "animals", label: "Animals" },
   { key: "feed", label: "Feed" },
   { key: "herd-finance", label: "Money" },
@@ -273,6 +276,7 @@ export default function Dashboard() {
   const availableTabs = linkedAnimalId ? animalRecordTabs : herdViews.slice(2);
   const activeTab = isDirectory ? "animals" : availableTabs.some(tab => tab.key === requestedTab) ? requestedTab : "general";
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [mobileSheet, setMobileSheet] = useState(null);
   const moreButtonRef = React.useRef(null);
   const toolbarRef = React.useRef(null);
   const [herds, setHerds] = useState([]);
@@ -311,6 +315,7 @@ export default function Dashboard() {
   }, [selectedHerdId]);
 
   const returnTo = location.pathname + location.search;
+  const showingCare = !isDirectory && !isProfile && activeTab === "general" && location.state?.mobileCare === true;
   const tour = params.get("tour");
   const viewPath = React.useCallback(view => {
     const next = new URLSearchParams();
@@ -357,14 +362,6 @@ export default function Dashboard() {
     backendAdvisorDashboardAvailable
   );
   const handledOnboardingStartRef = React.useRef(false);
-  const handleFfaProjectsClick = () => {
-    setMobileMoreOpen(false);
-    navigate("/dashboard/ffa-projects");
-  };
-  const handleAdvisorDashboardClick = () => {
-    setMobileMoreOpen(false);
-    navigate("/advisor");
-  };
   const isCompact = preferences.dashboardDensity === "compact";
   const primaryAnimalIdentifier = preferences.animalPrimaryIdentifier === "tag" ? "tag" : "name";
   const onboardingDefaultSpecies = React.useMemo(
@@ -760,14 +757,14 @@ export default function Dashboard() {
     }
   }, [authFetch, onboardingDefaultSpecies, refreshBackendUser, selectedHerd, setAnimals]);
 
-  const openAnimal = React.useCallback((animal, record = "general", replace = false) => {
+  const openAnimal = React.useCallback((animal, record = "general", replace = false, entry = {}) => {
     setMobileMoreOpen(false);
     setSelectedAnimal(animal);
     navigate(profilePath(animal, record), {
       replace: replace || Boolean(linkedAnimalId),
-      state: linkedAnimalId
+      state: { ...entry, ...(linkedAnimalId
         ? { returnTo: profileCameFrom || directoryPath, canGoBack: canGoBackToDirectory }
-        : { returnTo, canGoBack: !replace },
+        : { returnTo, canGoBack: !replace }) },
     });
   }, [canGoBackToDirectory, directoryPath, linkedAnimalId, navigate, profileCameFrom, profilePath, returnTo]);
 
@@ -846,18 +843,21 @@ export default function Dashboard() {
     </tr>
   ));
 
-  const handleAnimalTabClick = tabKey => {
+  const handleAnimalTabClick = (tabKey, entry = {}) => {
     if (mobileMoreOpen) moreButtonRef.current?.focus({ preventScroll: true });
     setMobileMoreOpen(false);
     if (!selectedAnimal || tabKey === activeTab) return;
-    navigate(profilePath(selectedAnimal, tabKey), { replace: true, state: location.state });
+    navigate(profilePath(selectedAnimal, tabKey), {
+      replace: true,
+      state: { returnTo: profileCameFrom, canGoBack: canGoBackToDirectory, ...entry },
+    });
   };
 
   function setHerdFromValue(value) {
     const next = new URLSearchParams(params);
     next.set("herd", value);
     if (linkedAnimalId) next.delete("record");
-    navigate(withQuery(linkedAnimalId ? "/dashboard" : location.pathname, next), { replace: !linkedAnimalId });
+    navigate(withQuery(linkedAnimalId ? "/dashboard" : location.pathname, next), { replace: !linkedAnimalId, state: location.state });
   }
 
   const isOverview = !linkedAnimalId && activeTab === "general";
@@ -898,8 +898,6 @@ export default function Dashboard() {
     : herdViews.find(view => view.key === activeTab)?.label || "Farm Overview";
   const primaryAnimalTabs = animalRecordTabs.slice(0, 4);
   const moreAnimalTabs = animalRecordTabs.slice(4);
-  const primaryHerdViews = herdViews.slice(0, 4);
-  const moreHerdViews = herdViews.slice(4);
 
   const dashboardTourSteps = React.useMemo(() => [
     {
@@ -1006,6 +1004,7 @@ export default function Dashboard() {
   const listLoading = loadingHerds || loadingAnimals;
   const profileLoading = Boolean(linkedAnimalId && !selectedAnimal);
   const shortcutsReady = !listLoading && !profileLoading;
+  const canAddAnimal = Boolean(selectedHerd && shortcutsReady && !addingAnimal && !animalsError);
   const switchableAnimals = selectedAnimal && !animals.some(animal => animal.id === selectedAnimal.id)
     ? [selectedAnimal, ...animals] : animals;
   const shortcutProps = {
@@ -1022,17 +1021,16 @@ export default function Dashboard() {
     { label: "Vet Care Upcoming", value: careState === "ready" ? upcomingVetVisits : null },
   ];
 
-  const renderHerdLink = (view, mobile = false, inMenu = false) => (
+  const renderHerdLink = view => (
     <Link
       key={view.key}
       to={view.key === "animals" ? directoryPath : viewPath(view.key)}
       aria-current={!linkedAnimalId && activeTab === view.key ? "page" : undefined}
-      aria-label={view.mobileLabel && mobile ? view.label : undefined}
       onClick={() => setMobileMoreOpen(false)}
       data-tour={view.key === "general" ? "farm-overview" : view.key === "animals" ? "animals-navigation" : undefined}
-      className={inMenu ? "bb-more-item" : "bb-work-tab"}
+      className="bb-work-tab"
     >
-      {mobile ? view.mobileLabel || view.label : view.label}
+      {view.label}
     </Link>
   );
 
@@ -1059,6 +1057,36 @@ export default function Dashboard() {
       </select>
     </label>
   );
+  const careProps = {
+    events: careSummary?.careEvents || noCareEvents, animals, careState, careWindow,
+    primaryIdentifier: primaryAnimalIdentifier, profilePath, returnTo,
+  };
+  const openCare = () => {
+    if (!showingCare) {
+      navigate(viewPath("general"), { state: { mobileCare: true } });
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+  };
+  const chooseQuickAction = (action, chosenAnimal = selectedAnimal) => {
+    if (action === "animal") {
+      if (canAddAnimal) void addAndOpenAnimal();
+      else {
+        toast.info("Choose an available herd to add an animal.");
+        return true;
+      }
+    } else if (action === "bulk-entry") {
+      navigate(viewPath("bulk-entry"));
+    } else {
+      if (!chosenAnimal) return false;
+      const tab = action === "vaccination" ? "health" : action;
+      openAnimal(chosenAnimal, tab, false, { quickRecord: action });
+    }
+    setMobileSheet(null);
+    return true;
+  };
+  const mobileContext = isOverview && !showingCare
+    ? new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })
+    : selectedHerd?.name;
   const backLabel = canGoBackToDirectory && !profileCameFrom.startsWith("/dashboard/animals") ? "Back to farm" : "Back to animals";
   const moreRecord = linkedAnimalId && moreAnimalTabs.find(tab => tab.key === activeTab);
   const moreMenu = (
@@ -1070,9 +1098,7 @@ export default function Dashboard() {
       </button>
       {mobileMoreOpen && (
         <div id="dashboard-more" role="group" aria-label={linkedAnimalId ? "More animal records" : "More farm tools"} className="bb-more-menu">
-          {linkedAnimalId ? moreAnimalTabs.map(tab => renderRecordButton(tab, "bb-more-item")) : moreHerdViews.map(view => renderHerdLink(view, true, true))}
-          <button type="button" onClick={handleFfaProjectsClick} className="bb-more-item">FFA Projects</button>
-          {advisorDashboardAvailable && <button type="button" onClick={handleAdvisorDashboardClick} className="bb-more-item">Advisor Dashboard</button>}
+          {moreAnimalTabs.map(tab => renderRecordButton(tab, "bb-more-item"))}
         </div>
       )}
     </div>
@@ -1089,8 +1115,26 @@ export default function Dashboard() {
         </nav>
         {shortcutsReady && <AnimalShortcuts {...shortcutProps} compact />}
       </aside>
-      <main className="dashboard-main">
+      <main className="dashboard-main" data-mobile-care={showingCare || undefined} data-mobile-directory={isDirectory || undefined}>
         <header ref={toolbarRef} className="bb-dashboard-toolbar" aria-label="Dashboard controls">
+          <div className="bb-mobile-header bb-mobile-only">
+            {isProfile ? (
+              <>
+                <button className="bb-mobile-icon-button" type="button" onClick={returnFromAnimal} aria-label={backLabel}><MobileIcon name="back" /></button>
+                <span>Animal profile</span>
+                <button className="bb-mobile-icon-button" type="button" aria-label="Animal actions" aria-haspopup="dialog"
+                  disabled={!selectedAnimal} onClick={() => setMobileSheet("profile")}><MobileIcon name="more" /></button>
+              </>
+            ) : (
+              <>
+                <Link className="bb-mobile-wordmark" to={viewPath("general")} aria-label="BarnBuddy home">
+                  <img src="/barnbuddy-wordmark-dark.svg" alt="" width="116" height="27" />
+                  <img src="/barnbuddy-wordmark-light.svg" alt="" width="116" height="27" />
+                </Link>
+                <div className="bb-dashboard-account"><UserButton afterSignOutUrl="/" /></div>
+              </>
+            )}
+          </div>
           <div className="bb-work-container">
             <div className="bb-dashboard-toolbar-row">
               <div className="bb-dashboard-toolbar-title">
@@ -1123,6 +1167,11 @@ export default function Dashboard() {
             </section>
             {isProfile && (
               <div className="bb-profile-heading">
+                <div className="bb-mobile-title bb-mobile-only">
+                  {mobileContext && <p>{mobileContext}</p>}
+                  <h1>{activeTab === "weight" ? "Weight history" : pageTitle}</h1>
+                  {activeTab === "weight" && selectedAnimal && <div className="bb-work-muted">{[pageTitle, getAnimalIdentifiers(selectedAnimal, primaryAnimalIdentifier).secondary].filter(Boolean).join(" · ")}</div>}
+                </div>
                 <div className="bb-profile-identity">
                   <button type="button" className="bb-action bb-profile-back" onClick={returnFromAnimal} aria-label={backLabel} title={backLabel}>
                     <span aria-hidden="true">←</span>
@@ -1160,19 +1209,43 @@ export default function Dashboard() {
 
         <div className="bb-work-container bb-dashboard-content">
           {!linkedAnimalId && (
-            <header className="bb-view-header bb-herd-heading">
+            <header className="bb-view-header bb-herd-heading bb-desktop-only">
               {isOverview ? (
                 <p className="bb-herd-message" aria-live="polite">
                   {careAnimal ? <Link className="bb-text-link" to={profilePath(careAnimal.animal, careAnimal.record)} state={{ returnTo }}>{careMessage}</Link>
                     : careLink ? <a className="bb-text-link" href={careLink}>{careMessage}</a> : careMessage}
                 </p>
               ) : <h1>{pageTitle}</h1>}
-              <div className="bb-dashboard-mobile-picker">{herdPicker}</div>
             </header>
           )}
 
-          {(isOverview || isDirectory) && shortcutsReady && (
-            <div className="bb-dashboard-mobile-shortcuts"><AnimalShortcuts {...shortcutProps} /></div>
+          {!linkedAnimalId && (
+            <div className="bb-mobile-section bb-mobile-only">
+              <div className="bb-mobile-title">
+                {!isDirectory && mobileContext && <p>{mobileContext}</p>}
+                <h1>{showingCare ? "Care" : isOverview ? "Today" : pageTitle}</h1>
+                {isDirectory && !listLoading && !animalsError && <div className="bb-work-muted">{totalActiveAnimals} active {totalActiveAnimals === 1 ? "animal" : "animals"}</div>}
+              </div>
+              {!isDirectory && !showingCare && herdPicker}
+              {showingCare && <MobileCare {...careProps} />}
+              {isOverview && !showingCare && (
+                <>
+                  <MobileCare {...careProps} preview />
+                  <button type="button" className="bb-mobile-primary" aria-haspopup="dialog" onClick={() => setMobileSheet("add")}>
+                    <MobileIcon name="add" /> Add record
+                  </button>
+                  <section>
+                    <h2>Herd shortcuts</h2>
+                    <ul className="bb-mobile-rows">
+                      <MobileRow to={directoryPath} icon="animals" title="Animals" subtitle={listLoading || animalsError ? selectedHerd?.name :
+                        [`${totalActiveAnimals} active`, selectedHerd?.name].filter(Boolean).join(" · ")} />
+                      <MobileRow to={viewPath("general") + "#herd-snapshot"} icon="chart" title="Herd snapshot"
+                        subtitle="Species, care and weights" />
+                    </ul>
+                  </section>
+                </>
+              )}
+            </div>
           )}
 
           <div data-tour="records-area" key={linkedAnimalId ? "profile" : activeTab}
@@ -1183,14 +1256,20 @@ export default function Dashboard() {
                 <div className="bb-record-content bb-view-enter" key={`${selectedAnimal.id}:${activeTab}`}>
                   {activeTab === "general" && (
                     <AnimalGeneralData animal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} setActiveTab={handleAnimalTabClick}
+                      profileEntry={location.state?.profileEntry} profileEntryKey={location.key}
                       onAnimalSaved={handleAnimalSaved} onAnimalDeleted={handleAnimalDeleted} herds={herds} selectedHerd={selectedHerd} />
                   )}
                   {activeTab === "health" && (
-                    <HealthRecords animal={selectedAnimal} selectedHerd={selectedHerd} isPremium={subscription.isPremium}
+                    <HealthRecords key={location.state?.quickRecord || location.state?.careTarget ? location.key : undefined}
+                      animal={selectedAnimal} selectedHerd={selectedHerd} isPremium={subscription.isPremium}
+                      entry={location.state?.quickRecord || location.state?.careTarget} entryRecordId={location.state?.careRecordId}
                       onVaccinationUpdate={() => setVaccinationRefresh(current => current + 1)} />
                   )}
-                  {activeTab === "weight" && <WeightRecords animal={selectedAnimal} onAnimalSaved={handleAnimalSaved} />}
-                  {activeTab === "vet" && <VetVisits animal={selectedAnimal} onVetVisitUpdate={() => setVaccinationRefresh(current => current + 1)} />}
+                  {activeTab === "weight" && <WeightRecords animal={selectedAnimal} onAnimalSaved={handleAnimalSaved}
+                    openEntryKey={location.state?.quickRecord === "weight" ? location.key : null} primaryIdentifier={primaryAnimalIdentifier} />}
+                  {activeTab === "vet" && <VetVisits key={location.state?.quickRecord || location.state?.careTarget ? location.key : undefined}
+                    animal={selectedAnimal} onVetVisitUpdate={() => setVaccinationRefresh(current => current + 1)}
+                    quickEntry={location.state?.quickRecord === "vet"} entryRecordId={location.state?.careRecordId} />}
                   {["reproduction", "finance"].includes(activeTab) && (
                     <PremiumRecords animal={selectedAnimal} animals={animals} isPremium={subscription.isPremium}
                       onExportAnimal={handleExportAnimalPdf} exportLoading={exportLoading} onAnimalSaved={handleAnimalSaved}
@@ -1200,7 +1279,8 @@ export default function Dashboard() {
               </section>
             ) : isDirectory ? (
               <AnimalDirectory animals={animals} careState={careState} urgencies={animalUrgencies}
-                primaryIdentifier={primaryAnimalIdentifier} profilePath={profilePath} returnTo={returnTo} loading={listLoading} error={animalsError} />
+                primaryIdentifier={primaryAnimalIdentifier} profilePath={profilePath} returnTo={returnTo} loading={listLoading} error={animalsError}
+                herdPicker={herdPicker} />
             ) : isOverview ? (
               <DashboardOverview animals={animals} loading={listLoading} error={animalsError} careState={careState}
                 attentionAnimals={attentionAnimals} urgencies={animalUrgencies} animalCare={animalCare} primaryIdentifier={primaryAnimalIdentifier}
@@ -1223,15 +1303,62 @@ export default function Dashboard() {
           <footer className="bb-work-footer"><a href="/contact?topic=Bug%20report">Report a bug</a></footer>
         </div>
 
-        {!linkedAnimalId && (
-          <nav aria-label="Farm navigation" className="bb-bottom-nav">
-            <div className="bb-mobile-tabs">
-              {primaryHerdViews.map(view => renderHerdLink(view, true))}
-              {moreMenu}
-            </div>
-          </nav>
+        {isDirectory && (
+          <div className="bb-mobile-directory-action bb-mobile-only">
+            <button className="bb-mobile-primary" type="button" data-tour="add-animal" disabled={!canAddAnimal} onClick={addAndOpenAnimal}>
+              <MobileIcon name="add" /> {addingAnimal ? "Adding…" : "Add animal"}
+            </button>
+          </div>
         )}
+        <MobileNav home={viewPath("general")} directory={directoryPath}
+          active={showingCare ? "care" : isDirectory || isProfile ? "animals" : isOverview ? "home" : "more"}
+          onAdd={() => setMobileSheet("add")} onCare={openCare} onMore={() => setMobileSheet("more")} />
       </main>
+      {mobileSheet === "add" && <QuickAdd herdPicker={herdPicker} herdId={selectedHerdId} herdName={selectedHerd?.name}
+        animals={animals} loading={listLoading || profileLoading} error={animalsError} primaryIdentifier={primaryAnimalIdentifier}
+        onChoose={chooseQuickAction} onClose={() => setMobileSheet(null)} />}
+      {mobileSheet === "more" && (
+        <MobileSheet title="More" onClose={() => setMobileSheet(null)}>
+          <PremiumExpiryBadge subscription={subscription} />
+          <ul className="bb-mobile-rows">
+            {herdViews.slice(2).map(view => <MobileRow key={view.key} icon="bulk" title={view.label}
+              to={viewPath(view.key)} onClick={() => setMobileSheet(null)} />)}
+            <MobileRow icon="tag" title="Add animal" onClick={() => chooseQuickAction("animal")} />
+            <MobileRow icon="chart" title={exportLoading ? "Preparing…" : "Export"} onClick={() => {
+              if (exportLoading || profileLoading) return;
+              setMobileSheet(null);
+              handleExportDashboardPdf();
+            }} />
+            <MobileRow icon="bulk" title="FFA Projects" to="/dashboard/ffa-projects" />
+            {advisorDashboardAvailable && <MobileRow icon="bulk" title="Advisor Dashboard" to="/advisor" />}
+            <li><Link className="bb-mobile-menu-link" to="/settings/account" data-tour="settings">Settings</Link></li>
+            <li><Link className="bb-mobile-menu-link" to="/settings/herd">Manage herds</Link></li>
+            <li><Link className="bb-mobile-menu-link" to="/help">Help</Link></li>
+          </ul>
+        </MobileSheet>
+      )}
+      {mobileSheet === "profile" && selectedAnimal && (
+        <MobileSheet title="Animal actions" onClose={() => setMobileSheet(null)}>
+          {switchableAnimals.length > 1 && (
+            <label className="bb-mobile-field-label">Switch animal
+              <select className="bb-field" value={linkedAnimalId} onChange={event => {
+                const animal = switchableAnimals.find(item => String(item.id) === event.target.value);
+                if (animal) { setMobileSheet(null); openAnimal(animal); }
+              }}>
+                {switchableAnimals.map(animal => <option key={animal.id} value={animal.id}>{getAnimalPrimaryLabel(animal)}</option>)}
+              </select>
+            </label>
+          )}
+          <ul className="bb-mobile-rows">
+            {[["edit", "Edit animal"], ["photo", "Photo"], ["qr", "QR tag"], ["status", "Change status"]].map(([entry, label]) => (
+              <MobileRow key={entry} icon="tag" title={label} onClick={() => {
+                setMobileSheet(null);
+                openAnimal(selectedAnimal, "general", true, { profileEntry: entry });
+              }} />
+            ))}
+          </ul>
+        </MobileSheet>
+      )}
       <DashboardTour
         open={tour === "1"}
         steps={dashboardTourSteps}

@@ -118,7 +118,19 @@ function HealthRecordsSkeleton() {
   );
 }
 
-export default function HealthRecords({ animal, onVaccinationUpdate, selectedHerd, isPremium = false }) {
+const createHealthDraft = () => ({
+  date: new Date().toISOString().slice(0, 10),
+  type: "Checkup", severity: "Low", description: "", notes: "", resolved: false,
+  inventory_item_id: "", inventory_quantity_used: "",
+});
+
+const createVaccinationDraft = () => ({
+  date: new Date().toISOString().slice(0, 10),
+  type: "Routine", notes: "", next_due_date: "", dosage: "", completed: false,
+  inventory_item_id: "", inventory_quantity_used: "",
+});
+
+export default function HealthRecords({ animal, onVaccinationUpdate, selectedHerd, isPremium = false, entry, entryRecordId }) {
 
   const [healthEvents, setHealthEvents] = useState([]);
   const [selectedEventIndex, setSelectedEventIndex] = useState(null);
@@ -131,7 +143,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate, selectedHer
   const [birthWeight, setBirthWeight] = useState("");
   const [birthNotes, setBirthNotes] = useState("");
   
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [savingEvent, setSavingEvent] = useState(null);
   const [savingVaccine, setSavingVaccine] = useState(null);
   const [addingEvent, setAddingEvent] = useState(false);
@@ -145,12 +157,14 @@ export default function HealthRecords({ animal, onVaccinationUpdate, selectedHer
   const lastEventSignatures = useRef(new Map());
   const lastVaccineSignatures = useRef(new Map());
   const saveStatusTimers = useRef({});
+  const entryTarget = useRef(null);
+  const entered = useRef(false);
 
-  // Helper to get today's date in YYYY-MM-DD format
-  const getTodayDate = () => {
-    const today = new Date();
-    return today.toISOString().slice(0, 10);
-  };
+  useEffect(() => {
+    if (!entry || loading || !entryTarget.current || entered.current) return;
+    entered.current = true;
+    entryTarget.current.focus();
+  }, [entry, loading]);
 
   const getSeverityClasses = (severity) => {
     if (severity === "High") return "bg-red-500 text-white";
@@ -171,18 +185,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate, selectedHer
   const handleAddEvent = async () => {
     if (addingEvent) return;
 
-    const newEvent = {
-      date: getTodayDate(),
-      type: "Checkup",
-      severity: "Low",
-      description: "",
-      notes: "",
-      resolved: false,
-      inventory_item_id: "",
-      inventory_quantity_used: "",
-    };
-
-    const updatedEvents = [...healthEvents, newEvent];
+    const updatedEvents = [...healthEvents, createHealthDraft()];
     setHealthEvents(updatedEvents);
     setSelectedEventIndex(updatedEvents.length - 1);
     setAddingEvent(false);
@@ -191,18 +194,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate, selectedHer
   const handleAddVaccine = async () => {
     if (addingVaccine) return;
 
-    const newVaccine = {
-      date: getTodayDate(),
-      type: "Routine",
-      notes: "",
-      next_due_date: "",
-      dosage: "",
-      completed: false,
-      inventory_item_id: "",
-      inventory_quantity_used: "",
-    };
-
-    const updatedVaccinations = [...vaccinations, newVaccine];
+    const updatedVaccinations = [...vaccinations, createVaccinationDraft()];
     setVaccinations(updatedVaccinations);
     setSelectedVaccineIndex(updatedVaccinations.length - 1);
     setAddingVaccine(false);
@@ -261,8 +253,16 @@ export default function HealthRecords({ animal, onVaccinationUpdate, selectedHer
           inventory_quantity_used: vac.inventory_quantity_used || "",
         }));
         
-        setHealthEvents(transformedEvents);
-        setVaccinations(transformedVaccinations);
+        const newHealthEvent = entry === "health";
+        const newVaccination = entry === "vaccination" && entryRecordId == null;
+        setHealthEvents(newHealthEvent ? [...transformedEvents, createHealthDraft()] : transformedEvents);
+        setVaccinations(newVaccination ? [...transformedVaccinations, createVaccinationDraft()] : transformedVaccinations);
+        if (newHealthEvent) setSelectedEventIndex(transformedEvents.length);
+        if (newVaccination) setSelectedVaccineIndex(transformedVaccinations.length);
+        else if (entryRecordId != null) {
+          const index = transformedVaccinations.findIndex(item => String(item.id) === String(entryRecordId));
+          if (index !== -1) setSelectedVaccineIndex(index);
+        }
         lastBirthSignature.current = JSON.stringify({
           birth_weight: animal.birth_weight || null,
           birth_notes: animal.birth_notes || "",
@@ -281,7 +281,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate, selectedHer
     };
     
     fetchData();
-  }, [animal]);
+  }, [animal, entry, entryRecordId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -547,7 +547,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate, selectedHer
       <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 sm:p-5">
 
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-semibold text-gray-200">Health Events</h2>
+          <h2 className="text-lg font-semibold text-gray-200" tabIndex={-1} ref={entry === "health" ? entryTarget : null}>Health Events</h2>
 
           <button
             onClick={handleAddEvent}
@@ -788,7 +788,7 @@ export default function HealthRecords({ animal, onVaccinationUpdate, selectedHer
       <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 sm:p-5">
 
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-semibold text-gray-200">Vaccinations</h2>
+          <h2 className="text-lg font-semibold text-gray-200" tabIndex={-1} ref={entry === "vaccination" ? entryTarget : null}>Vaccinations</h2>
 
           <button
             onClick={handleAddVaccine}

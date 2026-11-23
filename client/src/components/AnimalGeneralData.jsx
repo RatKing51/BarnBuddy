@@ -13,6 +13,8 @@ import ImageCropModal from "./ImageCropModal";
 import { QRCodeSVG } from "qrcode.react";
 import { formatAgeFromBirthdate, getAgeYears } from "../utils/age";
 import { getAnimalDisplayName } from "../utils/animalLabel";
+import { getAnimalIdentifiers } from "../utils/animalCare";
+import { MobileIcon, MobileRow } from "./MobileDashboard";
 
 function AnimalGeneralDataSkeleton() {
   const cardClass = "rounded-2xl border border-gray-700 bg-gray-800 p-6 shadow-md";
@@ -127,6 +129,8 @@ function cacheAnimalImage(animalId, blob) {
 }
 
 export default function AnimalGeneralData({
+  profileEntry,
+  profileEntryKey,
   animal,
   setSelectedAnimal,
   setActiveTab,
@@ -156,6 +160,7 @@ export default function AnimalGeneralData({
   const [showQrTag, setShowQrTag] = useState(false);
   const qrDialogRef = useRef(null);
   const qrButtonRef = useRef(null);
+  const handledProfileEntry = useRef(null);
 
   useEffect(() => {
     const dialog = qrDialogRef.current;
@@ -538,6 +543,20 @@ export default function AnimalGeneralData({
       );
 
   const hasAnimalImage = Boolean(imageBlobUrl);
+  const hydrated = Boolean(animal?.id && String(animalId) === String(animal.id));
+  useEffect(() => {
+    if (!profileEntry || !hydrated || handledProfileEntry.current === profileEntryKey) return;
+    handledProfileEntry.current = profileEntryKey;
+    const target = document.getElementById(`animal-profile-${profileEntry === "qr" ? "edit" : profileEntry}`);
+    if (profileEntry === "qr") {
+      qrButtonRef.current?.focus();
+      // Open via the existing control so the QR dialog returns focus to it.
+      qrButtonRef.current?.click();
+    } else {
+      target?.focus({ preventScroll: true });
+      target?.scrollIntoView({ block: "start" });
+    }
+  }, [hydrated, profileEntry, profileEntryKey]);
   const animalDisplayName = getAnimalDisplayName(
     { ...animal, name, tag_id: tag },
     { prefixTag: true }
@@ -793,9 +812,42 @@ export default function AnimalGeneralData({
   if (!animal || (animal?.id && String(animalId) !== String(animal.id))) {
     return <AnimalGeneralDataSkeleton />;
   }
+  const { primary, secondary } = getAnimalIdentifiers(animal, primaryAnimalIdentifier);
+  const quickDates = upcomingQuickDates.slice(0, 5);
+  const today = new Date().toLocaleDateString("sv-SE");
 
   return (
     <>
+      <div className="bb-mobile-section bb-mobile-only">
+        <div className="bb-mobile-identity">
+          {hasAnimalImage ? <img src={imageBlobUrl} alt="" /> : <span className="bb-mobile-row-icon"><MobileIcon name="tag" /></span>}
+          <span className="bb-mobile-row-copy"><strong>{secondary || primary}</strong><small>{[species, selectedHerd?.name].filter(Boolean).join(" · ")}</small></span>
+        </div>
+        <dl className="bb-mobile-metrics">
+          <div><dt>Last weight</dt><dd>{Number(animal.weight) > 0 ? `${Number(animal.weight).toLocaleString()} ${animal.weight_unit || "lb"}` : "—"}</dd></div>
+          <div><dt>Status</dt><dd>{status[0].toUpperCase() + status.slice(1)}</dd></div>
+        </dl>
+        <section>
+          <h2>Quick dates</h2>
+          {loadingVaccinationSummary || loadingVetSummary ? <p role="status" className="bb-mobile-empty">Checking care records…</p> :
+            quickDates.length ? (
+              <ul className="bb-mobile-rows">
+                {quickDates.map(item => {
+                  const date = String(item.date).slice(0, 10);
+                  const overdue = date < today;
+                  const isToday = date === today;
+                  const vaccination = item.type === "vaccination";
+                  return <MobileRow key={`${item.type}:${item.id}`} title={vaccination ? "Vaccination due" : item.id.endsWith("-followup") ? "Follow-up" : "Vet visit"}
+                    subtitle={item.name} icon={vaccination ? "vaccination" : "vet"} due={overdue || isToday}
+                    end={overdue ? "Overdue" : isToday ? "Today" : new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                    onClick={() => setActiveTab?.(vaccination ? "health" : "vet", {
+                      careTarget: item.type, careRecordId: vaccination ? item.id : item.id.split("-")[0],
+                    })} />;
+                })}
+              </ul>
+            ) : <p className="bb-mobile-empty">No upcoming dates</p>}
+        </section>
+      </div>
       {imageToCrop && (
         <ImageCropModal
           file={imageToCrop}
@@ -844,9 +896,9 @@ export default function AnimalGeneralData({
             </div>
         </dialog>
       )}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+      <div className="bb-profile-details grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
       {/* Top Left - Basic Info */}
-      <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-4">
+      <div id="animal-profile-edit" tabIndex={-1} className="bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-4">
         <div className="mb-2 flex items-center justify-between gap-3">
           <h3 className="text-gray-400 font-semibold">Basic Info</h3>
           <div className="flex items-center gap-2">
@@ -924,7 +976,7 @@ export default function AnimalGeneralData({
       </div>
 
       {/* Top Right - Picture */}
-      <div className="min-h-80 bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden">
+      <div id="animal-profile-photo" tabIndex={-1} className="min-h-80 bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden">
         <label className="w-full h-full min-h-80 relative group block cursor-pointer">
           <img
             src={imageSrc}
@@ -963,7 +1015,7 @@ export default function AnimalGeneralData({
       </div>
 
       {/* Bottom Left - Quick Dates */}
-      <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-4">
+      <div className="bb-desktop-only bg-gray-800 p-6 rounded-2xl border border-gray-700 space-y-4">
         <h4 className="text-gray-400 font-semibold mb-2">Upcoming Quick Dates</h4>
         {loadingVaccinationSummary || loadingVetSummary ? (
           <div className="space-y-2" aria-busy="true">
@@ -1088,8 +1140,9 @@ export default function AnimalGeneralData({
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(260px,360px)]">
           <div className="space-y-4">
             <div>
-              <label className="block text-gray-400 text-sm mb-1">Status</label>
+              <label htmlFor="animal-profile-status" className="block text-gray-400 text-sm mb-1">Status</label>
               <select
+                id="animal-profile-status"
                 value={status}
                 onChange={async (e) => {
                   const nextStatus = e.target.value;

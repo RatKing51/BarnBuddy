@@ -1,0 +1,15 @@
+{
+  "name": "BarnBuddy Full Mobile Mockups",
+  "id": "1732391647235017009",
+  "api": "1.0.0",
+  "editorType": [
+    "figma"
+  ],
+  "main": "code.js",
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": [
+      "none"
+    ]
+  }
+}
