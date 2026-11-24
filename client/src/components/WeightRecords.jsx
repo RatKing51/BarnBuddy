@@ -4,9 +4,9 @@ import * as weightRecordsAPI from "../api/weightRecords";
 import { SkeletonBlock } from "./LoadingSpinner";
 import { getAnimalByID } from "../api/animal";
 import { getAnimalIdentifiers } from "../utils/animalCare";
+import { getTodayDate } from "../utils/date";
 import { MobileIcon, MobileRow, MobileSheet } from "./MobileDashboard";
 
-const getTodayDate = () => new Date().toLocaleDateString("sv-SE");
 const mobileQuery = "(max-width: 1023px)";
 const isMobileViewport = () => window.matchMedia(mobileQuery).matches;
 

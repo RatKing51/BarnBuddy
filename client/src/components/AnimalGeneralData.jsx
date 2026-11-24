@@ -14,6 +14,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { formatAgeFromBirthdate, getAgeYears } from "../utils/age";
 import { getAnimalDisplayName } from "../utils/animalLabel";
 import { getAnimalIdentifiers } from "../utils/animalCare";
+import { getTodayDate } from "../utils/date";
 import { MobileIcon, MobileRow } from "./MobileDashboard";
 
 function AnimalGeneralDataSkeleton() {
@@ -510,7 +511,7 @@ export default function AnimalGeneralData({
       if (shouldCreateWeightRecord) {
         try {
           const weightRes = await createWeightRecord(animalId, {
-            recorded_date: new Date().toISOString().slice(0, 10),
+            recorded_date: getTodayDate(),
             weight: payload.weight,
             unit: "lb",
             notes: "Logged from General weight field",
@@ -1146,7 +1147,7 @@ export default function AnimalGeneralData({
                 value={status}
                 onChange={async (e) => {
                   const nextStatus = e.target.value;
-                  const defaultDate = new Date().toISOString().slice(0, 10);
+                  const defaultDate = getTodayDate();
                   setStatus(nextStatus);
                   if (nextStatus === "deceased" && !deceasedDate) {
                     setDeceasedDate(defaultDate);

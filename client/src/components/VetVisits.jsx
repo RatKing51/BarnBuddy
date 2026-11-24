@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getVetVisitsForAnimal, createVetVisit, updateVetVisit, deleteVetVisit } from "../api/vetVisits";
 import { toast } from "react-toastify";
+import { getTodayDate } from "../utils/date";
 import EmptyState from "./EmptyState";
 import { SkeletonBlock } from "./LoadingSpinner";
 
 const emptyVisit = (animalId) => ({
   animal_id: animalId,
   vet_name: "",
-  visit_date: new Date().toISOString().split("T")[0],
+  visit_date: getTodayDate(),
   reason: "",
   treatment: "",
   medications: "",
@@ -31,17 +32,11 @@ function parseLocalDate(value) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function normalizeDate(value) {
-  const date = parseLocalDate(value);
-  if (!date) return "";
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
 function normalizeVisit(visit) {
   return {
     ...visit,
-    visit_date: normalizeDate(visit.visit_date),
-    follow_up_date: normalizeDate(visit.follow_up_date),
+    visit_date: visit.visit_date?.slice(0, 10) || "",
+    follow_up_date: visit.follow_up_date?.slice(0, 10) || "",
     completed: Boolean(visit.completed),
     visit_completed: Boolean(visit.visit_completed || visit.completed),
     follow_up_completed: Boolean(visit.follow_up_completed || visit.completed),

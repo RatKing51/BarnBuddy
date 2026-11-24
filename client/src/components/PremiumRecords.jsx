@@ -7,11 +7,8 @@ import * as premiumRecordsAPI from "../api/premiumRecords";
 import * as vetVisitsAPI from "../api/vetVisits";
 import { getReproductionDefaults } from "../config/animalTypes";
 import { getAnimalDisplayName } from "../utils/animalLabel";
+import { getTodayDate } from "../utils/date";
 import { SkeletonBlock } from "./LoadingSpinner";
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function formatDate(value) {
   return value ? String(value).slice(0, 10) : "";
@@ -64,9 +61,9 @@ function getGestationDays(species) {
 
 function addDays(dateValue, days) {
   if (!dateValue || !Number.isFinite(days)) return "";
-  const date = new Date(dateValue);
+  const date = new Date(`${formatDate(dateValue)}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return "";
-  date.setDate(date.getDate() + days);
+  date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
 }
 
@@ -358,14 +355,14 @@ export default function PremiumRecords({
     return {
       dam_id: record.dam_id || null,
       sire_id: record.sire_id || null,
-      breeding_date: record.breeding_date || null,
-      due_date: record.due_date || null,
+      breeding_date: formatDate(record.breeding_date) || null,
+      due_date: formatDate(record.due_date) || null,
       outcome: record.outcome || "Planned",
       breeding_method: record.breeding_method || "",
-      pregnancy_check_date: record.pregnancy_check_date || null,
+      pregnancy_check_date: formatDate(record.pregnancy_check_date) || null,
       pregnancy_status: record.pregnancy_status || "",
-      birth_date: record.birth_date || null,
-      offspring_count: record.offspring_count || null,
+      birth_date: formatDate(record.birth_date) || null,
+      offspring_count: record.offspring_count === "" ? null : record.offspring_count ?? null,
       birth_outcome: record.birth_outcome || "",
       notes: record.notes || "",
     };
@@ -373,7 +370,7 @@ export default function PremiumRecords({
 
   function getFinancePayload(record) {
     return {
-      record_date: record.record_date || null,
+      record_date: formatDate(record.record_date) || null,
       category: record.category || "Expense",
       amount: record.amount || 0,
       vendor: record.vendor || "",
@@ -386,7 +383,7 @@ export default function PremiumRecords({
 
     try {
       setAddingReproduction(true);
-      const breedingDate = today();
+      const breedingDate = getTodayDate();
       const animalRole = getSexRole(animal);
       const res = await reproductionsAPI.createReproduction({
         dam_id: animalRole === "male" ? null : animal.id,
@@ -456,7 +453,7 @@ export default function PremiumRecords({
       setAddingFinance(true);
       const res = await premiumRecordsAPI.createFinanceRecord({
         animal_id: animal.id,
-        record_date: today(),
+        record_date: getTodayDate(),
         category: "Expense",
         amount: 0,
         vendor: "",
@@ -607,7 +604,7 @@ export default function PremiumRecords({
   const addOffspring = async () => {
     if (!selectedReproduction?.id || addingOffspring) return;
 
-    const birthDate = formatDate(selectedReproduction.birth_date) || formatDate(selectedReproduction.due_date) || today();
+    const birthDate = formatDate(selectedReproduction.birth_date) || formatDate(selectedReproduction.due_date) || getTodayDate();
     const species = selectedDam?.species || selectedSire?.species || animal.species || "";
     const offspringName = newOffspring.name.trim() || "New offspring";
 
@@ -653,20 +650,8 @@ export default function PremiumRecords({
         offspring_count: Number.isFinite(offspringCount) ? offspringCount + 1 : 1,
       };
       setSelectedReproduction(updatedReproduction);
-      const res = await reproductionsAPI.updateReproduction(selectedReproduction.id, {
-        dam_id: updatedReproduction.dam_id || null,
-        sire_id: updatedReproduction.sire_id || null,
-        breeding_date: updatedReproduction.breeding_date || null,
-        due_date: updatedReproduction.due_date || null,
-        outcome: updatedReproduction.outcome || "Birthed",
-        breeding_method: updatedReproduction.breeding_method || "",
-        pregnancy_check_date: updatedReproduction.pregnancy_check_date || null,
-        pregnancy_status: updatedReproduction.pregnancy_status || "",
-        birth_date: updatedReproduction.birth_date || null,
-        offspring_count: updatedReproduction.offspring_count || 1,
-        birth_outcome: updatedReproduction.birth_outcome || "Live birth",
-        notes: updatedReproduction.notes || "",
-      });
+      const res = await reproductionsAPI.updateReproduction(selectedReproduction.id, getReproductionPayload(updatedReproduction));
+      lastReproductionSignatures.current.set(res.data.id, JSON.stringify(getReproductionPayload(res.data)));
       setSelectedReproduction(res.data);
       setReproductions((current) => current.map((record) => (record.id === res.data.id ? res.data : record)));
 
@@ -695,26 +680,14 @@ export default function PremiumRecords({
 
       await refreshBirthRecords();
 
-      const nextCount = Math.max(0, Number.parseInt(selectedReproduction.offspring_count, 10) || 0) - 1;
+      const nextCount = Math.max(0, (Number.parseInt(selectedReproduction.offspring_count, 10) || 0) - 1);
       const updatedReproduction = {
         ...selectedReproduction,
         offspring_count: nextCount,
       };
       setSelectedReproduction(updatedReproduction);
-      const res = await reproductionsAPI.updateReproduction(selectedReproduction.id, {
-        dam_id: updatedReproduction.dam_id || null,
-        sire_id: updatedReproduction.sire_id || null,
-        breeding_date: updatedReproduction.breeding_date || null,
-        due_date: updatedReproduction.due_date || null,
-        outcome: updatedReproduction.outcome || "Planned",
-        breeding_method: updatedReproduction.breeding_method || "",
-        pregnancy_check_date: updatedReproduction.pregnancy_check_date || null,
-        pregnancy_status: updatedReproduction.pregnancy_status || "",
-        birth_date: updatedReproduction.birth_date || null,
-        offspring_count: nextCount,
-        birth_outcome: updatedReproduction.birth_outcome || "",
-        notes: updatedReproduction.notes || "",
-      });
+      const res = await reproductionsAPI.updateReproduction(selectedReproduction.id, getReproductionPayload(updatedReproduction));
+      lastReproductionSignatures.current.set(res.data.id, JSON.stringify(getReproductionPayload(res.data)));
       setSelectedReproduction(res.data);
       setReproductions((current) => current.map((record) => (record.id === res.data.id ? res.data : record)));
       toast.success(birth.offspring_id ? "Offspring animal deleted." : "Stale offspring link removed.");
@@ -1123,15 +1096,32 @@ export default function PremiumRecords({
           )} />
           {selectedFinance && (
             <div className="mt-4 space-y-3 rounded-xl border border-gray-700 bg-gray-900 p-4">
-              <input type="date" value={formatDate(selectedFinance.record_date)} onChange={(e) => setSelectedFinance({ ...selectedFinance, record_date: e.target.value })} onBlur={saveFinance} className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
-              <select value={selectedFinance.category || "Expense"} onChange={(e) => setSelectedFinance({ ...selectedFinance, category: e.target.value })} onBlur={saveFinance} className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white">
-                <option>Expense</option>
-                <option>Income</option>
-                <option>Animal sales</option>
-              </select>
-              <input type="number" step="0.01" value={selectedFinance.amount || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, amount: e.target.value })} onBlur={saveFinance} placeholder="Amount" className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
-              <input value={selectedFinance.vendor || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, vendor: e.target.value })} onBlur={saveFinance} placeholder="Vendor or buyer" className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
-              <textarea rows="3" value={selectedFinance.notes || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, notes: e.target.value })} onBlur={saveFinance} placeholder="Notes" className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
+              <label className="block text-xs text-gray-400">
+                Record date
+                <input type="date" value={formatDate(selectedFinance.record_date)} onChange={(e) => setSelectedFinance({ ...selectedFinance, record_date: e.target.value })} onBlur={saveFinance} className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
+              </label>
+              <label className="block text-xs text-gray-400">
+                Category
+                <select value={selectedFinance.category || "Expense"} onChange={(e) => setSelectedFinance({ ...selectedFinance, category: e.target.value })} onBlur={saveFinance} className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white">
+                  <option>Expense</option>
+                  {FINANCE_INCOME_CATEGORIES.map((category) => <option key={category}>{category}</option>)}
+                  {selectedFinance.category && selectedFinance.category !== "Expense" && !isFinanceIncome(selectedFinance.category) && (
+                    <option>{selectedFinance.category}</option>
+                  )}
+                </select>
+              </label>
+              <label className="block text-xs text-gray-400">
+                Amount
+                <input type="number" min="0" step="0.01" value={selectedFinance.amount ?? ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, amount: e.target.value })} onBlur={saveFinance} className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
+              </label>
+              <label className="block text-xs text-gray-400">
+                Vendor or buyer
+                <input value={selectedFinance.vendor || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, vendor: e.target.value })} onBlur={saveFinance} className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
+              </label>
+              <label className="block text-xs text-gray-400">
+                Notes
+                <textarea rows="3" value={selectedFinance.notes || ""} onChange={(e) => setSelectedFinance({ ...selectedFinance, notes: e.target.value })} onBlur={saveFinance} className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white" />
+              </label>
               <div className="flex items-center gap-2">
                 <span className={`rounded-lg px-4 py-2 text-sm font-semibold ${
                   saveStatus === "saved" ? "bg-emerald-500/15 text-emerald-200" : "bg-gray-700 text-gray-300"

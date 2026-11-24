@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import * as premiumRecordsAPI from "../api/premiumRecords";
 import { getAnimalDisplayName } from "../utils/animalLabel";
+import { getTodayDate } from "../utils/date";
 import EmptyState from "./EmptyState";
 import { SkeletonBlock } from "./LoadingSpinner";
 
@@ -29,10 +30,6 @@ const INCOME_CATEGORIES = [
 ];
 
 const CATEGORY_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#f97316", "#64748b"];
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function formatDate(value) {
   return value ? String(value).slice(0, 10) : "";
@@ -64,7 +61,7 @@ function getHerdFinancePayload(record, selectedHerd) {
   return {
     animal_id: record.animal_id || null,
     herd_id: selectedHerd?.id === "unassigned" ? null : selectedHerd?.id || null,
-    record_date: record.record_date || null,
+    record_date: formatDate(record.record_date) || null,
     category: record.category || "Other expense",
     amount: record.amount || 0,
     vendor: record.vendor || "",
@@ -405,7 +402,7 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
       const res = await premiumRecordsAPI.createFinanceRecord({
         animal_id: null,
         herd_id: selectedHerd.id === "unassigned" ? null : selectedHerd.id,
-        record_date: today(),
+        record_date: getTodayDate(),
         category: "Other expense",
         amount: 0,
         vendor: "",
@@ -460,13 +457,13 @@ export default function HerdFinanceRecords({ selectedHerd, animals = [], isPremi
       const record = getFinanceRecord(res.data);
       lastFinanceSignatures.current.set(record.id, JSON.stringify(getHerdFinancePayload(record, selectedHerd)));
       setFinanceRecords((current) => current.map((item) => (item.id === record.id ? record : item)));
-      setSelectedFinance(record);
+      setSelectedFinance((current) => current === selectedFinance ? record : current);
       if (res.data.archived_animal) onAnimalSaved?.(res.data.archived_animal);
       markSaved();
     } catch (err) {
       setSaveStatus("idle");
       console.error(err);
-      toast.error("Failed to save herd finance record.");
+      toast.error(err.response?.data?.error || "Failed to save herd finance record.");
     }
   };
 

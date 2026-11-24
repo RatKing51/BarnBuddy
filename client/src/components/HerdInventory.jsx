@@ -29,7 +29,7 @@ function inventoryPayload(item, selectedHerd) {
     reorder_level: item.reorder_level || 0,
     cost_per_unit: item.cost_per_unit || 0,
     supplier: item.supplier || "",
-    expiration_date: item.expiration_date || null,
+    expiration_date: dateValue(item.expiration_date) || null,
     use_for_vaccinations: Boolean(item.use_for_vaccinations),
     use_for_health_events: Boolean(item.use_for_health_events),
     notes: item.notes || "",

@@ -4,6 +4,7 @@ import * as healthEventsAPI from "../api/healthEvents";
 import * as premiumRecordsAPI from "../api/premiumRecords";
 import * as vaccinationsAPI from "../api/vaccinations";
 import * as birthDataAPI from "../api/birthData";
+import { getTodayDate } from "../utils/date";
 import { SkeletonBlock } from "./LoadingSpinner";
 
 function HealthRecordsSkeleton() {
@@ -119,13 +120,13 @@ function HealthRecordsSkeleton() {
 }
 
 const createHealthDraft = () => ({
-  date: new Date().toISOString().slice(0, 10),
+  date: getTodayDate(),
   type: "Checkup", severity: "Low", description: "", notes: "", resolved: false,
   inventory_item_id: "", inventory_quantity_used: "",
 });
 
 const createVaccinationDraft = () => ({
-  date: new Date().toISOString().slice(0, 10),
+  date: getTodayDate(),
   type: "Routine", notes: "", next_due_date: "", dosage: "", completed: false,
   inventory_item_id: "", inventory_quantity_used: "",
 });

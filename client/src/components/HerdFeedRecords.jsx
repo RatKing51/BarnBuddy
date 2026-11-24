@@ -1,12 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import * as premiumRecordsAPI from "../api/premiumRecords";
+import { getTodayDate } from "../utils/date";
 import EmptyState from "./EmptyState";
 import { SkeletonBlock } from "./LoadingSpinner";
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function formatDate(value) {
   return value ? String(value).slice(0, 10) : "";
@@ -19,20 +16,18 @@ function money(value) {
 
 function daysUntil(value) {
   if (!value) return null;
-  const target = new Date(value);
+  const target = new Date(formatDate(value));
   if (Number.isNaN(target.getTime())) return null;
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  target.setHours(0, 0, 0, 0);
-  return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+  const today = new Date(getTodayDate());
+  return (target - today) / (1000 * 60 * 60 * 24);
 }
 
 function getFeedPayload(record, herd) {
   return {
     ...record,
     herd_id: herd?.id === "unassigned" ? null : herd?.id,
-    record_date: record.record_date || null,
-    next_purchase_date: record.next_purchase_date || null,
+    record_date: formatDate(record.record_date) || null,
+    next_purchase_date: formatDate(record.next_purchase_date) || null,
   };
 }
 
@@ -176,7 +171,7 @@ export default function HerdFeedRecords({ selectedHerd, isPremium = false, autom
       const res = await premiumRecordsAPI.createFeedRecord({
         herd_id: selectedHerd.id === "unassigned" ? null : selectedHerd.id,
         animal_id: null,
-        record_date: today(),
+        record_date: getTodayDate(),
         feed_type: "",
         amount: 0,
         unit: "lb",
